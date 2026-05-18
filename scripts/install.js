@@ -99,17 +99,63 @@ function verifyChecksum(filePath, expected) {
   }
 }
 
+function firstExisting(paths) {
+  for (const candidate of paths) {
+    if (candidate && fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function windowsTool(name) {
+  const root = process.env.SystemRoot || process.env.windir || "C:\\Windows";
+  if (name === "powershell.exe") {
+    return firstExisting([
+      path.join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
+      path.join(root, "Sysnative", "WindowsPowerShell", "v1.0", "powershell.exe"),
+      "powershell.exe",
+    ]);
+  }
+  if (name === "tar.exe") {
+    return firstExisting([
+      path.join(root, "System32", "tar.exe"),
+      path.join(root, "Sysnative", "tar.exe"),
+      "tar.exe",
+    ]);
+  }
+  return name;
+}
+
 function extractArchive(archivePath, tmpDir) {
   if (isWindows) {
-    const ps = [
-      "-NoProfile",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-Command",
-      `$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${tmpDir.replace(/'/g, "''")}' -Force`,
-    ];
-    execFileSync("powershell.exe", ps, { stdio: "inherit" });
-    return;
+    const powershell = windowsTool("powershell.exe");
+    if (powershell) {
+      try {
+        const psEnv = {
+          ...process.env,
+          LUMA_CLI_ARCHIVE: archivePath,
+          LUMA_CLI_DEST: tmpDir,
+        };
+        const ps = [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath $env:LUMA_CLI_ARCHIVE -DestinationPath $env:LUMA_CLI_DEST -Force",
+        ];
+        execFileSync(powershell, ps, { stdio: "inherit", env: psEnv });
+        return;
+      } catch (err) {
+        console.warn(`[WARN] PowerShell extraction failed: ${err.message || err}`);
+      }
+    }
+
+    const tar = windowsTool("tar.exe");
+    if (tar) {
+      execFileSync(tar, ["-xf", archivePath, "-C", tmpDir], { stdio: "inherit" });
+      return;
+    }
+
+    throw new Error("No supported archive extractor found. Install PowerShell or ensure C:\\Windows\\System32 is in PATH.");
   }
   execFileSync("tar", ["-xzf", archivePath, "-C", tmpDir], { stdio: "ignore" });
 }
