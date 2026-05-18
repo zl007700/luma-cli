@@ -2,185 +2,114 @@
 
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.23-blue.svg)](https://go.dev/)
 
-[中文](./README.zh.md) | [English](./README.md)
+[中文](./README.md) | [English](./README.en.md)
 
-Agent-native CLI for PikGeo/Luma media creation workflows. `luma-cli` is an open-source client for a hosted backend. It exposes video, audio, asset, subtitle, and digital-human capabilities as small atomic commands that are easy for AI agents and humans to call safely.
+给 AI Agent 配上的视频运营与内容制作技能包。`luma-cli` 让 Agent 具备一组可调用的专业视频能力：识别素材、合成语音、生成数字人口播、制作字幕、增强画质、管理制作项目，并把产物整理成适合运营使用的短视频资产。
 
-[Quick Start](#quick-start) · [Agent Usage](#agent-usage) · [Atomic Tools](#atomic-tools) · [Skills](#agent-skills) · [Architecture](#architecture) · [Publishing](#publishing) · [Development](#development)
+它不是一个面向开发者炫技的命令集合，而是一个面向创作者、运营团队和 Agent 使用者的专业能力包：你把需求交给 Agent，Agent 通过 `luma-cli` 调用视频制作能力，完成从脚本、配音、数字人到字幕和成片增强的工作。
 
-## Why luma-cli?
+[快速开始](#快速开始) · [适合做什么](#适合做什么) · [核心能力](#核心能力) · [给-agent-使用](#给-agent-使用) · [项目工作区](#项目工作区) · [安装和发布](#安装和发布)
 
-- **Agent-native design**: atomic CLI commands are separated from workflow glue, so agents can compose capabilities without coupling business logic into the binary.
-- **Discoverable tool contracts**: `luma-cli tools list` and `luma-cli tools describe <id>` expose machine-readable metadata for agent planners.
-- **Skills-first workflows**: long-form orchestration guidance lives in `skills/`, while commands stay focused on single backend capabilities.
-- **Structured output path**: commands that need agent integration can use `--json` and return a stable `{ ok, code, error, data }` envelope.
-- **Project-aware media pipeline**: optional project workspaces organize source files, audio, subtitles, effects, outputs, and processing history.
-- **Thin root entrypoint**: the repository root stays clean; command implementations live under `internal/commands`.
-- **Hosted backend boundary**: model execution, scheduling, billing, registration, and account management live in the hosted backend, not in this repository.
+## 适合做什么
 
-## Capabilities
+- **短视频批量制作**：把文案变成配音、数字人口播、字幕和可发布视频。
+- **运营内容生产**：围绕直播、产品介绍、营销素材、知识讲解等场景快速生成视频资产。
+- **素材整理和复用**：管理音色、数字人、原始视频、输出视频和中间产物。
+- **字幕与包装**：生成适合短视频观看节奏的字幕，并支持高亮、样式和烧录。
+- **Agent 视频技能增强**：让 Claude Code、Codex、Clawhub 等 Agent 不只是写代码，也能调用视频制作能力。
 
-| Domain | Commands | Description |
+## 为什么需要 luma-cli？
+
+- **让 Agent 真的能做视频**：Agent 可以直接调用 ASR、TTS、数字人口型、字幕、增强、素材管理等能力。
+- **面向运营工作流**：不是单点 API 示例，而是围绕“做一条可用的视频”组织能力。
+- **安装后即可发现能力**：`luma-cli tools list` 可以列出 Agent 能调用的所有工具。
+- **适合团队沉淀经验**：视频制作方法、运营 SOP、字幕风格、数字人使用方式可以沉淀在 `skills/` 里。
+- **后端能力托管**：注册、计费、模型执行、任务调度在 PikGeo 后端完成，CLI 只负责把能力带到用户和 Agent 身边。
+
+## 核心能力
+
+| 场景 | 命令 | 说明 |
 | --- | --- | --- |
-| Authentication | `auth login`, `auth status` | Store and inspect the Luma card key used for backend calls. |
-| Assets | `asset upload`, `asset list` | Upload local media assets and list cloud asset groups such as voices and roles. |
-| ASR | `asr` | Transcribe local audio or video through cloud ASR. |
-| TTS | `tts` | Synthesize speech from text using a named voice asset. |
-| Lip Sync | `lipsync` | Generate a digital-human lip-sync video from an avatar and audio. |
-| Enhance | `enhance` | Enhance or upscale local video files. |
-| Subtitle | `subtitle` | Generate styled ASS subtitles and optionally burn them into video. |
-| Project | `project create/list/use/info/clean` | Manage local video project workspaces and processing history. |
-| Task | `task status` | Inspect backend task status and result metadata. |
-| Agent Tools | `tools list`, `tools describe` | List and inspect agent-callable atomic tools. |
+| 登录 | `auth login`, `auth status` | 保存和查看后端调用所需的 card key。 |
+| 素材 | `asset upload`, `asset list` | 上传素材，查看音色、数字人等资源。 |
+| 语音识别 | `asr` | 从音频或视频中识别文字。 |
+| 语音合成 | `tts` | 把文案合成为指定音色的语音。 |
+| 数字人口播 | `lipsync` | 用数字人形象和音频生成口播视频。 |
+| 视频增强 | `enhance` | 对视频进行画质增强或超分。 |
+| 字幕制作 | `subtitle` | 生成字幕，并可烧录到视频。 |
+| 项目管理 | `project create/list/use/info/clean` | 管理本地视频项目、产物和处理历史。 |
+| 任务查询 | `task status` | 查询云端任务状态。 |
+| Agent 工具发现 | `tools list`, `tools describe` | 查看 Agent 可调用能力和参数说明。 |
 
-## Quick Start
+## 快速开始
 
-### Requirements
-
-- Go `1.23` or newer
-- A valid Luma card key
-
-### Build From Source
-
-```bash
-git clone git@github.com:zl007700/luma-cli.git
-cd luma-cli
-go build -o luma-cli .
-```
-
-### Install From npm
-
-After a release is published:
+安装：
 
 ```bash
 npm install -g @lumageo/luma-cli
-luma-cli auth login <CARD_KEY>
-luma-cli tools list
 ```
 
-### Configure
+登录：
 
 ```bash
 luma-cli auth login <CARD_KEY>
 luma-cli auth status
 ```
 
-Configuration is stored in the local Luma config directory. For isolated tests or agent sandboxes, set:
-
-```bash
-export LUMA_CONFIG_DIR=/tmp/luma-cli-config
-```
-
-On PowerShell:
-
-```powershell
-$env:LUMA_CONFIG_DIR = "$env:TEMP\luma-cli-config"
-```
-
-The default API endpoint is:
-
-```bash
-https://api.pikgeo.com
-```
-
-For development or private deployments, override it with:
-
-```bash
-export LUMA_API_URL=https://your-api.example.com
-```
-
-On PowerShell:
-
-```powershell
-$env:LUMA_API_URL = "https://your-api.example.com"
-```
-
-### First Commands
-
-```bash
-# Transcribe media
-luma-cli asr input.mp4 --language zh
-
-# Synthesize speech
-luma-cli tts "你好，欢迎来到直播间" --voice 男声3 --speech-rate 1.1
-
-# Generate a lip-sync video
-luma-cli lipsync --avatar 数字人男 --audio tts_output.wav --output output.mp4
-
-# Enhance video
-luma-cli enhance output.mp4 --scale 2
-```
-
-## Agent Usage
-
-Agents should treat `luma-cli` as a collection of atomic backend tools. Do not hard-code multi-step business workflows into command calls; load the relevant skill instructions from `skills/` and compose tools from there.
-
-### Discover Tools
+查看 Agent 可用能力：
 
 ```bash
 luma-cli tools list
-luma-cli tools describe asr.transcribe
+luma-cli tools describe tts.synthesize
 ```
 
-Machine-readable mode:
+第一次制作：
 
 ```bash
-luma-cli --json tools describe tts.synthesize
+# 文案转语音
+luma-cli tts "你好，欢迎来到直播间" --voice 男声3
+
+# 数字人口播
+luma-cli lipsync --avatar 数字人男 --audio tts_output.wav --output output.mp4
+
+# 加字幕
+luma-cli subtitle output.mp4 --output output_subtitled.mp4
+
+# 增强画质
+luma-cli enhance output_subtitled.mp4 --scale 2
 ```
 
-Example response shape:
+## 给 Agent 使用
 
-```json
-{
-  "ok": true,
-  "data": {
-    "id": "tts.synthesize",
-    "service": "tts",
-    "command": "luma-cli tts",
-    "risk": "write",
-    "flags": [],
-    "outputs": []
-  }
-}
+Agent 不需要猜命令怎么用，先让它发现能力：
+
+```bash
+luma-cli tools list
+luma-cli --json tools describe asr.transcribe
 ```
 
-### Recommended Agent Flow
+典型 Agent 流程：
 
-1. Run `luma-cli tools list` to identify available atomic capabilities.
-2. Run `luma-cli tools describe <tool_id>` before calling a tool for the first time.
-3. Load the matching workflow skill from `skills/` when a task requires multiple tools.
-4. Prefer explicit file paths and output paths.
-5. Use `project create/use` for multi-step media jobs that need organized outputs.
+1. 根据用户目标选择视频制作技能。
+2. 用 `tools list` 查看当前 CLI 支持什么。
+3. 用 `tools describe <tool_id>` 查看参数、风险和输出。
+4. 调用一个个原子能力完成制作。
+5. 把多步任务产物放入 project 工作区。
 
-## Atomic Tools
+## 内置 Skills
 
-| Tool ID | Command | Risk | Skills |
-| --- | --- | --- | --- |
-| `asr.transcribe` | `luma-cli asr` | write | `luma-subtitle`, `luma-video-workflow` |
-| `tts.synthesize` | `luma-cli tts` | write | `luma-digital-human`, `luma-video-workflow` |
-| `lipsync.create` | `luma-cli lipsync` | write | `luma-digital-human`, `luma-video-workflow` |
-| `video.enhance` | `luma-cli enhance` | write | `luma-video-workflow` |
-| `subtitle.render` | `luma-cli subtitle` | write | `luma-subtitle` |
-| `asset.upload` | `luma-cli asset upload` | write | `luma-assets`, `luma-digital-human` |
-| `asset.list` | `luma-cli asset list` | read | `luma-assets` |
-| `task.status` | `luma-cli task status` | read | `luma-video-workflow` |
+`skills/` 是给 Agent 看的专业说明书，用来告诉 Agent 如何把多个能力组合成运营和视频制作工作流。
 
-The source of truth for these contracts is `shortcuts/`.
-
-## Agent Skills
-
-| Skill | Purpose |
+| Skill | 说明 |
 | --- | --- |
-| `luma-assets` | Asset discovery, upload conventions, voice/avatar lookup. |
-| `luma-digital-human` | TTS + lip-sync workflow guidance for digital-human videos. |
-| `luma-subtitle` | Subtitle generation, segmentation, styling, and burn-in workflow. |
-| `luma-video-workflow` | End-to-end media workflow composition across ASR, TTS, lip sync, enhance, and tasks. |
+| `luma-video-workflow` | 从素材到成片的完整视频制作流程。 |
+| `luma-digital-human` | 数字人口播、配音、口型同步相关流程。 |
+| `luma-subtitle` | 字幕生成、切分、样式和烧录流程。 |
+| `luma-assets` | 音色、数字人、素材上传和选择流程。 |
 
-Skills contain orchestration guidance. CLI commands should stay atomic.
+## 项目工作区
 
-## Project Workspaces
-
-Projects help agents keep multi-step jobs organized.
+多步视频任务建议创建项目，方便整理素材和产物：
 
 ```bash
 luma-cli project create demo-video
@@ -188,127 +117,100 @@ luma-cli project use demo-video
 luma-cli project info
 ```
 
-Project directories:
+项目目录：
 
 ```text
-source/     source media files
-audio/      extracted or generated audio
-subtitles/  SRT and ASS subtitle files
-effects/    effect overlay files
-output/     final outputs
-tmp/        temporary files
+source/     原始素材
+audio/      配音和音频
+subtitles/  字幕文件
+effects/    特效文件
+output/     最终成片
+tmp/        临时文件
 ```
 
-## Architecture
+## 配置
+
+默认 API：
 
 ```text
-main.go                 thin CLI entrypoint
-internal/commands/      command routing and CLI adapters
-internal/atom/          atomic backend capabilities
-internal/cmdutil/       shared argument parsing helpers
-internal/config/        local config and credential loading
-internal/output/        machine-readable output envelope
-shortcuts/              agent tool metadata and discovery
-skills/                 agent workflow instructions
-project/                local project workspace model
-subtitle/               subtitle generation and rendering logic
-cloud/                  backend API client helpers
+https://api.pikgeo.com
 ```
 
-Design rule:
-
-```text
-skills describe workflows
-shortcuts describe callable tools
-commands adapt CLI args to atom calls
-atoms call backend capabilities
-```
-
-## Open Source Boundary
-
-This repository is intended to be open-source client code. It is safe to expose the CLI adapter layer, tool metadata, local project workspace helpers, and agent skills. The hosted backend remains responsible for:
-
-- user registration and account management;
-- billing and entitlement checks;
-- model execution and task scheduling;
-- production prompts and internal workflow policy;
-- private asset catalogs and operational tooling.
-
-Do not commit production credentials, card keys, internal model endpoints, database URLs, bucket credentials, or private prompts. Use `LUMA_API_URL` for non-default backend environments.
-
-## Publishing
-
-The release flow follows the same pattern as Lark CLI:
-
-```text
-git tag v0.0.1
-        ↓
-GitHub Actions runs GoReleaser
-        ↓
-GitHub Release stores platform archives and checksums.txt
-        ↓
-npm publishes a lightweight installer package
-        ↓
-npm postinstall downloads the matching Go binary
-```
-
-Release requirements:
-
-- GitHub repository permission to create releases.
-- npm package access for `@lumageo/luma-cli`, or change `package.json` to a package name you own.
-- GitHub Actions secret `NPM_TOKEN`.
-
-Publish `0.0.1`:
+开发或私有环境可以覆盖：
 
 ```bash
-git tag v0.0.1
-git push origin v0.0.1
+export LUMA_API_URL=https://your-api.example.com
 ```
 
-The workflow in `.github/workflows/release.yml` will:
+PowerShell：
 
-1. run `go test ./...`;
-2. build `darwin/linux/windows` archives for `amd64/arm64`;
-3. upload the archives and `checksums.txt` to GitHub Release;
-4. publish the npm package.
+```powershell
+$env:LUMA_API_URL = "https://your-api.example.com"
+```
 
-Local checks before tagging:
+也可以用环境变量传入 card key：
 
 ```bash
-go test ./...
-go build ./...
-npm pack --dry-run
+export LUMA_CARD_KEY=<CARD_KEY>
 ```
 
-## Development
+## 安装和发布
+
+当前 npm 包：
+
+```bash
+npm install -g @lumageo/luma-cli
+```
+
+安装包会从 GitHub Release 下载当前系统对应的二进制：
+
+```text
+Windows amd64/arm64
+macOS amd64/arm64
+Linux amd64/arm64
+```
+
+发新版本时：
+
+```bash
+git tag v0.0.2
+git push origin v0.0.2
+```
+
+GitHub Actions 会自动构建多平台二进制、生成 GitHub Release，并发布 npm 包。
+
+## 开源边界
+
+这个仓库是开源客户端，适合开放：
+
+- CLI 使用入口；
+- Agent 可调用工具描述；
+- 视频制作 Skills；
+- 本地项目管理；
+- 发布和安装脚本。
+
+闭源后端继续负责：
+
+- 用户注册和账号体系；
+- 计费和权益；
+- 模型执行；
+- 任务调度；
+- 私有素材和运营后台；
+- 生产级 prompt 和内部策略。
+
+请不要提交生产 card key、内部 token、私有模型地址、数据库连接串、bucket 凭证或未公开 prompt。
+
+## 开发
 
 ```bash
 go test ./...
 go build ./...
-go run . help
 go run . tools list
 go run . --json tools describe asr.transcribe
 ```
 
-On Windows with a local Go toolchain:
+## 安全
 
-```powershell
-$goRoot = Join-Path $env:USERPROFILE ".local\go\go1.25.5"
-$env:GOROOT = $goRoot
-$env:Path = (Join-Path $goRoot "bin") + ";" + $env:Path
-$env:GOTOOLCHAIN = "local"
-go test ./...
-go build ./...
-```
+`luma-cli` 可以被 AI Agent 调用，并通过当前配置的 card key 创建、上传、下载或修改媒体资源。所有 `risk: write` 的工具都应被视为有副作用的操作。
 
-## Security Notes
-
-`luma-cli` can be invoked by AI agents and may create, upload, download, or modify media assets through the configured backend identity. Treat commands with `risk: write` as side-effecting operations.
-
-Recommended practices:
-
-- Keep card keys private and avoid pasting them into shared logs.
-- Use isolated `LUMA_CONFIG_DIR` values for test agents.
-- Prefer explicit output paths so generated files are easy to inspect.
-- Use `tools describe` before allowing an agent to call an unfamiliar command.
-- Keep workflow policy in skills rather than embedding broad automation into command implementations.
+安全问题请参考 [SECURITY.md](./SECURITY.md)。

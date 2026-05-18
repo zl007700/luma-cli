@@ -19,7 +19,7 @@ archives:
         format: zip
     files:
       - README.md
-      - README.zh.md
+      - README.en.md
       - LICENSE
       - SECURITY.md
       - CONTRIBUTING.md
