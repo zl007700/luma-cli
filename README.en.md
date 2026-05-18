@@ -33,17 +33,4 @@ luma-cli subtitle output.mp4 --output output_subtitled.mp4
 luma-cli enhance output_subtitled.mp4 --scale 2
 ```
 
-The default hosted API is:
-
-```text
-https://api.pikgeo.com
-```
-
-This repository is the open-source CLI client. Account registration, billing, model execution, task scheduling, private assets, and production prompts live in the hosted backend.
-
-Development:
-
-```bash
-go test ./...
-go build ./...
-```
+For security issues, see [SECURITY.md](./SECURITY.md).

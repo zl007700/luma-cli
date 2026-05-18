@@ -8,7 +8,7 @@
 
 它不是一个面向开发者炫技的命令集合，而是一个面向创作者、运营团队和 Agent 使用者的专业能力包：你把需求交给 Agent，Agent 通过 `luma-cli` 调用视频制作能力，完成从脚本、配音、数字人到字幕和成片增强的工作。
 
-[快速开始](#快速开始) · [适合做什么](#适合做什么) · [核心能力](#核心能力) · [给-agent-使用](#给-agent-使用) · [项目工作区](#项目工作区) · [安装和发布](#安装和发布)
+[快速开始](#快速开始) · [适合做什么](#适合做什么) · [核心能力](#核心能力) · [给-agent-使用](#给-agent-使用) · [项目工作区](#项目工作区)
 
 ## 适合做什么
 
@@ -128,88 +128,7 @@ output/     最终成片
 tmp/        临时文件
 ```
 
-## 配置
-
-默认 API：
-
-```text
-https://api.pikgeo.com
-```
-
-开发或私有环境可以覆盖：
-
-```bash
-export LUMA_API_URL=https://your-api.example.com
-```
-
-PowerShell：
-
-```powershell
-$env:LUMA_API_URL = "https://your-api.example.com"
-```
-
-也可以用环境变量传入 card key：
-
-```bash
-export LUMA_CARD_KEY=<CARD_KEY>
-```
-
-## 安装和发布
-
-当前 npm 包：
-
-```bash
-npm install -g @lumageo/luma-cli
-```
-
-安装包会从 GitHub Release 下载当前系统对应的二进制：
-
-```text
-Windows amd64/arm64
-macOS amd64/arm64
-Linux amd64/arm64
-```
-
-发新版本时：
-
-```bash
-git tag v0.0.2
-git push origin v0.0.2
-```
-
-GitHub Actions 会自动构建多平台二进制、生成 GitHub Release，并发布 npm 包。
-
-## 开源边界
-
-这个仓库是开源客户端，适合开放：
-
-- CLI 使用入口；
-- Agent 可调用工具描述；
-- 视频制作 Skills；
-- 本地项目管理；
-- 发布和安装脚本。
-
-闭源后端继续负责：
-
-- 用户注册和账号体系；
-- 计费和权益；
-- 模型执行；
-- 任务调度；
-- 私有素材和运营后台；
-- 生产级 prompt 和内部策略。
-
-请不要提交生产 card key、内部 token、私有模型地址、数据库连接串、bucket 凭证或未公开 prompt。
-
-## 开发
-
-```bash
-go test ./...
-go build ./...
-go run . tools list
-go run . --json tools describe asr.transcribe
-```
-
-## 安全
+## 安全说明
 
 `luma-cli` 可以被 AI Agent 调用，并通过当前配置的 card key 创建、上传、下载或修改媒体资源。所有 `risk: write` 的工具都应被视为有副作用的操作。
 

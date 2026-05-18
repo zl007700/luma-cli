@@ -24,6 +24,55 @@ go run . tools list
 go run . --json tools describe asr.transcribe
 ```
 
+## Backend Configuration
+
+The public CLI uses the hosted PikGeo API by default:
+
+```text
+https://api.pikgeo.com
+```
+
+For development or private deployments, override it locally:
+
+```bash
+export LUMA_API_URL=https://your-api.example.com
+```
+
+PowerShell:
+
+```powershell
+$env:LUMA_API_URL = "https://your-api.example.com"
+```
+
+You can also inject credentials through the environment:
+
+```bash
+export LUMA_CARD_KEY=<CARD_KEY>
+```
+
+## Release Process
+
+Releases are maintained by project maintainers.
+
+1. Update `package.json`.
+2. Run local checks:
+
+   ```bash
+   go test ./...
+   go build ./...
+   npm pack --dry-run
+   ```
+
+3. Commit and push.
+4. Create a version tag:
+
+   ```bash
+   git tag v0.0.2
+   git push origin v0.0.2
+   ```
+
+GitHub Actions builds the multi-platform binaries, creates the GitHub Release, and publishes the npm package.
+
 ## Adding a Tool
 
 When adding a new atomic capability:
