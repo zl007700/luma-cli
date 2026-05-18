@@ -2,6 +2,8 @@
 
 const crypto = require("crypto");
 const fs = require("fs");
+const http = require("http");
+const https = require("https");
 const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
@@ -40,26 +42,37 @@ function printHelp() {
   console.log(`  ${releaseURL}`);
 }
 
-function download(url, destPath) {
-  const args = [
-    "--fail",
-    "--location",
-    "--silent",
-    "--show-error",
-    "--connect-timeout",
-    "10",
-    "--max-time",
-    "120",
-    "--max-redirs",
-    "3",
-    "--output",
-    destPath,
-    url,
-  ];
-  if (isWindows) {
-    args.unshift("--ssl-revoke-best-effort");
+function download(url, destPath, redirects = 0) {
+  if (redirects > 3) {
+    return Promise.reject(new Error(`Too many redirects while downloading ${url}`));
   }
-  execFileSync("curl", args, { stdio: ["ignore", "ignore", "pipe"] });
+
+  const client = url.startsWith("https:") ? https : http;
+  return new Promise((resolve, reject) => {
+    const req = client.get(url, { timeout: 120000 }, (res) => {
+      const status = res.statusCode || 0;
+      const location = res.headers.location;
+      if (status >= 300 && status < 400 && location) {
+        res.resume();
+        const nextURL = new URL(location, url).toString();
+        download(nextURL, destPath, redirects + 1).then(resolve, reject);
+        return;
+      }
+
+      if (status < 200 || status >= 300) {
+        res.resume();
+        reject(new Error(`download failed: HTTP ${status}`));
+        return;
+      }
+
+      const out = fs.createWriteStream(destPath);
+      res.pipe(out);
+      out.on("finish", () => out.close(resolve));
+      out.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(new Error("download timed out")));
+    req.on("error", reject);
+  });
 }
 
 function expectedChecksum(name) {
@@ -125,6 +138,19 @@ function windowsTool(name) {
   return name;
 }
 
+function unixTool(name) {
+  if (name === "tar") {
+    return firstExisting([
+      "/usr/bin/tar",
+      "/bin/tar",
+      "/usr/local/bin/tar",
+      "/opt/homebrew/bin/tar",
+      "tar",
+    ]);
+  }
+  return name;
+}
+
 function extractArchive(archivePath, tmpDir) {
   if (isWindows) {
     const powershell = windowsTool("powershell.exe");
@@ -157,10 +183,15 @@ function extractArchive(archivePath, tmpDir) {
 
     throw new Error("No supported archive extractor found. Install PowerShell or ensure C:\\Windows\\System32 is in PATH.");
   }
-  execFileSync("tar", ["-xzf", archivePath, "-C", tmpDir], { stdio: "ignore" });
+
+  const tar = unixTool("tar");
+  if (!tar) {
+    throw new Error("No supported archive extractor found. Install tar or ensure it is in PATH.");
+  }
+  execFileSync(tar, ["-xzf", archivePath, "-C", tmpDir], { stdio: "ignore" });
 }
 
-function install() {
+async function install() {
   if (!platform || !arch) {
     throw new Error(`Unsupported platform: ${process.platform}-${process.arch}`);
   }
@@ -170,7 +201,7 @@ function install() {
   const archivePath = path.join(tmpDir, archiveName);
 
   try {
-    download(releaseURL, archivePath);
+    await download(releaseURL, archivePath);
     verifyChecksum(archivePath, expectedChecksum(archiveName));
     extractArchive(archivePath, tmpDir);
 
@@ -199,13 +230,11 @@ if (require.main === module) {
     process.exit(0);
   }
 
-  try {
-    install();
-  } catch (err) {
+  install().catch((err) => {
     console.error(`Failed to install ${NAME}: ${err.message || err}`);
     console.error("");
     console.error("You can also download the binary manually from:");
     console.error(`  https://github.com/${REPO}/releases/tag/v${VERSION}`);
     process.exit(1);
-  }
+  });
 }
