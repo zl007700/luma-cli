@@ -1,0 +1,45 @@
+package commands
+
+import "sort"
+
+type commandHandler func(args []string)
+
+type commandSpec struct {
+	Name        string
+	Description string
+	Handler     commandHandler
+}
+
+func commandRegistry() map[string]commandSpec {
+	specs := []commandSpec{
+		{Name: "auth", Description: "Authentication commands", Handler: cmdAuth},
+		{Name: "asr", Description: "Speech recognition", Handler: cmdASR},
+		{Name: "asset", Description: "Asset upload and listing", Handler: cmdAsset},
+		{Name: "download", Description: "Download a remote file", Handler: cmdDownload},
+		{Name: "douyin", Description: "Douyin helpers", Handler: cmdDouyin},
+		{Name: "enhance", Description: "Video enhancement", Handler: cmdEnhance},
+		{Name: "lipsync", Description: "Digital human lip sync", Handler: cmdLipSync},
+		{Name: "project", Description: "Project workspace commands", Handler: cmdProject},
+		{Name: "subtitle", Description: "Subtitle generation and rendering", Handler: cmdSubtitle},
+		{Name: "task", Description: "Cloud task status", Handler: cmdTask},
+		{Name: "tools", Description: "Agent tool discovery", Handler: cmdTools},
+		{Name: "tts", Description: "Text to speech", Handler: cmdTTS},
+		{Name: "viral", Description: "Viral copy helpers", Handler: cmdViral},
+	}
+
+	registry := make(map[string]commandSpec, len(specs))
+	for _, spec := range specs {
+		registry[spec.Name] = spec
+	}
+	return registry
+}
+
+func commandNames() []string {
+	registry := commandRegistry()
+	names := make([]string, 0, len(registry))
+	for name := range registry {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}

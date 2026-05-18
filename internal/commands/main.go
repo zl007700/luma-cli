@@ -1,0 +1,76 @@
+package commands
+
+import "fmt"
+
+var version = "0.1.0"
+
+func printUsage() {
+	fmt.Println("luma-cli - Luma CLI tool")
+	fmt.Println("")
+	fmt.Println("Usage:")
+	fmt.Println("  luma-cli version                 Show version")
+	fmt.Println("  luma-cli help                    Show help")
+	fmt.Println("  luma-cli auth login <key>        Save card key")
+	fmt.Println("  luma-cli auth status             Show login status")
+	fmt.Println("  luma-cli asr <file>              Transcribe audio or video")
+	fmt.Println("  luma-cli asset upload <file>     Upload an asset")
+	fmt.Println("  luma-cli asset list [group]      List assets")
+	fmt.Println("  luma-cli tts <text>              Synthesize speech")
+	fmt.Println("  luma-cli lipsync --avatar <name> Create a lip-sync video")
+	fmt.Println("  luma-cli enhance <video>         Enhance a video")
+	fmt.Println("  luma-cli task status <task_id>   Show task status")
+	fmt.Println("  luma-cli download <url> [file]   Download a file")
+	fmt.Println("  luma-cli douyin <share_link>     Douyin helpers")
+	fmt.Println("  luma-cli viral text <text> [--persona <name>] [--length short|medium|long]")
+	fmt.Println("  luma-cli viral video <file> [--persona <name>] [--length short|medium|long]")
+	fmt.Println("  luma-cli project create <name> [--dir <path>]")
+	fmt.Println("  luma-cli project list            List projects")
+	fmt.Println("  luma-cli project use <name>      Switch active project")
+	fmt.Println("  luma-cli project info            Show active project")
+	fmt.Println("  luma-cli project clean           Clean project temp files")
+	fmt.Println("  luma-cli subtitle <video> <srt_or_txt> [options]")
+	fmt.Println("")
+	fmt.Println("Agent tools:")
+	fmt.Println("  luma-cli tools list")
+	fmt.Println("  luma-cli tools describe asr.transcribe")
+	fmt.Println("")
+	fmt.Println("Examples:")
+	fmt.Println("  luma-cli auth login <CARD_KEY>")
+	fmt.Println("  luma-cli asr video.mp4")
+	fmt.Println("  luma-cli lipsync --avatar 数字人男 --audio tts_output.wav")
+	fmt.Println("  luma-cli enhance lipsync_output.mp4")
+}
+
+func Run(args []string) int {
+	if len(args) < 2 {
+		printUsage()
+		return 1
+	}
+
+	runtimeOpts = runtimeOptions{}
+	commandArgs := args[1:]
+	if commandArgs[0] == "--json" {
+		runtimeOpts.JSON = true
+		commandArgs = commandArgs[1:]
+		if len(commandArgs) == 0 {
+			printUsage()
+			return 1
+		}
+	}
+
+	switch commandArgs[0] {
+	case "version":
+		fmt.Printf("luma-cli version %s\n", version)
+	case "help":
+		printUsage()
+	default:
+		if spec, ok := commandRegistry()[commandArgs[0]]; ok {
+			spec.Handler(commandArgs[1:])
+			return 0
+		}
+		fmt.Printf("unknown command: %s\n\n", commandArgs[0])
+		printUsage()
+		return 1
+	}
+	return 0
+}

@@ -1,0 +1,49 @@
+{
+  "name": "@lumageo/luma-cli",
+  "version": "0.0.1",
+  "description": "Agent-native CLI for Luma media creation workflows",
+  "bin": {
+    "luma-cli": "scripts/run.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "test:install": "node scripts/install.js --help"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zl007700/luma-cli.git"
+  },
+  "keywords": [
+    "luma",
+    "cli",
+    "agent",
+    "video",
+    "asr",
+    "tts",
+    "digital-human"
+  ],
+  "license": "MIT",
+  "files": [
+    "scripts/install.js",
+    "scripts/run.js",
+    "checksums.txt",
+    "README.md",
+    "README.zh.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
+  ]
+}
