@@ -4,6 +4,8 @@ builds:
   - binary: luma-cli
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/luma-cli/lumer-cli/internal/commands.version={{ .Version }}
     goos:
       - darwin
       - linux

@@ -2,7 +2,7 @@ package commands
 
 import "fmt"
 
-var version = "0.1.0"
+var version = "dev"
 
 func printUsage() {
 	fmt.Println("luma-cli - Luma CLI tool")
