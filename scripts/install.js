@@ -34,6 +34,7 @@ const releaseURL = `https://github.com/${REPO}/releases/download/v${VERSION}/${a
 
 const binDir = path.join(__dirname, "..", "bin");
 const dest = path.join(binDir, NAME + (isWindows ? ".exe" : ""));
+const packageRoot = path.join(__dirname, "..");
 
 function printHelp() {
   console.log(`${NAME} installer`);
@@ -151,6 +152,149 @@ function unixTool(name) {
   return name;
 }
 
+function splitPathList(value) {
+  return (value || "")
+    .split(path.delimiter)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function samePath(a, b) {
+  const left = path.resolve(a).replace(/[\\\/]+$/, "");
+  const right = path.resolve(b).replace(/[\\\/]+$/, "");
+  return isWindows ? left.toLowerCase() === right.toLowerCase() : left === right;
+}
+
+function pathContains(dir, value) {
+  return splitPathList(value).some((entry) => samePath(entry, dir));
+}
+
+function npmGlobalPrefix() {
+  if (process.env.npm_config_prefix) return process.env.npm_config_prefix;
+  return path.resolve(__dirname, "..", "..", "..", "..");
+}
+
+function writeFileIfChanged(filePath, content, mode) {
+  if (fs.existsSync(filePath) && fs.readFileSync(filePath, "utf8") === content) return;
+  fs.writeFileSync(filePath, content, "utf8");
+  if (mode) fs.chmodSync(filePath, mode);
+}
+
+function canWriteDirectory(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, `.${NAME}-${process.pid}.tmp`);
+    fs.writeFileSync(probe, "");
+    fs.rmSync(probe, { force: true });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function addWindowsUserPath(dir) {
+  if (!isWindows) return false;
+  const powershell = windowsTool("powershell.exe");
+  if (!powershell) return false;
+
+  const script =
+    "$ErrorActionPreference='Stop';" +
+    "$dir=$env:LUMA_CLI_PATH_DIR;" +
+    "$path=[Environment]::GetEnvironmentVariable('Path','User');" +
+    "$parts=@($path -split ';' | Where-Object { $_ -and $_.Trim() -ne '' });" +
+    "$exists=$false;" +
+    "foreach($p in $parts){ if($p.TrimEnd('\\') -ieq $dir.TrimEnd('\\')){ $exists=$true } }" +
+    "if(-not $exists){" +
+    "  $new=($dir+';'+($parts -join ';')).TrimEnd(';');" +
+    "  [Environment]::SetEnvironmentVariable('Path',$new,'User')" +
+    "}";
+
+  execFileSync(
+    powershell,
+    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+    {
+      stdio: "ignore",
+      env: { ...process.env, LUMA_CLI_PATH_DIR: dir },
+    }
+  );
+  return true;
+}
+
+function userWritablePathDirs() {
+  const home = os.homedir();
+  const disallowed = [
+    `${path.sep}.codex${path.sep}tmp${path.sep}`,
+    `${path.sep}Temp${path.sep}`,
+    `${path.sep}tmp${path.sep}`,
+  ].map((item) => (isWindows ? item.toLowerCase() : item));
+
+  return splitPathList(process.env.PATH)
+    .filter((entry) => {
+      const resolved = path.resolve(entry);
+      const comparable = isWindows ? resolved.toLowerCase() : resolved;
+      const homeComparable = isWindows ? home.toLowerCase() : home;
+      if (!comparable.startsWith(homeComparable)) return false;
+      return !disallowed.some((part) => comparable.includes(part));
+    })
+    .filter((entry, index, all) => all.findIndex((candidate) => samePath(candidate, entry)) === index);
+}
+
+function createPathShim(targetDir) {
+  const runScript = path.join(packageRoot, "scripts", "run.js");
+  if (isWindows) {
+    const cmdPath = path.join(targetDir, `${NAME}.cmd`);
+    const psPath = path.join(targetDir, `${NAME}.ps1`);
+    writeFileIfChanged(
+      cmdPath,
+      `@ECHO off\r\n"${process.execPath}" "${runScript}" %*\r\n`,
+      0o755
+    );
+    writeFileIfChanged(
+      psPath,
+      `& "${process.execPath}" "${runScript}" @args\r\nexit $LASTEXITCODE\r\n`,
+      0o755
+    );
+    return cmdPath;
+  }
+
+  const shimPath = path.join(targetDir, NAME);
+  writeFileIfChanged(
+    shimPath,
+    `#!/usr/bin/env sh\nexec "${process.execPath}" "${runScript}" "$@"\n`,
+    0o755
+  );
+  return shimPath;
+}
+
+function ensureCommandReachable() {
+  const prefix = npmGlobalPrefix();
+  const commandDir = isWindows ? prefix : path.join(prefix, "bin");
+  const currentPath = process.env.PATH || "";
+  if (pathContains(commandDir, currentPath)) return;
+
+  if (isWindows) {
+    try {
+      addWindowsUserPath(commandDir);
+      console.log(`${NAME}: added ${commandDir} to the user PATH for new terminals`);
+    } catch (err) {
+      console.warn(`${NAME}: could not update the user PATH automatically: ${err.message || err}`);
+    }
+  }
+
+  for (const candidate of userWritablePathDirs()) {
+    if (!canWriteDirectory(candidate)) continue;
+    try {
+      const shim = createPathShim(candidate);
+      console.log(`${NAME}: command shim available at ${shim}`);
+      return;
+    } catch (_) {
+      // Try the next writable PATH entry.
+    }
+  }
+
+  console.warn(`${NAME}: ${commandDir} is not in PATH. Restart your terminal after installation.`);
+}
+
 function extractArchive(archivePath, tmpDir) {
   if (isWindows) {
     const powershell = windowsTool("powershell.exe");
@@ -214,6 +358,7 @@ async function install() {
     fs.copyFileSync(extracted, dest);
     fs.chmodSync(dest, 0o755);
     console.log(`${NAME} v${VERSION} installed successfully`);
+    ensureCommandReachable();
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
