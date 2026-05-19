@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -24,6 +25,34 @@ func BaseURL() string {
 }
 
 const multipartThreshold = 100 * 1024 * 1024 // 100MB
+
+type RuntimeResolve struct {
+	Name           string `json:"name"`
+	Version        string `json:"version"`
+	Platform       string `json:"platform"`
+	Filename       string `json:"filename"`
+	Size           int64  `json:"size"`
+	SHA256         string `json:"sha256"`
+	ArchiveType    string `json:"archive_type"`
+	ExecutablePath string `json:"executable_path"`
+	FFProbePath    string `json:"ffprobe_path"`
+	DownloadURL    string `json:"download_url"`
+	ExpireSeconds  int    `json:"expire_seconds"`
+}
+
+type ClientResource struct {
+	ID            string   `json:"id"`
+	Type          string   `json:"type"`
+	Name          string   `json:"name"`
+	Version       string   `json:"version"`
+	Filename      string   `json:"filename"`
+	Size          int64    `json:"size"`
+	SHA256        string   `json:"sha256"`
+	Tags          []string `json:"tags"`
+	Description   string   `json:"description"`
+	DownloadURL   string   `json:"download_url,omitempty"`
+	ExpireSeconds int      `json:"expire_seconds,omitempty"`
+}
 
 func apiRequest(method string, path string, body any, cardKey string) (map[string]any, error) {
 	url := BaseURL() + path
@@ -72,6 +101,16 @@ func apiRequest(method string, path string, body any, cardKey string) (map[strin
 		return nil, fmt.Errorf("parse response failed: %w, body: %s", err, string(respBody))
 	}
 	return result, nil
+}
+
+func mapToStruct[T any](payload map[string]any) (T, error) {
+	var out T
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return out, err
+	}
+	err = json.Unmarshal(data, &out)
+	return out, err
 }
 
 func guessMimeType(filePath string) string {
@@ -138,10 +177,10 @@ func UploadFile(filePath, cardKey, groupName string) (string, error) {
 func uploadSinglePart(filePath, filename, groupName, resourceType, mimeType, cardKey string) (string, error) {
 	signBody, _ := json.Marshal(map[string]any{
 		"group_name":    groupName,
-		"filename":     filename,
+		"filename":      filename,
 		"resource_type": resourceType,
-		"mime_type":    mimeType,
-		"variant":      "original",
+		"mime_type":     mimeType,
+		"variant":       "original",
 	})
 	signResult, err := apiRequest("POST", "/v1/resources/upload-sign", signBody, cardKey)
 	if err != nil {
@@ -194,10 +233,10 @@ func uploadMultipart(filePath, filename, groupName, resourceType, mimeType, card
 
 	initBody, _ := json.Marshal(map[string]any{
 		"group_name":    groupName,
-		"filename":     asciiFilename,
+		"filename":      asciiFilename,
 		"resource_type": resourceType,
-		"mime_type":    mimeType,
-		"variant":      "original",
+		"mime_type":     mimeType,
+		"variant":       "original",
 	})
 	initResult, err := apiRequest("POST", "/v1/resources/multipart/init", initBody, cardKey)
 	if err != nil {
@@ -330,4 +369,61 @@ func AssetList(groupName, cardKey string) ([]any, error) {
 	}
 	items, _ := result["items"].([]any)
 	return items, nil
+}
+
+func ResolveRuntime(name, osName, arch, version, cardKey string) (*RuntimeResolve, error) {
+	payload := map[string]any{
+		"name":    name,
+		"os":      osName,
+		"arch":    arch,
+		"version": version,
+	}
+	result, err := apiRequest("POST", "/v1/client-runtime/resolve", payload, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := mapToStruct[RuntimeResolve](result)
+	if err != nil {
+		return nil, fmt.Errorf("parse runtime response failed: %w", err)
+	}
+	return &resolved, nil
+}
+
+func ListClientResources(resourceType, tag, cardKey string) ([]ClientResource, error) {
+	path := "/v1/client-resources"
+	sep := "?"
+	if resourceType != "" {
+		path += sep + "type=" + url.QueryEscape(resourceType)
+		sep = "&"
+	}
+	if tag != "" {
+		path += sep + "tag=" + url.QueryEscape(tag)
+	}
+	result, err := apiRequest("GET", path, nil, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	data, err := json.Marshal(result["items"])
+	if err != nil {
+		return nil, err
+	}
+	var items []ClientResource
+	if err := json.Unmarshal(data, &items); err != nil {
+		return nil, fmt.Errorf("parse resources response failed: %w", err)
+	}
+	return items, nil
+}
+
+func SignClientResource(resourceID, cardKey string) (*ClientResource, error) {
+	result, err := apiRequest("POST", "/v1/client-resources/sign", map[string]any{
+		"resource_id": resourceID,
+	}, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	item, err := mapToStruct[ClientResource](result)
+	if err != nil {
+		return nil, fmt.Errorf("parse resource sign response failed: %w", err)
+	}
+	return &item, nil
 }

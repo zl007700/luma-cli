@@ -28,6 +28,8 @@ func printUsage() {
 	fmt.Println("  luma-cli project use <name>      Switch active project")
 	fmt.Println("  luma-cli project info            Show active project")
 	fmt.Println("  luma-cli project clean           Clean project temp files")
+	fmt.Println("  luma-cli runtime install ffmpeg  Install local video runtime")
+	fmt.Println("  luma-cli resource list [type]    List cloud-managed client resources")
 	fmt.Println("  luma-cli subtitle <video> <srt_or_txt> [options]")
 	fmt.Println("")
 	fmt.Println("Agent tools:")

@@ -6,6 +6,7 @@ import (
 	"github.com/luma-cli/lumer-cli/shortcuts/asset"
 	"github.com/luma-cli/lumer-cli/shortcuts/common"
 	"github.com/luma-cli/lumer-cli/shortcuts/media"
+	runtimeshortcuts "github.com/luma-cli/lumer-cli/shortcuts/runtime"
 )
 
 // List returns every registered atomic shortcut.
@@ -13,6 +14,7 @@ func List() []common.Shortcut {
 	var all []common.Shortcut
 	all = append(all, media.Shortcuts()...)
 	all = append(all, asset.Shortcuts()...)
+	all = append(all, runtimeshortcuts.Shortcuts()...)
 	for i := range all {
 		all[i].CommandLine = all[i].FullCommand()
 	}

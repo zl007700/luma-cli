@@ -20,6 +20,8 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "enhance", Description: "Video enhancement", Handler: cmdEnhance},
 		{Name: "lipsync", Description: "Digital human lip sync", Handler: cmdLipSync},
 		{Name: "project", Description: "Project workspace commands", Handler: cmdProject},
+		{Name: "resource", Description: "Cloud-managed client resources", Handler: cmdResource},
+		{Name: "runtime", Description: "Local runtime installation", Handler: cmdRuntime},
 		{Name: "subtitle", Description: "Subtitle generation and rendering", Handler: cmdSubtitle},
 		{Name: "task", Description: "Cloud task status", Handler: cmdTask},
 		{Name: "tools", Description: "Agent tool discovery", Handler: cmdTools},
