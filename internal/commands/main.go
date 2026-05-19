@@ -18,6 +18,7 @@ func printUsage() {
 	fmt.Println("  luma-cli asset list [group]      List assets")
 	fmt.Println("  luma-cli bgm mix <video> --bgm <file_or_resource_id>")
 	fmt.Println("  luma-cli cover frame <video>     Extract a cover frame")
+	fmt.Println("  luma-cli pip render <video>      Render picture-in-picture inserts")
 	fmt.Println("  luma-cli tts <text>              Synthesize speech")
 	fmt.Println("  luma-cli lipsync --avatar <name> Create a lip-sync video")
 	fmt.Println("  luma-cli enhance <video>         Enhance a video")

@@ -3,6 +3,11 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	imagedraw "image/draw"
+	"image/jpeg"
+	"image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +17,12 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 	"github.com/luma-cli/lumer-cli/internal/output"
 	"github.com/luma-cli/lumer-cli/project"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
+	"golang.org/x/image/math/fixed"
 )
+
+const defaultCoverFontResourceID = "font_22b2e39414"
 
 func cmdBGM(args []string) {
 	if len(args) < 1 || args[0] != "mix" {
@@ -29,7 +39,8 @@ func cmdBGM(args []string) {
 	outputPath := parsed.String("output", "bgm_video.mp4")
 	voiceVolume := parsed.String("voice-volume", "1.0")
 	bgmVolume := parsed.String("bgm-volume", "0.25")
-	bgmPath, err := resolveLocalOrCachedResource(bgmValue)
+	cfg := loadConfig()
+	bgmPath, err := resolveLocalCachedOrCloudResource(bgmValue, cfg)
 	if err != nil {
 		fmt.Printf("Error: resolve bgm failed: %v\n", err)
 		return
@@ -119,10 +130,17 @@ func cmdCoverRender(raw []string) {
 	title := parsed.String("title", "")
 	subtitle := parsed.String("subtitle", "")
 	font := parsed.String("font", "")
-	if font != "" {
-		if resolved, err := resolveLocalOrCachedResource(font); err == nil {
-			font = resolved
-		}
+	if font == "" {
+		font = defaultCoverFontResourceID
+	}
+	cfg := loadConfig()
+	if resolved, err := resolveLocalCachedOrCloudResource(font, cfg); err == nil {
+		font = resolved
+	} else if parsed.String("font", "") != "" {
+		fmt.Printf("Error: resolve font failed: %v\n", err)
+		return
+	} else {
+		font = ""
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
@@ -133,24 +151,12 @@ func cmdCoverRender(raw []string) {
 		fmt.Printf("Error: create output dir failed: %v\n", err)
 		return
 	}
-	ffmpeg, err := installedFFmpegPath()
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-	filter := buildCoverFilter(title, subtitle, font)
-	args := []string{"-y", "-i", imagePath}
-	if filter != "" {
-		args = append(args, "-vf", filter)
-	}
-	args = append(args, "-frames:v", "1", "-q:v", "2", absOut)
-	cmd := exec.Command(ffmpeg, args...)
-	if data, err := cmd.CombinedOutput(); err != nil {
-		fmt.Printf("Error: ffmpeg cover render failed: %v\n%s\n", err, string(data))
+	if err := renderCoverImage(imagePath, absOut, title, subtitle, font); err != nil {
+		fmt.Printf("Error: cover render failed: %v\n", err)
 		return
 	}
 	metaPath := strings.TrimSuffix(absOut, filepath.Ext(absOut)) + ".json"
-	meta := map[string]any{"title": title, "subtitle": subtitle, "image_path": imagePath, "output_path": absOut}
+	meta := map[string]any{"title": title, "subtitle": subtitle, "image_path": imagePath, "font_path": font, "output_path": absOut}
 	if data, err := json.MarshalIndent(meta, "", "  "); err == nil {
 		_ = os.WriteFile(metaPath, data, 0644)
 	}
@@ -175,41 +181,24 @@ func installedFFmpegPath() (string, error) {
 	return "", fmt.Errorf("ffmpeg not found. Run: luma-cli runtime install ffmpeg")
 }
 
-func resolveLocalOrCachedResource(value string) (string, error) {
+func resolveLocalCachedOrCloudResource(value string, cfg *config) (string, error) {
 	if value == "" {
 		return "", fmt.Errorf("empty resource")
 	}
 	if _, err := os.Stat(value); err == nil {
 		return filepath.Abs(value)
 	}
-	cached, err := clientruntime.CurrentResource(value)
+	if cached, err := clientruntime.CurrentResource(value); err == nil {
+		return cached.Path, nil
+	}
+	if cfg == nil {
+		return "", fmt.Errorf("not a local file or cached resource: %s. Run 'luma-cli auth login <card_key>' to cache cloud resources", value)
+	}
+	cached, err := clientruntime.CacheResource(cfg.CardKey, value)
 	if err != nil {
-		return "", fmt.Errorf("not a local file or cached resource: %s", value)
+		return "", fmt.Errorf("not a local file or cloud resource: %s", value)
 	}
 	return cached.Path, nil
-}
-
-func buildCoverFilter(title, subtitle, font string) string {
-	var filters []string
-	fontOpt := ""
-	if font != "" {
-		fontOpt = ":fontfile='" + escapeDrawtext(font) + "'"
-	}
-	if title != "" {
-		filters = append(filters, fmt.Sprintf("drawtext=text='%s'%s:fontcolor=white:fontsize=72:box=1:boxcolor=black@0.55:boxborderw=24:x=60:y=h*0.58", escapeDrawtext(title), fontOpt))
-	}
-	if subtitle != "" {
-		filters = append(filters, fmt.Sprintf("drawtext=text='%s'%s:fontcolor=white:fontsize=38:box=1:boxcolor=black@0.45:boxborderw=16:x=60:y=h*0.58+110", escapeDrawtext(subtitle), fontOpt))
-	}
-	return strings.Join(filters, ",")
-}
-
-func escapeDrawtext(value string) string {
-	value = strings.ReplaceAll(value, `\`, `/`)
-	value = strings.ReplaceAll(value, `'`, `\'`)
-	value = strings.ReplaceAll(value, `:`, `\:`)
-	value = strings.ReplaceAll(value, `%`, `\%`)
-	return value
 }
 
 func recordProjectArtifact(artifactType, path, step string) {
@@ -218,6 +207,99 @@ func recordProjectArtifact(artifactType, path, step string) {
 		return
 	}
 	_ = proj.AddArtifact(project.Artifact{Type: artifactType, Path: path, Step: step})
+}
+
+func renderCoverImage(imagePath, outputPath, title, subtitle, fontPath string) error {
+	input, err := os.Open(imagePath)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+	src, _, err := image.Decode(input)
+	if err != nil {
+		return err
+	}
+	bounds := src.Bounds()
+	canvas := image.NewRGBA(bounds)
+	imagedraw.Draw(canvas, bounds, src, bounds.Min, imagedraw.Src)
+
+	fontData, err := os.ReadFile(fontPath)
+	if err != nil {
+		return fmt.Errorf("read font: %w", err)
+	}
+	parsedFont, err := opentype.Parse(fontData)
+	if err != nil {
+		return fmt.Errorf("parse font: %w", err)
+	}
+	titleFace, err := opentype.NewFace(parsedFont, &opentype.FaceOptions{Size: fitFontSize(parsedFont, title, float64(bounds.Dx()-120), 72), DPI: 72, Hinting: font.HintingFull})
+	if err != nil {
+		return err
+	}
+	defer titleFace.Close()
+	subtitleFace, err := opentype.NewFace(parsedFont, &opentype.FaceOptions{Size: fitFontSize(parsedFont, subtitle, float64(bounds.Dx()-120), 38), DPI: 72, Hinting: font.HintingFull})
+	if err != nil {
+		return err
+	}
+	defer subtitleFace.Close()
+
+	y := bounds.Min.Y + int(float64(bounds.Dy())*0.58)
+	if title != "" {
+		y = drawTextBlock(canvas, title, titleFace, 60, y, color.RGBA{255, 255, 255, 255})
+	}
+	if subtitle != "" {
+		drawTextBlock(canvas, subtitle, subtitleFace, 60, y+28, color.RGBA{255, 255, 255, 255})
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return err
+	}
+	outputFile, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+	switch strings.ToLower(filepath.Ext(outputPath)) {
+	case ".png":
+		return png.Encode(outputFile, canvas)
+	default:
+		return jpeg.Encode(outputFile, canvas, &jpeg.Options{Quality: 92})
+	}
+}
+
+func fitFontSize(parsedFont *opentype.Font, text string, maxWidth, start float64) float64 {
+	if strings.TrimSpace(text) == "" {
+		return start
+	}
+	for size := start; size >= 24; size -= 2 {
+		face, err := opentype.NewFace(parsedFont, &opentype.FaceOptions{Size: size, DPI: 72, Hinting: font.HintingFull})
+		if err != nil {
+			return start
+		}
+		width := font.MeasureString(face, text).Round()
+		_ = face.Close()
+		if float64(width) <= maxWidth {
+			return size
+		}
+	}
+	return 24
+}
+
+func drawTextBlock(dst *image.RGBA, text string, face font.Face, x, baselineY int, fill color.Color) int {
+	metrics := face.Metrics()
+	height := (metrics.Ascent + metrics.Descent).Round()
+	width := font.MeasureString(face, text).Round()
+	paddingX := 24
+	paddingY := 16
+	rect := image.Rect(x-28, baselineY-metrics.Ascent.Round()-paddingY, x+width+paddingX, baselineY+metrics.Descent.Round()+paddingY)
+	imagedraw.Draw(dst, rect, &image.Uniform{color.RGBA{0, 0, 0, 150}}, image.Point{}, imagedraw.Over)
+	drawer := &font.Drawer{
+		Dst:  dst,
+		Src:  image.NewUniform(fill),
+		Face: face,
+		Dot:  fixed.P(x, baselineY),
+	}
+	drawer.DrawString(text)
+	return baselineY + height + paddingY
 }
 
 func writeSimpleResult(data map[string]any) {

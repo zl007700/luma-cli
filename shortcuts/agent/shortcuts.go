@@ -85,5 +85,16 @@ func Shortcuts() []common.Shortcut {
 			Examples:    []string{"luma-cli agent run material.match --input match_payload.json --output inserts.json"},
 			Skills:      []string{"luma-video-workflow"},
 		},
+		{
+			ID:          "pip.plan",
+			Service:     "agent",
+			Command:     "run pip.plan",
+			Description: "Build a worker-facing picture-in-picture insert payload from scenes and matched materials.",
+			Risk:        "write",
+			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
+			Outputs:     []string{"pip_plan", "worker_payload", "output_path"},
+			Examples:    []string{"luma-cli agent run pip.plan --input pip_payload.json --output pip_plan.json"},
+			Skills:      []string{"luma-video-workflow"},
+		},
 	}
 }

@@ -22,6 +22,7 @@ var agentAbilityPaths = map[string]string{
 	"storyboard.scene":   "/v1/agent/storyboard/scene",
 	"storyboard.shot":    "/v1/agent/storyboard/shot",
 	"material.match":     "/v1/agent/material/match",
+	"pip.plan":           "/v1/agent/pip/plan",
 }
 
 func cmdAgent(args []string) {

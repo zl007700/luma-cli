@@ -22,6 +22,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "douyin", Description: "Douyin helpers", Handler: cmdDouyin},
 		{Name: "enhance", Description: "Video enhancement", Handler: cmdEnhance},
 		{Name: "lipsync", Description: "Digital human lip sync", Handler: cmdLipSync},
+		{Name: "pip", Description: "Picture-in-picture rendering", Handler: cmdPIP},
 		{Name: "project", Description: "Project workspace commands", Handler: cmdProject},
 		{Name: "resource", Description: "Cloud-managed client resources", Handler: cmdResource},
 		{Name: "runtime", Description: "Local runtime installation", Handler: cmdRuntime},
