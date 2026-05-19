@@ -12,6 +12,7 @@ func printUsage() {
 	fmt.Println("  luma-cli help                    Show help")
 	fmt.Println("  luma-cli auth login <key>        Save card key")
 	fmt.Println("  luma-cli auth status             Show login status")
+	fmt.Println("  luma-cli agent run <ability>     Run backend-owned agent ability")
 	fmt.Println("  luma-cli asr <file>              Transcribe audio or video")
 	fmt.Println("  luma-cli asset upload <file>     Upload an asset")
 	fmt.Println("  luma-cli asset list [group]      List assets")

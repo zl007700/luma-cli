@@ -3,18 +3,17 @@ package subtitle
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
 // Segment represents a subtitle segment with timing and text.
 type Segment struct {
-	SegID          int     // segment index
-	Start          float64 // start time in seconds
-	End            float64 // end time in seconds
-	Text           string  // display text
-	HighlightWord  string  // keyword to highlight (LLM-assigned)
-	EffectType     string  // "blur_in", "bounce_in", "scale_pop", "rotate_pop", "wave_bounce", or ""
+	SegID         int     // segment index
+	Start         float64 // start time in seconds
+	End           float64 // end time in seconds
+	Text          string  // display text
+	HighlightWord string  // keyword to highlight (LLM-assigned)
+	EffectType    string  // "blur_in", "bounce_in", "scale_pop", "rotate_pop", "wave_bounce", or ""
 }
 
 // SentenceGroup groups segments that belong to the same spoken sentence.
@@ -27,53 +26,13 @@ type SentenceGroup struct {
 // SplitByLLM uses LLM to split raw text into subtitle segments respecting sentence boundaries.
 // Returns segments and sentence groupings. Falls back to punctuation split on error.
 func SplitByLLM(text string, maxCharsPerSeg int, llmClient *LLMClient, persona string) ([]Segment, []SentenceGroup, error) {
-	prompt := buildSplitPrompt(text, maxCharsPerSeg, persona)
-
-	response, err := llmClient.Chat(prompt)
-	if err != nil {
-		// fallback to punctuation
-		segs := splitByPunctuation(text, maxCharsPerSeg)
-		return segs, buildSentenceGroups(segs), nil
-	}
-
-	segments, sentenceGroups, err := parseSplitOutput(response, text, maxCharsPerSeg)
+	segments, sentenceGroups, err := llmClient.SplitSubtitle(text, maxCharsPerSeg, persona)
 	if err != nil {
 		segs := splitByPunctuation(text, maxCharsPerSeg)
 		return segs, buildSentenceGroups(segs), nil
 	}
 
 	return segments, sentenceGroups, nil
-}
-
-// buildSplitPrompt creates the LLM prompt for sentence-aware subtitle splitting.
-func buildSplitPrompt(text string, maxChars int, persona string) string {
-	personaHint := ""
-	if persona != "" {
-		personaHint = "\n\n人设要求：" + persona
-	}
-	return `你是字幕切分助手。
-
-任务：在不改动原文任何字的前提下，把文本切成适合竖屏短视频展示的字幕段，并同时标出句子边界。` + personaHint + `
-
-硬性规则：
-1. 只能复制原文并换行，禁止增删改任何字。
-2. 每个 seg 尽量不超过 ` + strconv.Itoa(maxChars) + ` 个字。
-3. 同一句话如果过长，可以拆成多个连续 seg。
-4. 严禁把前一句尾巴和后一句开头放进同一个 seg。
-5. 不同句子之间用空行分隔，也就是两个换行 \n\n。
-6. 同一句中的多个 seg 之间只用单个换行 \n 分隔。
-7. 一个句子不要包含超过3个seg, 句子不要太长。
-8. 输出只能是纯文本，不要 JSON，不要编号，不要解释。
-
-输出示例：
-第一句的第一段
-第一句的第二段
-
-第二句的第一段
-第二句的第二段
-
-原文：
-` + text
 }
 
 // parseSplitOutput parses the LLM's plain-text split output into segments and sentence groups.

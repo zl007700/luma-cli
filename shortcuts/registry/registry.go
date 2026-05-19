@@ -3,6 +3,7 @@ package registry
 import (
 	"sort"
 
+	agentshortcuts "github.com/luma-cli/lumer-cli/shortcuts/agent"
 	"github.com/luma-cli/lumer-cli/shortcuts/asset"
 	"github.com/luma-cli/lumer-cli/shortcuts/common"
 	"github.com/luma-cli/lumer-cli/shortcuts/media"
@@ -13,6 +14,7 @@ import (
 // List returns every registered atomic shortcut.
 func List() []common.Shortcut {
 	var all []common.Shortcut
+	all = append(all, agentshortcuts.Shortcuts()...)
 	all = append(all, media.Shortcuts()...)
 	all = append(all, asset.Shortcuts()...)
 	all = append(all, runtimeshortcuts.Shortcuts()...)

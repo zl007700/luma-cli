@@ -61,6 +61,13 @@ type ScriptRewriteResponse struct {
 	Usage     map[string]any `json:"usage"`
 }
 
+type AgentAbilityResponse struct {
+	Ability   string         `json:"ability"`
+	RequestID string         `json:"request_id"`
+	Result    map[string]any `json:"result"`
+	Usage     map[string]any `json:"usage"`
+}
+
 func apiRequest(method string, path string, body any, cardKey string) (map[string]any, error) {
 	url := BaseURL() + path
 
@@ -454,6 +461,24 @@ func RewriteScript(text, length, model, cardKey string) (*ScriptRewriteResponse,
 	item, err := mapToStruct[ScriptRewriteResponse](result)
 	if err != nil {
 		return nil, fmt.Errorf("parse script rewrite response failed: %w", err)
+	}
+	return &item, nil
+}
+
+func RunAgentAbility(path string, input map[string]any, options map[string]any, cardKey string) (*AgentAbilityResponse, error) {
+	payload := map[string]any{
+		"input": input,
+	}
+	if options != nil {
+		payload["options"] = options
+	}
+	result, err := apiRequest("POST", path, payload, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	item, err := mapToStruct[AgentAbilityResponse](result)
+	if err != nil {
+		return nil, fmt.Errorf("parse agent ability response failed: %w", err)
 	}
 	return &item, nil
 }
