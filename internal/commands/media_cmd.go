@@ -69,11 +69,12 @@ func cmdASR(args []string) {
 func cmdTTS(args []string) {
 	parsed := cmdutil.Parse(args)
 	if len(parsed.Positionals) < 1 {
-		fmt.Println("usage: luma-cli tts <text> [--voice <name>] [--speech-rate <rate>]")
+		fmt.Println("usage: luma-cli tts <text> [--voice <name>] [--speech-rate <rate>] [--output <path>]")
 		fmt.Println("")
 		fmt.Println("  Options:")
 		fmt.Printf("    --voice <name>       Voice name. Default: %s\n", defaultVoiceName)
 		fmt.Println("    --speech-rate <rate> Speech rate multiplier (default: 1.1)")
+		fmt.Println("    --output <path>      Output wav path (default: ./tts_output.wav)")
 		fmt.Println("")
 		fmt.Println("  List voices: luma-cli asset list voice")
 		return
@@ -100,14 +101,22 @@ func cmdTTS(args []string) {
 	}
 
 	proj := resolveProjectByName("")
-	outputPath := "tts_output.wav"
-	if proj != nil {
+	outputPath := parsed.String("output", "")
+	if outputPath == "" && proj != nil {
 		outputPath = filepath.Join(proj.SubDir(project.DirAudio), "tts_output.wav")
+	} else if outputPath == "" {
+		outputPath = "tts_output.wav"
+	}
+	outputPath, err = absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: invalid output path: %v\n", err)
+		return
 	}
 
 	fmt.Println("Submitting TTS task...")
 	fmt.Printf("  Voice: %s\n", voiceName)
 	fmt.Printf("  Text: %s\n", text)
+	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunTTS(atom.TTSOptions{
 		Text:       text,
 		VoiceKey:   voiceKey,
@@ -121,12 +130,24 @@ func cmdTTS(args []string) {
 	}
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 
+	localFileWritten := false
+	if outputPath != "" {
+		if info, err := os.Stat(outputPath); err == nil && !info.IsDir() {
+			localFileWritten = true
+		}
+	}
+
 	if proj != nil && result.AudioObjectKey != "" {
 		proj.LatestTTSKey = result.AudioObjectKey
 		proj.Save()
 	}
 
-	fmt.Printf("\nDone! Output: %s\n", outputPath)
+	if localFileWritten {
+		fmt.Printf("\nDone! Saved to: %s\n", outputPath)
+	} else {
+		fmt.Println("\nDone! Cloud task completed, but no local file was downloaded.")
+		fmt.Println("The backend did not return a downloadable URL for this task.")
+	}
 	recordStep(proj, "tts", text, outputPath)
 }
 
@@ -192,9 +213,15 @@ func cmdLipSync(args []string) {
 			outputPath = "lipsync_output.mp4"
 		}
 	}
+	outputPath, err = absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: invalid output path: %v\n", err)
+		return
+	}
 
 	fmt.Println("Submitting LipSync task...")
 	fmt.Printf("  Avatar: %s\n", avatarName)
+	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunLipSync(atom.LipSyncOptions{
 		VideoKey:   videoKey,
 		AudioKey:   audioKey,
@@ -207,7 +234,7 @@ func cmdLipSync(args []string) {
 	}
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 
-	fmt.Printf("\nDone! Output: %s\n", outputPath)
+	fmt.Printf("\nDone! Saved to: %s\n", outputPath)
 	recordStep(proj, "lipsync", avatarName, outputPath)
 }
 
@@ -246,9 +273,15 @@ func cmdEnhance(args []string) {
 			outputPath = strings.TrimSuffix(videoPath, ext) + "_enhanced" + ext
 		}
 	}
+	outputPath, err = absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: invalid output path: %v\n", err)
+		return
+	}
 
 	fmt.Println("Uploading video...")
 	fmt.Println("Submitting Enhance task...")
+	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunEnhance(atom.EnhanceOptions{
 		VideoPath:  videoPath,
 		Scale:      scale,
@@ -262,6 +295,6 @@ func cmdEnhance(args []string) {
 	fmt.Printf("  Uploaded: %s\n", result.ObjectKey)
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 
-	fmt.Printf("\nDone! Output: %s\n", outputPath)
+	fmt.Printf("\nDone! Saved to: %s\n", outputPath)
 	recordStep(proj, "enhance", videoPath, outputPath)
 }

@@ -18,9 +18,14 @@ func cmdDownload(args []string) {
 	if parsed.Pos(1) != "" {
 		output = parsed.Pos(1)
 	}
-	if err := atom.DownloadFile(url, output); err != nil {
+	absOutput, err := absoluteOutputPath(output)
+	if err != nil {
+		fmt.Printf("Error: invalid output path: %v\n", err)
+		return
+	}
+	if err := atom.DownloadFile(url, absOutput); err != nil {
 		fmt.Printf("Error: download failed: %v\n", err)
 		return
 	}
-	fmt.Printf("Downloaded: %s\n", output)
+	fmt.Printf("Downloaded: %s\n", absOutput)
 }

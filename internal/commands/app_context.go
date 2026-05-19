@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"path/filepath"
 	"time"
 
 	appconfig "github.com/luma-cli/lumer-cli/internal/config"
@@ -28,4 +29,14 @@ func recordStep(proj *project.Project, command, input, output string) {
 		Input:     input,
 		Output:    output,
 	})
+}
+
+func absoluteOutputPath(outputPath string) (string, error) {
+	if outputPath == "" {
+		return "", nil
+	}
+	if filepath.IsAbs(outputPath) {
+		return filepath.Clean(outputPath), nil
+	}
+	return filepath.Abs(outputPath)
 }
