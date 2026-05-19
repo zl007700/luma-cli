@@ -65,3 +65,6 @@ Do not assume one CLI command should hide the whole product workflow.
 - Use `project create` and `project use` for multi-step workflows.
 - Use `task status` when a long-running task times out or the agent resumes later.
 - Keep final outputs in the project `output/` directory when a project is active.
+- Advanced backend parameters are available, but should be explicit user choices:
+  - `luma-cli tts ... --trim-long-silence`
+  - `luma-cli lipsync ... --random-start --guidance-scale 1.0 --num-inference-steps 15 --no-superres --superres-scale 2 --multi-shot-json payload.json`

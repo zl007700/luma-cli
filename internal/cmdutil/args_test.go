@@ -26,7 +26,7 @@ func TestParsePositionalsAndFlags(t *testing.T) {
 }
 
 func TestTypedFlags(t *testing.T) {
-	args := Parse([]string{"--scale", "4", "--speech-rate", "1.25"})
+	args := Parse([]string{"--scale", "4", "--speech-rate", "1.25", "--random-start", "--enabled=false"})
 
 	scale, err := args.Int("scale", 2)
 	if err != nil {
@@ -43,11 +43,32 @@ func TestTypedFlags(t *testing.T) {
 	if rate != 1.25 {
 		t.Fatalf("expected rate 1.25, got %f", rate)
 	}
+
+	randomStart, err := args.Bool("random-start", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !randomStart {
+		t.Fatal("expected random-start true")
+	}
+
+	enabled, err := args.Bool("enabled", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if enabled {
+		t.Fatal("expected enabled false")
+	}
 }
 
 func TestTypedFlagErrors(t *testing.T) {
 	args := Parse([]string{"--scale", "large"})
 	if _, err := args.Int("scale", 2); err == nil {
 		t.Fatal("expected integer parse error")
+	}
+
+	args = Parse([]string{"--random-start", "maybe"})
+	if _, err := args.Bool("random-start", false); err == nil {
+		t.Fatal("expected boolean parse error")
 	}
 }

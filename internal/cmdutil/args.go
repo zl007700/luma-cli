@@ -80,3 +80,21 @@ func (a Args) Float(name string, fallback float64) (float64, error) {
 	}
 	return n, nil
 }
+
+func (a Args) Bool(name string, fallback bool) (bool, error) {
+	value, ok := a.Flags[name]
+	if !ok {
+		return fallback, nil
+	}
+	if value == "" {
+		return true, nil
+	}
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "y", "on":
+		return true, nil
+	case "0", "false", "no", "n", "off":
+		return false, nil
+	default:
+		return fallback, fmt.Errorf("--%s must be a boolean", name)
+	}
+}

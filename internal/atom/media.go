@@ -83,12 +83,13 @@ func RunASR(opts ASROptions) (*ASRResult, error) {
 
 // TTSOptions describes a TTS atomic capability invocation.
 type TTSOptions struct {
-	Text       string
-	VoiceKey   string
-	SpeechRate float64
-	CardKey    string
-	OutputPath string
-	TimeoutSec int
+	Text            string
+	VoiceKey        string
+	SpeechRate      float64
+	TrimLongSilence bool
+	CardKey         string
+	OutputPath      string
+	TimeoutSec      int
 }
 
 // TTSResult is the structured TTS atomic capability result.
@@ -111,9 +112,10 @@ func RunTTS(opts TTSOptions) (*TTSResult, error) {
 	}
 
 	taskResult, err := cloud.SubmitTask("tts", "tts_output", map[string]any{
-		"text":             opts.Text,
-		"voice_object_key": opts.VoiceKey,
-		"speech_rate":      opts.SpeechRate,
+		"text":              opts.Text,
+		"voice_object_key":  opts.VoiceKey,
+		"speech_rate":       opts.SpeechRate,
+		"trim_long_silence": opts.TrimLongSilence,
 	}, opts.CardKey)
 	if err != nil {
 		return nil, fmt.Errorf("submit failed: %w", err)
@@ -230,11 +232,18 @@ func RunEnhance(opts EnhanceOptions) (*EnhanceResult, error) {
 
 // LipSyncOptions describes a lip-sync atomic capability invocation.
 type LipSyncOptions struct {
-	VideoKey   string
-	AudioKey   string
-	CardKey    string
-	OutputPath string
-	TimeoutSec int
+	VideoKey          string
+	AudioKey          string
+	GuidanceScale     float64
+	NumInferenceSteps int
+	EnableSuperres    bool
+	DisableSuperres   bool
+	SuperresScale     int
+	RandomStart       bool
+	MultiShot         map[string]any
+	CardKey           string
+	OutputPath        string
+	TimeoutSec        int
 }
 
 // LipSyncResult is the structured lip-sync result.
@@ -250,16 +259,36 @@ func RunLipSync(opts LipSyncOptions) (*LipSyncResult, error) {
 	if opts.TimeoutSec <= 0 {
 		opts.TimeoutSec = 600
 	}
+	if opts.GuidanceScale == 0 {
+		opts.GuidanceScale = 1.0
+	}
+	if opts.NumInferenceSteps <= 0 {
+		opts.NumInferenceSteps = 15
+	}
+	if opts.SuperresScale <= 0 {
+		opts.SuperresScale = 2
+	}
+	enableSuperres := true
+	if opts.DisableSuperres {
+		enableSuperres = false
+	} else if opts.EnableSuperres {
+		enableSuperres = true
+	}
+	multiShot := opts.MultiShot
+	if multiShot == nil {
+		multiShot = map[string]any{"resource_list": []any{}}
+	}
 
 	taskResult, err := cloud.SubmitTask("lipsync", "lipsync_output", map[string]any{
 		"video_object_key":    opts.VideoKey,
 		"audio_object_key":    opts.AudioKey,
-		"guidance_scale":      1.0,
-		"num_inference_steps": 15,
-		"enable_superres":     true,
-		"superres_scale":      2,
+		"guidance_scale":      opts.GuidanceScale,
+		"num_inference_steps": opts.NumInferenceSteps,
+		"enable_superres":     enableSuperres,
+		"superres_scale":      opts.SuperresScale,
+		"random_start":        opts.RandomStart,
 		"start_mode":          "from_start",
-		"multi_shot":          map[string]any{"resource_list": []any{}},
+		"multi_shot":          multiShot,
 	}, opts.CardKey)
 	if err != nil {
 		return nil, fmt.Errorf("submit failed: %w", err)

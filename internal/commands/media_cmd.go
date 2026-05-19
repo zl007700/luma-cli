@@ -69,11 +69,12 @@ func cmdASR(args []string) {
 func cmdTTS(args []string) {
 	parsed := cmdutil.Parse(args)
 	if len(parsed.Positionals) < 1 {
-		fmt.Println("usage: luma-cli tts <text> [--voice <name>] [--speech-rate <rate>] [--output <path>]")
+		fmt.Println("usage: luma-cli tts <text> [--voice <name>] [--speech-rate <rate>] [--trim-long-silence] [--output <path>]")
 		fmt.Println("")
 		fmt.Println("  Options:")
 		fmt.Printf("    --voice <name>       Voice name. Default: %s\n", defaultVoiceName)
 		fmt.Println("    --speech-rate <rate> Speech rate multiplier (default: 1.1)")
+		fmt.Println("    --trim-long-silence  Ask the backend to trim long pauses")
 		fmt.Println("    --output <path>      Output wav path (default: ./tts_output.wav)")
 		fmt.Println("")
 		fmt.Println("  List voices: luma-cli asset list voice")
@@ -83,6 +84,11 @@ func cmdTTS(args []string) {
 	text := parsed.Pos(0)
 	voiceName := parsed.String("voice", defaultVoiceName)
 	speechRate, err := parsed.Float("speech-rate", 1.1)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	trimLongSilence, err := parsed.Bool("trim-long-silence", false)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -118,11 +124,12 @@ func cmdTTS(args []string) {
 	fmt.Printf("  Text: %s\n", text)
 	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunTTS(atom.TTSOptions{
-		Text:       text,
-		VoiceKey:   voiceKey,
-		SpeechRate: speechRate,
-		CardKey:    cfg.CardKey,
-		OutputPath: outputPath,
+		Text:            text,
+		VoiceKey:        voiceKey,
+		SpeechRate:      speechRate,
+		TrimLongSilence: trimLongSilence,
+		CardKey:         cfg.CardKey,
+		OutputPath:      outputPath,
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -155,9 +162,15 @@ func cmdLipSync(args []string) {
 	fmt.Println("usage: luma-cli lipsync --avatar <name> [--audio <file>] [--output <path>]")
 	fmt.Println("")
 	fmt.Println("  Options:")
-	fmt.Println("    --avatar <name>  Digital avatar name")
-	fmt.Println("    --audio <file>   Audio file path. Default: use latest TTS output from project")
-	fmt.Println("    --output <path>  Output video path")
+	fmt.Println("    --avatar <name>             Digital avatar name")
+	fmt.Println("    --audio <file>              Audio file path. Default: use latest TTS output from project")
+	fmt.Println("    --output <path>             Output video path")
+	fmt.Println("    --random-start              Start the avatar video from a random position")
+	fmt.Println("    --guidance-scale <number>   Lip-sync guidance scale (default: 1.0)")
+	fmt.Println("    --num-inference-steps <n>   Inference steps (default: 15)")
+	fmt.Println("    --no-superres               Disable super-resolution")
+	fmt.Println("    --superres-scale <n>        Super-resolution scale (default: 2)")
+	fmt.Println("    --multi-shot-json <file>    JSON payload for backend multi_shot")
 	fmt.Println("")
 	fmt.Println("  List avatars: luma-cli asset list roles")
 
@@ -165,6 +178,31 @@ func cmdLipSync(args []string) {
 	avatarName := parsed.String("avatar", "")
 	audioPath := parsed.String("audio", "")
 	outputPath := parsed.String("output", "")
+	randomStart, err := parsed.Bool("random-start", false)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	guidanceScale, err := parsed.Float("guidance-scale", 1.0)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	numInferenceSteps, err := parsed.Int("num-inference-steps", 15)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	superresScale, err := parsed.Int("superres-scale", 2)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	multiShot, err := loadJSONMap(parsed.String("multi-shot-json", ""))
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 
 	if avatarName == "" {
 		fmt.Println("Error: --avatar is required. Use 'luma-cli asset list roles' to see available avatars.")
@@ -197,6 +235,7 @@ func cmdLipSync(args []string) {
 			fmt.Printf("Error: audio upload failed: %v\n", err)
 			return
 		}
+		audioKey = atom.NormalizeResourceKey(audioKey, cfg.CardKey)
 		fmt.Printf("  Uploaded: %s\n", audioKey)
 	} else if proj != nil && proj.LatestTTSKey != "" {
 		audioKey = proj.LatestTTSKey
@@ -223,10 +262,16 @@ func cmdLipSync(args []string) {
 	fmt.Printf("  Avatar: %s\n", avatarName)
 	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunLipSync(atom.LipSyncOptions{
-		VideoKey:   videoKey,
-		AudioKey:   audioKey,
-		CardKey:    cfg.CardKey,
-		OutputPath: outputPath,
+		VideoKey:          videoKey,
+		AudioKey:          audioKey,
+		GuidanceScale:     guidanceScale,
+		NumInferenceSteps: numInferenceSteps,
+		DisableSuperres:   parsed.Has("no-superres"),
+		SuperresScale:     superresScale,
+		RandomStart:       randomStart,
+		MultiShot:         multiShot,
+		CardKey:           cfg.CardKey,
+		OutputPath:        outputPath,
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -297,4 +342,19 @@ func cmdEnhance(args []string) {
 
 	fmt.Printf("\nDone! Saved to: %s\n", outputPath)
 	recordStep(proj, "enhance", videoPath, outputPath)
+}
+
+func loadJSONMap(filePath string) (map[string]any, error) {
+	if filePath == "" {
+		return nil, nil
+	}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("read --multi-shot-json: %w", err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("parse --multi-shot-json: %w", err)
+	}
+	return payload, nil
 }

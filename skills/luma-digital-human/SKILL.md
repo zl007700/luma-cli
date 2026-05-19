@@ -57,3 +57,6 @@ luma-cli asset upload avatar.mp4 --group roles
 - Use the latest project TTS output for lip-sync unless the user explicitly provides `--audio`.
 - Do not enhance every draft; enhance only the selected final render.
 - Keep user-facing script revisions outside the CLI. The CLI should receive the final text for each generation attempt.
+- Use advanced backend parameters only when the user asks for them:
+  - TTS: `--trim-long-silence`
+  - Lip-sync: `--random-start`, `--guidance-scale`, `--num-inference-steps`, `--no-superres`, `--superres-scale`, `--multi-shot-json`
