@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -108,6 +109,7 @@ func readAgentPayload(path string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 	var payload map[string]any
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, err

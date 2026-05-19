@@ -19,9 +19,6 @@ func NewLLMClient(apiKey, baseURL, model string) *LLMClient {
 	if baseURL == "" {
 		baseURL = cloud.BaseURL()
 	}
-	if model == "" {
-		model = "deepseek-ai/DeepSeek-V3.2"
-	}
 	return &LLMClient{BaseURL: baseURL, APIKey: apiKey, Model: model}
 }
 
