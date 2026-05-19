@@ -385,6 +385,13 @@ func AssetList(groupName, cardKey string) ([]any, error) {
 	return items, nil
 }
 
+func UnderstandResource(groupName, objectName, cardKey string) (map[string]any, error) {
+	return apiRequest("POST", "/v1/resources/understand", map[string]any{
+		"group_name":  groupName,
+		"object_name": objectName,
+	}, cardKey)
+}
+
 func ResolveRuntime(name, osName, arch, version, cardKey string) (*RuntimeResolve, error) {
 	payload := map[string]any{
 		"name":    name,

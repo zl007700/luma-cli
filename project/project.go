@@ -12,12 +12,13 @@ import (
 
 // Project represents a video project with organized directory structure.
 type Project struct {
-	Name         string    `json:"name"`
-	Path         string    `json:"path"`
-	CreatedAt    time.Time `json:"created_at"`
-	Source       string    `json:"source,omitempty"`
-	LatestTTSKey string    `json:"latest_tts_key,omitempty"` // cloud object key for most recent TTS output
-	History      []Step    `json:"history,omitempty"`
+	Name         string     `json:"name"`
+	Path         string     `json:"path"`
+	CreatedAt    time.Time  `json:"created_at"`
+	Source       string     `json:"source,omitempty"`
+	LatestTTSKey string     `json:"latest_tts_key,omitempty"` // cloud object key for most recent TTS output
+	History      []Step     `json:"history,omitempty"`
+	Artifacts    []Artifact `json:"artifacts,omitempty"`
 }
 
 // Step records a processing step executed in the project.
@@ -26,6 +27,15 @@ type Step struct {
 	Timestamp time.Time `json:"timestamp"`
 	Input     string    `json:"input,omitempty"`
 	Output    string    `json:"output,omitempty"`
+}
+
+type Artifact struct {
+	ID        string    `json:"id"`
+	Type      string    `json:"type"`
+	Path      string    `json:"path"`
+	Step      string    `json:"step,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	Meta      any       `json:"meta,omitempty"`
 }
 
 // Subdirectory names within a project.
@@ -182,6 +192,17 @@ func (p *Project) Save() error {
 // AddStep appends a processing step to the project history.
 func (p *Project) AddStep(step Step) error {
 	p.History = append(p.History, step)
+	return p.Save()
+}
+
+func (p *Project) AddArtifact(artifact Artifact) error {
+	if artifact.ID == "" {
+		artifact.ID = fmt.Sprintf("%s_%d", artifact.Type, time.Now().Unix())
+	}
+	if artifact.CreatedAt.IsZero() {
+		artifact.CreatedAt = time.Now()
+	}
+	p.Artifacts = append(p.Artifacts, artifact)
 	return p.Save()
 }
 

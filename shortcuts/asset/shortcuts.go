@@ -33,6 +33,21 @@ func Shortcuts() []common.Shortcut {
 			Skills:   []string{"luma-assets"},
 		},
 		{
+			ID:          "material.understand",
+			Service:     "asset",
+			Command:     "understand",
+			Description: "Run cloud VLM understanding for an uploaded material.",
+			Risk:        "write",
+			Flags: []common.Flag{
+				{Name: "object_name", Description: "Object name or relative object key.", Required: true},
+				{Name: "group", Description: "Asset group name.", Default: "default"},
+				{Name: "output", Description: "Output metadata JSON path."},
+			},
+			Outputs:  []string{"meta", "meta_key", "output_path"},
+			Examples: []string{"luma-cli asset understand demo.mp4 --group vlm_demo --output material_meta.json"},
+			Skills:   []string{"luma-assets", "luma-video-workflow"},
+		},
+		{
 			ID:          "task.status",
 			Service:     "task",
 			Command:     "status",

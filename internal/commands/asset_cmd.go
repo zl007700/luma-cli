@@ -1,8 +1,10 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/luma-cli/lumer-cli/cloud"
@@ -116,6 +118,49 @@ func cmdAsset(args []string) {
 			fmt.Printf("%-8s %s\n", item.Type, item.Name)
 		}
 
+	case "understand":
+		parsed := cmdutil.Parse(args[1:])
+		group := parsed.String("group", "default")
+		objectName := parsed.String("object", "")
+		if objectName == "" {
+			objectName = parsed.Pos(0)
+		}
+		if objectName == "" {
+			fmt.Println("usage: luma-cli asset understand <object_name> [--group <name>] [--output meta.json]")
+			return
+		}
+		result, err := cloud.UnderstandResource(group, objectName, cfg.CardKey)
+		if err != nil {
+			fmt.Printf("Error: understand failed: %v\n", err)
+			return
+		}
+		outputPath := parsed.String("output", "")
+		if outputPath != "" {
+			abs, err := absoluteOutputPath(outputPath)
+			if err != nil {
+				fmt.Printf("Error: bad output path: %v\n", err)
+				return
+			}
+			if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
+				fmt.Printf("Error: create output dir failed: %v\n", err)
+				return
+			}
+			data, _ := json.MarshalIndent(result, "", "  ")
+			if err := os.WriteFile(abs, data, 0644); err != nil {
+				fmt.Printf("Error: write output failed: %v\n", err)
+				return
+			}
+			result["output_path"] = abs
+		}
+		if runtimeOpts.JSON {
+			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: result})
+			return
+		}
+		fmt.Println("Analyzed resource.")
+		if outputPath != "" {
+			fmt.Printf("Saved to: %s\n", result["output_path"])
+		}
+
 	default:
 		fmt.Printf("unknown asset subcommand: %s\n", args[0])
 	}
@@ -124,4 +169,5 @@ func cmdAsset(args []string) {
 func printAssetUsage() {
 	fmt.Println("usage: luma-cli asset upload <file> [--group <name>] [--verbose]")
 	fmt.Println("       luma-cli asset list [group] [--verbose]")
+	fmt.Println("       luma-cli asset understand <object_name> [--group <name>] [--output meta.json]")
 }

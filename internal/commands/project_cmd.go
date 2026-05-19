@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,6 +28,10 @@ func cmdProject(args []string) {
 		cmdProjectInfo(args[1:])
 	case "clean":
 		cmdProjectClean(args[1:])
+	case "manifest":
+		cmdProjectManifest(args[1:])
+	case "artifact":
+		cmdProjectArtifact(args[1:])
 	default:
 		fmt.Printf("unknown project subcommand: %s\n\n", args[0])
 		printProjectUsage()
@@ -42,12 +47,76 @@ func printProjectUsage() {
 	fmt.Println("  use <name>                     Switch active project")
 	fmt.Println("  info                           Show active project details")
 	fmt.Println("  clean                          Clean project temp files")
+	fmt.Println("  manifest                       Print project manifest JSON")
+	fmt.Println("  artifact add <path> --type <t> Add an artifact to project manifest")
 	fmt.Println("")
 	fmt.Println("Examples:")
 	fmt.Println("  luma-cli project create my-video")
 	fmt.Println("  luma-cli project create my-video --dir ~/videos")
 	fmt.Println("  luma-cli project list")
 	fmt.Println("  luma-cli project use my-video")
+}
+
+func cmdProjectManifest(args []string) {
+	p, err := resolveProject(args)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	data, _ := json.MarshalIndent(p, "", "  ")
+	fmt.Println(string(data))
+}
+
+func cmdProjectArtifact(args []string) {
+	if len(args) < 1 || args[0] != "add" {
+		fmt.Println("usage: luma-cli project artifact add <path> --type <type> [--id <id>] [--step <step>]")
+		return
+	}
+	parsed := parseProjectKV(args[1:])
+	path := parsed["path"]
+	if path == "" {
+		path = parsed["_pos0"]
+	}
+	artifactType := parsed["type"]
+	if path == "" || artifactType == "" {
+		fmt.Println("usage: luma-cli project artifact add <path> --type <type> [--id <id>] [--step <step>]")
+		return
+	}
+	p, err := resolveProject(args[1:])
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		fmt.Printf("Error: bad artifact path: %v\n", err)
+		return
+	}
+	if err := p.AddArtifact(project.Artifact{
+		ID:   parsed["id"],
+		Type: artifactType,
+		Path: abs,
+		Step: parsed["step"],
+	}); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	fmt.Printf("Artifact added: %s\n", abs)
+}
+
+func parseProjectKV(args []string) map[string]string {
+	out := map[string]string{}
+	for i := 0; i < len(args); i++ {
+		if strings.HasPrefix(args[i], "--") && i+1 < len(args) {
+			out[strings.TrimPrefix(args[i], "--")] = args[i+1]
+			i++
+			continue
+		}
+		if out["_pos0"] == "" {
+			out["_pos0"] = args[i]
+		}
+	}
+	return out
 }
 
 func cmdProjectCreate(args []string) {
