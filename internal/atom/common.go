@@ -1,6 +1,7 @@
 package atom
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,6 +9,22 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+func TaskFailure(status map[string]any) string {
+	if s, _ := status["status"].(string); strings.ToLower(strings.TrimSpace(s)) != "failed" {
+		return ""
+	}
+	for _, key := range []string{"error_message", "message", "error"} {
+		if msg, ok := status[key].(string); ok && strings.TrimSpace(msg) != "" {
+			return strings.TrimSpace(msg)
+		}
+	}
+	data, _ := json.Marshal(status)
+	if len(data) > 0 {
+		return string(data)
+	}
+	return "task failed"
+}
 
 // ResultURL extracts a downloadable result URL from a completed task status.
 func ResultURL(status map[string]any) string {

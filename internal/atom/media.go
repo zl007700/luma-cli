@@ -56,6 +56,9 @@ func RunASR(opts ASROptions) (*ASRResult, error) {
 	if stillRunning {
 		return nil, fmt.Errorf("ASR task timed out")
 	}
+	if msg := TaskFailure(status); msg != "" {
+		return nil, fmt.Errorf("ASR task failed: %s", msg)
+	}
 
 	var text string
 	var segments []any
@@ -124,6 +127,9 @@ func RunTTS(opts TTSOptions) (*TTSResult, error) {
 	status, stillRunning := cloud.WaitTaskComplete(taskID, opts.CardKey, opts.TimeoutSec)
 	if stillRunning {
 		return nil, fmt.Errorf("TTS task timed out")
+	}
+	if msg := TaskFailure(status); msg != "" {
+		return nil, fmt.Errorf("TTS task failed: %s", msg)
 	}
 
 	resultObjKey := ResultObjectKey(status)
@@ -197,6 +203,9 @@ func RunEnhance(opts EnhanceOptions) (*EnhanceResult, error) {
 	if stillRunning {
 		return nil, fmt.Errorf("Enhance task timed out")
 	}
+	if msg := TaskFailure(status); msg != "" {
+		return nil, fmt.Errorf("Enhance task failed: %s", msg)
+	}
 
 	outputURL := ResultURL(status)
 	if outputURL == "" {
@@ -264,6 +273,9 @@ func RunLipSync(opts LipSyncOptions) (*LipSyncResult, error) {
 	status, stillRunning := cloud.WaitTaskComplete(taskID, opts.CardKey, opts.TimeoutSec)
 	if stillRunning {
 		return nil, fmt.Errorf("LipSync task timed out")
+	}
+	if msg := TaskFailure(status); msg != "" {
+		return nil, fmt.Errorf("LipSync task failed: %s", msg)
 	}
 
 	outputURL := ResultURL(status)

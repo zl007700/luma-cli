@@ -11,7 +11,7 @@ import (
 // ResolveAssetKey resolves a friendly asset name to a cloud object key.
 func ResolveAssetKey(group, name, cardKey string) (string, error) {
 	if strings.Contains(name, "/") {
-		return name, nil
+		return NormalizeResourceKey(name, cardKey), nil
 	}
 
 	items, err := cloud.AssetList(group, cardKey)
@@ -24,8 +24,9 @@ func ResolveAssetKey(group, name, cardKey string) (string, error) {
 			objKey, _ := m["object_key"].(string)
 			filename, _ := m["filename"].(string)
 			friendly := AssetFriendlyName(objKey)
-			if friendly == name || filename == name || objKey == name {
-				return objKey, nil
+			normalized := ResourceKeyFromMap(m, cardKey)
+			if friendly == name || filename == name || objKey == name || normalized == name {
+				return normalized, nil
 			}
 		}
 	}
@@ -41,13 +42,33 @@ func ResolveAssetKey(group, name, cardKey string) (string, error) {
 			objKey, _ := m["object_key"].(string)
 			filename, _ := m["filename"].(string)
 			friendly := AssetFriendlyName(objKey)
-			if friendly == name || filename == name || objKey == name {
-				return "common/" + objKey, nil
+			normalized := ResourceKeyFromMap(m, cardKey)
+			if friendly == name || filename == name || objKey == name || normalized == name {
+				return normalized, nil
 			}
 		}
 	}
 
 	return "", fmt.Errorf("asset %q not found in group %q", name, group)
+}
+
+func ResourceKeyFromMap(item map[string]any, cardKey string) string {
+	objKey, _ := item["object_key"].(string)
+	normalized := NormalizeResourceKey(objKey, cardKey)
+	if userID, _ := item["user_id"].(string); userID == "common" && !strings.HasPrefix(normalized, "common/") {
+		normalized = "common/" + normalized
+	}
+	return normalized
+}
+
+// NormalizeResourceKey converts storage object keys to the relative keys accepted by task APIs.
+func NormalizeResourceKey(objKey, cardKey string) string {
+	key := strings.TrimSpace(strings.ReplaceAll(objKey, "\\", "/"))
+	if key == "" {
+		return ""
+	}
+	prefix := "prod/resource/" + strings.TrimSpace(cardKey) + "/"
+	return strings.TrimPrefix(key, prefix)
 }
 
 // AssetFriendlyName extracts a human-readable name from an object key.

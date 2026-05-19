@@ -26,10 +26,47 @@ func TestResultObjectKey(t *testing.T) {
 	}
 }
 
+func TestTaskFailure(t *testing.T) {
+	status := map[string]any{
+		"status":        "failed",
+		"error_message": "missing source object",
+	}
+	if got := TaskFailure(status); got != "missing source object" {
+		t.Fatalf("expected task failure message, got %q", got)
+	}
+
+	status["status"] = "completed"
+	if got := TaskFailure(status); got != "" {
+		t.Fatalf("expected no failure message, got %q", got)
+	}
+}
+
 func TestStripResourcePrefix(t *testing.T) {
 	got := StripResourcePrefix("prod/resource/user-a/audio/out.wav", "user-a")
 	if got != "audio/out.wav" {
 		t.Fatalf("expected stripped key, got %q", got)
+	}
+}
+
+func TestNormalizeResourceKey(t *testing.T) {
+	got := NormalizeResourceKey("prod/resource/user-a/voice/name_original.wav", "user-a")
+	if got != "voice/name_original.wav" {
+		t.Fatalf("expected relative key, got %q", got)
+	}
+
+	got = NormalizeResourceKey("common/voice/name_original.wav", "user-a")
+	if got != "common/voice/name_original.wav" {
+		t.Fatalf("expected common key unchanged, got %q", got)
+	}
+}
+
+func TestResourceKeyFromMapPrefixesCommonAssets(t *testing.T) {
+	got := ResourceKeyFromMap(map[string]any{
+		"user_id":    "common",
+		"object_key": "voice/name_original.wav",
+	}, "user-a")
+	if got != "common/voice/name_original.wav" {
+		t.Fatalf("expected common resource key, got %q", got)
 	}
 }
 

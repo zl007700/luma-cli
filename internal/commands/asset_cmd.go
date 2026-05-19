@@ -86,7 +86,7 @@ func cmdAsset(args []string) {
 				continue
 			}
 			rtype, _ := m["resource_type"].(string)
-			key, _ := m["object_key"].(string)
+			key := atom.ResourceKeyFromMap(m, cfg.CardKey)
 			view := assetView{
 				Type:      rtype,
 				Name:      atom.AssetFriendlyName(key),
