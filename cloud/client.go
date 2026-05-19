@@ -54,6 +54,13 @@ type ClientResource struct {
 	ExpireSeconds int      `json:"expire_seconds,omitempty"`
 }
 
+type ScriptRewriteResponse struct {
+	Ability   string         `json:"ability"`
+	RequestID string         `json:"request_id"`
+	Result    map[string]any `json:"result"`
+	Usage     map[string]any `json:"usage"`
+}
+
 func apiRequest(method string, path string, body any, cardKey string) (map[string]any, error) {
 	url := BaseURL() + path
 
@@ -424,6 +431,29 @@ func SignClientResource(resourceID, cardKey string) (*ClientResource, error) {
 	item, err := mapToStruct[ClientResource](result)
 	if err != nil {
 		return nil, fmt.Errorf("parse resource sign response failed: %w", err)
+	}
+	return &item, nil
+}
+
+func RewriteScript(text, length, model, cardKey string) (*ScriptRewriteResponse, error) {
+	payload := map[string]any{
+		"input": map[string]any{
+			"text": text,
+		},
+		"options": map[string]any{
+			"length": length,
+		},
+	}
+	if model != "" {
+		payload["options"].(map[string]any)["model"] = model
+	}
+	result, err := apiRequest("POST", "/v1/agent/script/rewrite", payload, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	item, err := mapToStruct[ScriptRewriteResponse](result)
+	if err != nil {
+		return nil, fmt.Errorf("parse script rewrite response failed: %w", err)
 	}
 	return &item, nil
 }
