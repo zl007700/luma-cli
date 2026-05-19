@@ -17,6 +17,12 @@ func TestParsePositionalsAndFlags(t *testing.T) {
 	if got := args.String("dry-run", "false"); got != "" {
 		t.Fatalf("expected empty value for dry-run flag, got %q", got)
 	}
+	if !args.Has("dry-run") {
+		t.Fatal("expected dry-run flag to be present")
+	}
+	if args.Has("missing") {
+		t.Fatal("expected missing flag to be absent")
+	}
 }
 
 func TestTypedFlags(t *testing.T) {

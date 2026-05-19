@@ -1,19 +1,26 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/luma-cli/lumer-cli/cloud"
 	"github.com/luma-cli/lumer-cli/internal/atom"
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
+	"github.com/luma-cli/lumer-cli/internal/output"
 )
+
+type assetView struct {
+	Type      string `json:"type,omitempty"`
+	Name      string `json:"name"`
+	Group     string `json:"group,omitempty"`
+	ObjectKey string `json:"object_key,omitempty"`
+}
 
 func cmdAsset(args []string) {
 	if len(args) < 1 {
-		fmt.Println("usage: luma-cli asset upload <file> [--group <name>]")
-		fmt.Println("       luma-cli asset list [group]")
+		printAssetUsage()
 		return
 	}
 
@@ -26,6 +33,7 @@ func cmdAsset(args []string) {
 	switch args[0] {
 	case "upload":
 		parsed := cmdutil.Parse(args[1:])
+		verbose := parsed.Has("verbose")
 		filePath := parsed.Pos(0)
 		if filePath == "" {
 			fmt.Println("usage: luma-cli asset upload <file> [--group <name>]")
@@ -37,10 +45,27 @@ func cmdAsset(args []string) {
 			fmt.Printf("Error: upload failed: %v\n", err)
 			return
 		}
-		fmt.Printf("Uploaded: %s\n", objectKey)
+		view := assetView{
+			Name:      atom.AssetFriendlyName(objectKey),
+			Group:     group,
+			ObjectKey: objectKey,
+		}
+		if runtimeOpts.JSON {
+			if !verbose {
+				view.ObjectKey = ""
+			}
+			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: view})
+			return
+		}
+		fmt.Printf("Uploaded: %s\n", view.Name)
+		fmt.Printf("Group: %s\n", group)
+		if verbose {
+			fmt.Printf("Object key: %s\n", objectKey)
+		}
 
 	case "list":
 		parsed := cmdutil.Parse(args[1:])
+		verbose := parsed.Has("verbose")
 		group := "default"
 		if parsed.Pos(0) != "" {
 			group = parsed.Pos(0)
@@ -54,22 +79,49 @@ func cmdAsset(args []string) {
 			fmt.Println("No assets found.")
 			return
 		}
-		fmt.Printf("%-8s %-20s %s\n", "TYPE", "NAME", "OBJECT_KEY")
-		fmt.Println(strings.Repeat("-", 80))
+		views := make([]assetView, 0, len(items))
 		for _, item := range items {
 			m, ok := item.(map[string]any)
 			if !ok {
-				data, _ := json.Marshal(item)
-				fmt.Println(string(data))
 				continue
 			}
 			rtype, _ := m["resource_type"].(string)
 			key, _ := m["object_key"].(string)
-			name := atom.AssetFriendlyName(key)
-			fmt.Printf("%-8s %-20s %s\n", rtype, name, key)
+			view := assetView{
+				Type:      rtype,
+				Name:      atom.AssetFriendlyName(key),
+				Group:     group,
+				ObjectKey: key,
+			}
+			if !verbose {
+				view.ObjectKey = ""
+			}
+			views = append(views, view)
+		}
+		if runtimeOpts.JSON {
+			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"items": views}})
+			return
+		}
+		if verbose {
+			fmt.Printf("%-8s %-20s %s\n", "TYPE", "NAME", "OBJECT_KEY")
+			fmt.Println(strings.Repeat("-", 80))
+			for _, item := range views {
+				fmt.Printf("%-8s %-20s %s\n", item.Type, item.Name, item.ObjectKey)
+			}
+			return
+		}
+		fmt.Printf("%-8s %s\n", "TYPE", "NAME")
+		fmt.Println(strings.Repeat("-", 32))
+		for _, item := range views {
+			fmt.Printf("%-8s %s\n", item.Type, item.Name)
 		}
 
 	default:
 		fmt.Printf("unknown asset subcommand: %s\n", args[0])
 	}
+}
+
+func printAssetUsage() {
+	fmt.Println("usage: luma-cli asset upload <file> [--group <name>] [--verbose]")
+	fmt.Println("       luma-cli asset list [group] [--verbose]")
 }

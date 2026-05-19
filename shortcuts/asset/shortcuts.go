@@ -15,7 +15,7 @@ func Shortcuts() []common.Shortcut {
 				{Name: "file", Description: "Local file path.", Required: true},
 				{Name: "group", Description: "Asset group name.", Default: "default"},
 			},
-			Outputs:  []string{"object_key"},
+			Outputs:  []string{"name", "group"},
 			Examples: []string{"luma-cli asset upload avatar.mp4 --group roles"},
 			Skills:   []string{"luma-assets", "luma-digital-human"},
 		},

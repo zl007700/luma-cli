@@ -52,6 +52,11 @@ func (a Args) String(name, fallback string) string {
 	return fallback
 }
 
+func (a Args) Has(name string) bool {
+	_, ok := a.Flags[name]
+	return ok
+}
+
 func (a Args) Int(name string, fallback int) (int, error) {
 	value, ok := a.Flags[name]
 	if !ok || value == "" {
