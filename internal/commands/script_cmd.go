@@ -46,7 +46,7 @@ func cmdScriptRewrite(raw []string) {
 	}
 	length := strings.TrimSpace(args.String("length", "short"))
 	model := strings.TrimSpace(args.String("model", ""))
-	outputPath := strings.TrimSpace(args.String("output", "rewrite.json"))
+	outputPath := strings.TrimSpace(args.String("output", "step1_rewrite.json"))
 
 	cfg := loadConfig()
 	if cfg == nil {
@@ -75,6 +75,7 @@ func cmdScriptRewrite(raw []string) {
 			return
 		}
 		outputPath = abs
+		recordProjectArtifact("script", outputPath, "script.rewrite")
 	}
 
 	if runtimeOpts.JSON {
@@ -107,6 +108,6 @@ func printScriptUsage() {
 	fmt.Println("luma-cli script <subcommand>")
 	fmt.Println("")
 	fmt.Println("Subcommands:")
-	fmt.Println("  rewrite <text> [--length short|medium|long] [--output <path>]")
-	fmt.Println("  rewrite --input <file> [--length short|medium|long] [--output <path>]")
+	fmt.Println("  rewrite <text> [--length short|medium|long] [--output step1_rewrite.json]")
+	fmt.Println("  rewrite --input <file> [--length short|medium|long] [--output step1_rewrite.json]")
 }

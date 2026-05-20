@@ -169,7 +169,7 @@ func cmdMaterialMerge(raw []string) {
 	materialsPath := strings.TrimSpace(args.String("materials", ""))
 	metaPath := strings.TrimSpace(args.String("meta", ""))
 	if materialsPath == "" || metaPath == "" {
-		fmt.Println("usage: luma-cli material merge --materials materials.json --meta material_meta.json [--output materials_enriched.json]")
+		fmt.Println("usage: luma-cli material merge --materials materials.json --meta material_meta.json_or_dir [--output materials_enriched.json]")
 		return
 	}
 	outputPath := strings.TrimSpace(args.String("output", "materials_enriched.json"))
@@ -306,7 +306,7 @@ func printMaterialUsage() {
 	fmt.Println("luma-cli material <subcommand>")
 	fmt.Println("  describe <file_or_dir> [--output materials.json]")
 	fmt.Println("  understand <file> [--group pip_materials] [--output material_meta.json] [--descriptor-output material.json]")
-	fmt.Println("  merge --materials materials.json --meta material_meta.json [--output materials_enriched.json]")
+	fmt.Println("  merge --materials materials.json --meta material_meta.json_or_dir [--output materials_enriched.json]")
 }
 
 func materialDescriptorsFromPayload(payload map[string]any) ([]materialDescriptor, error) {
@@ -322,6 +322,34 @@ func materialDescriptorsFromPayload(payload map[string]any) ([]materialDescripto
 }
 
 func readMaterialMetas(path string) ([]map[string]any, error) {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if stat.IsDir() {
+		var metas []map[string]any
+		err := filepath.WalkDir(path, func(itemPath string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() || strings.ToLower(filepath.Ext(itemPath)) != ".json" {
+				return nil
+			}
+			payload, err := readJSONObject(itemPath)
+			if err != nil {
+				return err
+			}
+			if payload["object_name"] == nil {
+				payload["object_name"] = filepath.Base(itemPath)
+			}
+			if payload["file_name"] == nil {
+				payload["file_name"] = strings.TrimSuffix(filepath.Base(itemPath), filepath.Ext(itemPath))
+			}
+			metas = append(metas, payload)
+			return nil
+		})
+		return metas, err
+	}
 	payload, err := readJSONObject(path)
 	if err != nil {
 		return nil, err
@@ -366,7 +394,8 @@ func matchMaterialMeta(materials []materialDescriptor, meta map[string]any) int 
 				continue
 			}
 			base := strings.TrimSuffix(filepath.Base(name), filepath.Ext(name))
-			if material.MaterialID == name || strings.Contains(material.Path, name) || strings.Contains(material.Title, base) || strings.Contains(base, material.Title) {
+			materialBase := strings.TrimSuffix(filepath.Base(material.Path), filepath.Ext(material.Path))
+			if material.MaterialID == name || materialBase == base || strings.Contains(material.Path, name) || strings.Contains(material.Title, base) || strings.Contains(base, material.Title) {
 				return i
 			}
 		}

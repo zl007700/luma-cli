@@ -15,11 +15,11 @@ func Shortcuts() []common.Shortcut {
 				{Name: "text", Description: "Source copy text. Can also be positional.", Required: true},
 				{Name: "input", Description: "Read source copy from a local text file."},
 				{Name: "length", Description: "Length preset: short, medium, long, or 短/中/长.", Default: "short"},
-				{Name: "output", Description: "Output JSON path.", Default: "rewrite.json"},
+				{Name: "output", Description: "Output JSON path.", Default: "step1_rewrite.json"},
 			},
 			Outputs:  []string{"request_id", "original_text", "rewritten_text", "usage", "output_path"},
-			Examples: []string{"luma-cli script rewrite --input script.txt --length short --output rewrite.json"},
-			Skills:   []string{"luma-video-workflow"},
+			Examples: []string{"luma-cli script rewrite --input source_script.txt --length short --output step1_rewrite.json"},
+			Skills:   []string{"luma-video-workflow", "luma-viral-remix-workflow"},
 		},
 	}
 }

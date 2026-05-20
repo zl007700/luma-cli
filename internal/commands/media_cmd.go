@@ -109,9 +109,9 @@ func cmdTTS(args []string) {
 	proj := resolveProjectByName("")
 	outputPath := parsed.String("output", "")
 	if outputPath == "" && proj != nil {
-		outputPath = filepath.Join(proj.SubDir(project.DirAudio), "tts_output.wav")
+		outputPath = filepath.Join(proj.SubDir(project.DirAudio), "step2_tts.wav")
 	} else if outputPath == "" {
-		outputPath = "tts_output.wav"
+		outputPath = "step2_tts.wav"
 	}
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
@@ -247,9 +247,9 @@ func cmdLipSync(args []string) {
 
 	if outputPath == "" {
 		if proj != nil {
-			outputPath = filepath.Join(proj.SubDir(project.DirOutput), "lipsync_output.mp4")
+			outputPath = filepath.Join(proj.SubDir(project.DirOutput), "step3_lipsync.mp4")
 		} else {
-			outputPath = "lipsync_output.mp4"
+			outputPath = "step3_lipsync.mp4"
 		}
 	}
 	outputPath, err = absoluteOutputPath(outputPath)

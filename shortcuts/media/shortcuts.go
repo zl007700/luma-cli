@@ -28,7 +28,7 @@ func Shortcuts() []common.Shortcut {
 				{Name: "voice", Description: "Voice friendly name or object key.", Default: "男声3"},
 				{Name: "speech-rate", Description: "Speech rate multiplier.", Default: "1.1"},
 				{Name: "trim-long-silence", Description: "Ask the backend to trim long pauses.", Default: "false"},
-				{Name: "output", Description: "Output wav path."},
+				{Name: "output", Description: "Output wav path.", Default: "step2_tts.wav"},
 			},
 			Outputs:  []string{"task_id", "audio_object_key", "output_path", "output_url"},
 			Examples: []string{"luma-cli tts \"你好，欢迎来到直播间\" --voice 男声3"},
@@ -42,7 +42,7 @@ func Shortcuts() []common.Shortcut {
 			Flags: []common.Flag{
 				{Name: "avatar", Description: "Avatar friendly name or object key.", Required: true},
 				{Name: "audio", Description: "Local audio file path. Defaults to latest project TTS audio."},
-				{Name: "output", Description: "Output video path."},
+				{Name: "output", Description: "Output video path.", Default: "step3_lipsync.mp4"},
 				{Name: "random-start", Description: "Start the avatar video from a random position.", Default: "false"},
 				{Name: "guidance-scale", Description: "Lip-sync guidance scale.", Default: "1.0"},
 				{Name: "num-inference-steps", Description: "Inference steps.", Default: "15"},
@@ -76,13 +76,14 @@ func Shortcuts() []common.Shortcut {
 			Flags: []common.Flag{
 				{Name: "video_or_text", Description: "Local video file path, or raw text with --text.", Required: true},
 				{Name: "text", Description: "Treat positional input as raw text."},
-				{Name: "output", Description: "Output video path."},
+				{Name: "output", Description: "Output video path.", Default: "step5_subtitle.mp4"},
+				{Name: "segments-output", Description: "Output segment JSON path for PIP planning."},
 				{Name: "project", Description: "Project name for organized outputs."},
 				{Name: "max-chars", Description: "Maximum characters per subtitle segment.", Default: "15"},
 			},
 			Outputs:  []string{"output_path", "ass_path", "segments"},
 			Examples: []string{"luma-cli subtitle input.mp4 --project demo"},
-			Skills:   []string{"luma-subtitle"},
+			Skills:   []string{"luma-subtitle", "luma-video-workflow", "luma-viral-remix-workflow"},
 		},
 	}
 }

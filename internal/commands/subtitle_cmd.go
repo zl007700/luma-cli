@@ -17,6 +17,7 @@ type subtitleOptions struct {
 	input          string // video file path or raw text
 	isTextMode     bool
 	outputPath     string
+	segmentsOutput string
 	projectName    string
 	maxChars       int
 	fontSize       int
@@ -109,6 +110,19 @@ func cmdSubtitle(args []string) {
 		printSegmentCount(segments, "with effects", func(s subtitle.Segment) bool {
 			return s.EffectType != "" && s.EffectType != "none"
 		})
+	}
+	if opts.segmentsOutput != "" {
+		segmentsPath, err := absoluteOutputPath(opts.segmentsOutput)
+		if err != nil {
+			fmt.Printf("Error: bad segments output path: %v\n", err)
+			return
+		}
+		if err := writeJSONFile(segmentsPath, map[string]any{"segments": segments, "sentence_groups": sentenceGroups}); err != nil {
+			fmt.Printf("Error writing segments: %v\n", err)
+			return
+		}
+		recordProjectArtifact("segments", segmentsPath, "subtitle.segments")
+		fmt.Printf("  Segments written: %s\n", segmentsPath)
 	}
 
 	// Step 6: Generate ASS and burn
@@ -237,6 +251,11 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 		case "--output":
 			if i+1 < len(args) {
 				opts.outputPath = args[i+1]
+				i++
+			}
+		case "--segments-output":
+			if i+1 < len(args) {
+				opts.segmentsOutput = args[i+1]
 				i++
 			}
 		case "--project":
@@ -403,16 +422,14 @@ func resolveOutputPath(opts *subtitleOptions, proj *project.Project, dirs projec
 	}
 	if proj != nil {
 		if opts.isTextMode {
-			return filepath.Join(dirs.output, "subtitle_output.mp4")
+			return filepath.Join(dirs.output, "step5_subtitle.mp4")
 		}
-		ext := filepath.Ext(opts.input)
-		return filepath.Join(dirs.output, strings.TrimSuffix(filepath.Base(opts.input), ext)+"_subtitled"+ext)
+		return filepath.Join(dirs.output, "step5_subtitle.mp4")
 	}
 	if opts.isTextMode {
-		return "subtitle_output.mp4"
+		return "step5_subtitle.mp4"
 	}
-	ext := filepath.Ext(opts.input)
-	return strings.TrimSuffix(opts.input, ext) + "_subtitled" + ext
+	return "step5_subtitle.mp4"
 }
 
 func resolveVideoSize(isTextMode bool, videoPath string) (int, int) {
@@ -475,6 +492,7 @@ func printSubtitleUsage() {
 	fmt.Println("  Options:")
 	fmt.Println("    --text                   - Treat argument as raw text instead of video file")
 	fmt.Println("    --output <path>          - Output video path (default: <input>_subtitled.mp4)")
+	fmt.Println("    --segments-output <path> - Output segment JSON path")
 	fmt.Println("    --project <name>         - Use specified project for output organization")
 	fmt.Println("    --max-chars <n>          - Max chars per segment (default: 15)")
 	fmt.Println("    --font-size <n>          - Font size in px (default: auto)")

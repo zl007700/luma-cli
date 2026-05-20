@@ -2,6 +2,7 @@ package commands
 
 import (
 	"crypto/sha1"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,6 +35,8 @@ func cmdResearch(args []string) {
 	switch args[0] {
 	case "run":
 		cmdResearchRun(args[1:])
+	case "export":
+		cmdResearchExport(args[1:])
 	case "persona":
 		cmdResearchPersona(args[1:])
 	default:
@@ -67,7 +70,7 @@ func cmdResearchRun(raw []string) {
 	}
 	mode := strings.TrimSpace(args.String("mode", "precise"))
 	dateRange := strings.TrimSpace(args.String("date-range", "7d"))
-	outputPath := strings.TrimSpace(args.String("output", "research.json"))
+	outputPath := strings.TrimSpace(args.String("output", "step0_content_research.json"))
 	cfg := loadConfig()
 	if cfg == nil {
 		printResearchError("not_logged_in", "Error: not logged in. Run: luma-cli auth login <card_key>\n")
@@ -90,6 +93,7 @@ func cmdResearchRun(raw []string) {
 			return
 		}
 		savedPath = abs
+		recordProjectArtifact("research", savedPath, "research.run")
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"response": resp, "output_path": savedPath}})
@@ -102,6 +106,61 @@ func cmdResearchRun(raw []string) {
 	if count, ok := resp.Result["result_count"]; ok {
 		fmt.Printf("Result count: %v\n", count)
 	}
+}
+
+func cmdResearchExport(raw []string) {
+	args := cmdutil.Parse(raw)
+	inputPath := strings.TrimSpace(args.String("input", ""))
+	if inputPath == "" {
+		inputPath = strings.TrimSpace(args.Pos(0))
+	}
+	if inputPath == "" {
+		fmt.Println("usage: luma-cli research export --input step0_content_research.json [--output step0_content_research.csv]")
+		return
+	}
+	outputPath := strings.TrimSpace(args.String("output", "step0_content_research.csv"))
+	payload, err := readJSONObject(inputPath)
+	if err != nil {
+		printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
+		return
+	}
+	results := researchResults(payload)
+	abs, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		printResearchError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
+		printResearchError("create_output_dir_failed", fmt.Sprintf("Error: create output dir failed: %v\n", err))
+		return
+	}
+	file, err := os.Create(abs)
+	if err != nil {
+		printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
+		return
+	}
+	defer file.Close()
+	if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
+		printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
+		return
+	}
+	writer := csv.NewWriter(file)
+	headers := []string{"keyword", "title", "author", "likes", "followers", "duration_seconds", "publish_time", "link", "video_id", "content_type", "note"}
+	_ = writer.Write(headers)
+	for _, item := range results {
+		row := make([]string, 0, len(headers))
+		for _, key := range headers {
+			row = append(row, strAny(item[key]))
+		}
+		_ = writer.Write(row)
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
+		return
+	}
+	recordProjectArtifact("research_table", abs, "research.export")
+	writeSimpleResult(map[string]any{"output_path": abs, "count": len(results)})
 }
 
 func cmdResearchPersona(raw []string) {
@@ -252,11 +311,22 @@ func printResearchUsage() {
 	fmt.Println("luma-cli research <subcommand>")
 	fmt.Println("")
 	fmt.Println("Subcommands:")
-	fmt.Println("  run --role <description> [--mode precise|expanded] [--date-range 24h|7d] [--output research.json]")
-	fmt.Println("  run --persona <name_or_id> [--mode precise|expanded] [--output research.json]")
+	fmt.Println("  run --role <description> [--mode precise|expanded] [--date-range 24h|7d] [--output step0_content_research.json]")
+	fmt.Println("  export --input step0_content_research.json [--output step0_content_research.csv]")
+	fmt.Println("  run --persona <name_or_id> [--mode precise|expanded] [--output step0_content_research.json]")
 	fmt.Println("  persona list")
 	fmt.Println("  persona get <name_or_id>")
 	fmt.Println("  persona save <name> --role <description>")
+}
+
+func researchResults(payload map[string]any) []map[string]any {
+	if items := listMap(payload["results"]); len(items) > 0 {
+		return items
+	}
+	if result, ok := payload["result"].(map[string]any); ok {
+		return listMap(result["results"])
+	}
+	return nil
 }
 
 func writeJSONFile(path string, value any) error {

@@ -43,11 +43,11 @@ func Shortcuts() []common.Shortcut {
 			Risk:        "write",
 			Flags: []common.Flag{
 				{Name: "materials", Description: "Local material descriptors JSON path.", Required: true},
-				{Name: "meta", Description: "Material metadata JSON path.", Required: true},
+				{Name: "meta", Description: "Material metadata JSON path or metadata directory.", Required: true},
 				{Name: "output", Description: "Output enriched materials JSON path.", Default: "materials_enriched.json"},
 			},
 			Outputs:  []string{"materials", "output_path"},
-			Examples: []string{"luma-cli material merge --materials materials.json --meta a.meta.json --output materials_enriched.json"},
+			Examples: []string{"luma-cli material merge --materials materials.json --meta ./meta --output materials_enriched.json"},
 			Skills:   []string{"luma-assets", "luma-video-workflow"},
 		},
 		{

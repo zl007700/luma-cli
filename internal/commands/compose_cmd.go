@@ -44,7 +44,7 @@ func cmdBGM(args []string) {
 		fmt.Println("Error: no BGM specified and no default BGM configured")
 		return
 	}
-	outputPath := parsed.String("output", "bgm_video.mp4")
+	outputPath := parsed.String("output", "step6_bgm.mp4")
 	voiceVolume := parsed.String("voice-volume", formatVolume(defaults.BGM.VoiceVolume, "1.0"))
 	bgmVolume := parsed.String("bgm-volume", formatVolume(defaults.BGM.BGMVolume, "0.25"))
 	bgmPath, err := resolveLocalCachedOrCloudResource(bgmValue, cfg)
@@ -98,7 +98,7 @@ func cmdCoverFrame(raw []string) {
 		fmt.Println("usage: luma-cli cover frame <video> [--time 1.0] [--output cover_frame.png]")
 		return
 	}
-	outputPath := parsed.String("output", "cover_frame.png")
+	outputPath := parsed.String("output", "step6_cover_frame.png")
 	seek := parsed.String("time", "1.0")
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
@@ -137,7 +137,7 @@ func cmdCoverRender(raw []string) {
 	if imagePath == "" {
 		imagePath = defaults.Cover.Template
 	}
-	outputPath := parsed.String("output", "title_cover.jpg")
+	outputPath := parsed.String("output", "step6_cover.jpg")
 	title := parsed.String("title", "")
 	subtitle := parsed.String("subtitle", "")
 	font := parsed.String("font", "")
@@ -234,8 +234,8 @@ func cmdCoverRender(raw []string) {
 
 func printCoverUsage() {
 	fmt.Println("luma-cli cover <subcommand>")
-	fmt.Println("  frame <video> [--time 1.0] [--output cover_frame.png]")
-	fmt.Println("  render [image] --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--template <resource_id>] [--output title_cover.jpg]")
+	fmt.Println("  frame <video> [--time 1.0] [--output step6_cover_frame.png]")
+	fmt.Println("  render [image] --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--template <resource_id>] [--output step6_cover.jpg]")
 }
 
 func installedFFmpegPath() (string, error) {
