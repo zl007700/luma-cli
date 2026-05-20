@@ -7,7 +7,9 @@ import (
 	"github.com/luma-cli/lumer-cli/shortcuts/asset"
 	"github.com/luma-cli/lumer-cli/shortcuts/common"
 	"github.com/luma-cli/lumer-cli/shortcuts/compose"
+	"github.com/luma-cli/lumer-cli/shortcuts/material"
 	"github.com/luma-cli/lumer-cli/shortcuts/media"
+	"github.com/luma-cli/lumer-cli/shortcuts/research"
 	runtimeshortcuts "github.com/luma-cli/lumer-cli/shortcuts/runtime"
 	"github.com/luma-cli/lumer-cli/shortcuts/script"
 	"github.com/luma-cli/lumer-cli/shortcuts/social"
@@ -20,7 +22,9 @@ func List() []common.Shortcut {
 	all = append(all, compose.Shortcuts()...)
 	all = append(all, media.Shortcuts()...)
 	all = append(all, asset.Shortcuts()...)
+	all = append(all, material.Shortcuts()...)
 	all = append(all, runtimeshortcuts.Shortcuts()...)
+	all = append(all, research.Shortcuts()...)
 	all = append(all, script.Shortcuts()...)
 	all = append(all, social.Shortcuts()...)
 	for i := range all {

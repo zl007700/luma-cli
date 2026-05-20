@@ -9,8 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/luma-cli/lumer-cli/cloud"
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
+	"github.com/luma-cli/lumer-cli/internal/output"
 )
 
 type pipMediaInfo struct {
@@ -30,11 +32,137 @@ type pipRenderSpec struct {
 }
 
 func cmdPIP(args []string) {
-	if len(args) < 1 || args[0] != "render" {
-		fmt.Println("usage: luma-cli pip render <video> --plan pip_plan.json [--output pip_video.mp4] [--landscape-height-ratio 0.32]")
+	if len(args) < 1 {
+		printPIPUsage()
 		return
 	}
-	parsed := cmdutil.Parse(args[1:])
+	switch args[0] {
+	case "scan":
+		cmdPIPScan(args[1:])
+	case "plan":
+		cmdPIPPlan(args[1:])
+	case "render":
+		cmdPIPRender(args[1:])
+	default:
+		printPIPUsage()
+	}
+}
+
+func cmdPIPScan(raw []string) {
+	args := cmdutil.Parse(raw)
+	inputPath := args.Pos(0)
+	if inputPath == "" {
+		inputPath = args.String("input", "")
+	}
+	if inputPath == "" {
+		fmt.Println("usage: luma-cli pip scan <material_dir> [--output materials.json]")
+		return
+	}
+	outputPath := args.String("output", "materials.json")
+	materials, err := describeMaterials(inputPath)
+	if err != nil {
+		fmt.Printf("Error: pip scan failed: %v\n", err)
+		return
+	}
+	absOut, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: bad output path: %v\n", err)
+		return
+	}
+	if err := writeJSONFile(absOut, map[string]any{"materials": materials}); err != nil {
+		fmt.Printf("Error: write output failed: %v\n", err)
+		return
+	}
+	writeSimpleResult(map[string]any{"output_path": absOut, "count": len(materials)})
+}
+
+func cmdPIPPlan(raw []string) {
+	args := cmdutil.Parse(raw)
+	segmentsPath := strings.TrimSpace(args.String("segments", ""))
+	materialsPath := strings.TrimSpace(args.String("materials", ""))
+	if segmentsPath == "" || materialsPath == "" {
+		fmt.Println("usage: luma-cli pip plan --segments segments.json --materials materials.json [--output pip_plan.json]")
+		return
+	}
+	outputPath := args.String("output", "pip_plan.json")
+	landscapeRatio, err := args.Float("landscape-height-ratio", 0.32)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	cfg := loadConfig()
+	if cfg == nil {
+		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
+		return
+	}
+	segmentsPayload, err := readJSONObject(segmentsPath)
+	if err != nil {
+		fmt.Printf("Error: read segments failed: %v\n", err)
+		return
+	}
+	materialsPayload, err := readJSONObject(materialsPath)
+	if err != nil {
+		fmt.Printf("Error: read materials failed: %v\n", err)
+		return
+	}
+	segments := anyListFromPayload(segmentsPayload, "segments")
+	materials := anyListFromPayload(materialsPayload, "materials")
+	if len(segments) == 0 || len(materials) == 0 {
+		fmt.Println("Error: segments and materials cannot be empty")
+		return
+	}
+	sceneResp, err := cloud.RunAgentAbility("/v1/agent/storyboard/scene", map[string]any{"segments": segments}, nil, cfg.CardKey)
+	if err != nil {
+		fmt.Printf("Error: scene plan failed: %v\n", err)
+		return
+	}
+	sceneUnits := anyListFromPayload(sceneResp.Result, "scene_units")
+	matchResp, err := cloud.RunAgentAbility("/v1/agent/material/match", map[string]any{"scene_units": sceneUnits, "materials": materials}, nil, cfg.CardKey)
+	if err != nil {
+		fmt.Printf("Error: material match failed: %v\n", err)
+		return
+	}
+	inserts := anyListFromPayload(matchResp.Result, "inserts")
+	pipResp, err := cloud.RunAgentAbility("/v1/agent/pip/plan", map[string]any{"scene_units": sceneUnits, "materials": materials, "inserts": inserts}, nil, cfg.CardKey)
+	if err != nil {
+		fmt.Printf("Error: pip plan failed: %v\n", err)
+		return
+	}
+	plan := map[string]any{
+		"enabled":                len(inserts) > 0,
+		"landscape_height_ratio": landscapeRatio,
+		"scene_units":            sceneUnits,
+		"material_candidates":    materials,
+		"materials":              materials,
+		"inserts":                inserts,
+		"pip_plan":               pipResp.Result["pip_plan"],
+		"worker_payload":         pipResp.Result["worker_payload"],
+		"render_rules": map[string]any{
+			"portrait":  "replace",
+			"landscape": "center_with_blurred_background",
+			"empty":     "keep_original",
+		},
+		"status": "planned",
+	}
+	absOut, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: bad output path: %v\n", err)
+		return
+	}
+	if err := writeJSONFile(absOut, plan); err != nil {
+		fmt.Printf("Error: write output failed: %v\n", err)
+		return
+	}
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"output_path": absOut, "scene_count": len(sceneUnits), "matched_count": len(inserts)}})
+		return
+	}
+	fmt.Printf("Plan saved to: %s\n", absOut)
+	fmt.Printf("Scenes: %d, matched inserts: %d\n", len(sceneUnits), len(inserts))
+}
+
+func cmdPIPRender(raw []string) {
+	parsed := cmdutil.Parse(raw)
 	videoPath := parsed.Pos(0)
 	planPath := parsed.String("plan", "")
 	if videoPath == "" || planPath == "" {
@@ -58,6 +186,13 @@ func cmdPIP(args []string) {
 	}
 	recordProjectArtifact("pip", absOut, "pip.render")
 	writeSimpleResult(map[string]any{"output_path": absOut, "plan_path": planPath})
+}
+
+func printPIPUsage() {
+	fmt.Println("luma-cli pip <subcommand>")
+	fmt.Println("  scan <material_dir> [--output materials.json]")
+	fmt.Println("  plan --segments segments.json --materials materials.json [--output pip_plan.json]")
+	fmt.Println("  render <video> --plan pip_plan.json [--output pip_video.mp4] [--landscape-height-ratio 0.32]")
 }
 
 func renderPIPVideo(sourceVideo, planPath, outputPath string, landscapeRatio float64) error {
@@ -291,6 +426,31 @@ func listMap(value any) []map[string]any {
 		}
 	}
 	return out
+}
+
+func readJSONObject(path string) (map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, err
+	}
+	return payload, nil
+}
+
+func anyListFromPayload(payload map[string]any, key string) []any {
+	value := payload[key]
+	if items, ok := value.([]any); ok {
+		return items
+	}
+	if result, ok := payload["result"].(map[string]any); ok {
+		if items, ok := result[key].([]any); ok {
+			return items
+		}
+	}
+	return nil
 }
 
 func firstString(m map[string]any, keys ...string) string {

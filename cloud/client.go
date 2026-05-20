@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -97,6 +98,8 @@ type AgentAbilityResponse struct {
 	Result    map[string]any `json:"result"`
 	Usage     map[string]any `json:"usage"`
 }
+
+type ResearchResponse = AgentAbilityResponse
 
 func apiRequest(method string, path string, body any, cardKey string) (map[string]any, error) {
 	url := BaseURL() + path
@@ -534,6 +537,28 @@ func RunAgentAbility(path string, input map[string]any, options map[string]any, 
 		return nil, fmt.Errorf("parse agent ability response failed: %w", err)
 	}
 	return &item, nil
+}
+
+func RunResearch(roleDescription, mode, dateRange, cardKey string) (*ResearchResponse, error) {
+	mode = strings.TrimSpace(strings.ToLower(mode))
+	path := "/v1/content-research/precise-search"
+	ability := "research.precise_search"
+	if mode == "expanded" {
+		path = "/v1/content-research/expanded-search"
+		ability = "research.expanded_search"
+	}
+	result, err := apiRequest("POST", path, map[string]any{
+		"role_description": roleDescription,
+		"date_range":       dateRange,
+	}, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	return &ResearchResponse{
+		Ability: ability,
+		Result:  result,
+		Usage:   map[string]any{},
+	}, nil
 }
 
 func DouyinDownloadCookie(cardKey string) (string, error) {

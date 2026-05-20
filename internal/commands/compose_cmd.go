@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
@@ -127,6 +128,9 @@ func cmdCoverRender(raw []string) {
 	cfg := loadConfig()
 	defaults := loadClientDefaults(cfg)
 	imagePath := parsed.String("image", "")
+	if template := parsed.String("template", ""); template != "" {
+		imagePath = template
+	}
 	if imagePath == "" {
 		imagePath = parsed.Pos(0)
 	}
@@ -137,8 +141,16 @@ func cmdCoverRender(raw []string) {
 	title := parsed.String("title", "")
 	subtitle := parsed.String("subtitle", "")
 	font := parsed.String("font", "")
+	titleFont := parsed.String("title-font", "")
+	subtitleFont := parsed.String("subtitle-font", "")
 	if font == "" {
 		font = defaults.Cover.Font
+	}
+	if titleFont == "" {
+		titleFont = font
+	}
+	if subtitleFont == "" {
+		subtitleFont = font
 	}
 	if imagePath == "" {
 		fmt.Println("usage: luma-cli cover render <image> --title <text> [--subtitle <text>] [--output title_cover.jpg]")
@@ -153,13 +165,17 @@ func cmdCoverRender(raw []string) {
 		fmt.Printf("Error: resolve default cover template failed: %v\n", err)
 		return
 	}
-	if resolved, err := resolveLocalCachedOrCloudResource(font, cfg); err == nil {
-		font = resolved
-	} else if parsed.String("font", "") != "" {
-		fmt.Printf("Error: resolve font failed: %v\n", err)
+	if resolved, err := resolveLocalCachedOrCloudResource(titleFont, cfg); err == nil {
+		titleFont = resolved
+	} else if parsed.String("font", "") != "" || parsed.String("title-font", "") != "" {
+		fmt.Printf("Error: resolve title font failed: %v\n", err)
 		return
-	} else {
-		font = ""
+	}
+	if resolved, err := resolveLocalCachedOrCloudResource(subtitleFont, cfg); err == nil {
+		subtitleFont = resolved
+	} else if parsed.String("font", "") != "" || parsed.String("subtitle-font", "") != "" {
+		fmt.Printf("Error: resolve subtitle font failed: %v\n", err)
+		return
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
@@ -170,12 +186,45 @@ func cmdCoverRender(raw []string) {
 		fmt.Printf("Error: create output dir failed: %v\n", err)
 		return
 	}
-	if err := renderCoverImage(imagePath, absOut, title, subtitle, font); err != nil {
+	titleSize, err := parsed.Float("title-size", float64(defaults.Cover.TitleSize))
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	subtitleSize, err := parsed.Float("subtitle-size", float64(defaults.Cover.SubtitleSize))
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	topMargin, err := parsed.Float("top-margin", -1)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	verticalOffset, err := parsed.Float("vertical-offset", 0)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	opts := coverRenderOptions{
+		Title:          title,
+		Subtitle:       subtitle,
+		TitleFont:      titleFont,
+		SubtitleFont:   subtitleFont,
+		TitleSize:      titleSize,
+		SubtitleSize:   subtitleSize,
+		TitleColor:     parsed.String("title-color", "#FFFFFF"),
+		SubtitleColor:  parsed.String("subtitle-color", "#FFFFFF"),
+		Align:          parsed.String("align", "left"),
+		TopMargin:      topMargin,
+		VerticalOffset: verticalOffset,
+	}
+	if err := renderCoverImageWithOptions(imagePath, absOut, opts); err != nil {
 		fmt.Printf("Error: cover render failed: %v\n", err)
 		return
 	}
 	metaPath := strings.TrimSuffix(absOut, filepath.Ext(absOut)) + ".json"
-	meta := map[string]any{"title": title, "subtitle": subtitle, "image_path": imagePath, "font_path": font, "output_path": absOut}
+	meta := map[string]any{"title": title, "subtitle": subtitle, "image_path": imagePath, "title_font_path": titleFont, "subtitle_font_path": subtitleFont, "output_path": absOut}
 	if data, err := json.MarshalIndent(meta, "", "  "); err == nil {
 		_ = os.WriteFile(metaPath, data, 0644)
 	}
@@ -186,7 +235,7 @@ func cmdCoverRender(raw []string) {
 func printCoverUsage() {
 	fmt.Println("luma-cli cover <subcommand>")
 	fmt.Println("  frame <video> [--time 1.0] [--output cover_frame.png]")
-	fmt.Println("  render [image] --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--output title_cover.jpg]")
+	fmt.Println("  render [image] --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--template <resource_id>] [--output title_cover.jpg]")
 }
 
 func installedFFmpegPath() (string, error) {
@@ -228,13 +277,29 @@ func recordProjectArtifact(artifactType, path, step string) {
 	_ = proj.AddArtifact(project.Artifact{Type: artifactType, Path: path, Step: step})
 }
 
+type coverRenderOptions struct {
+	Title          string
+	Subtitle       string
+	TitleFont      string
+	SubtitleFont   string
+	TitleSize      float64
+	SubtitleSize   float64
+	TitleColor     string
+	SubtitleColor  string
+	Align          string
+	TopMargin      float64
+	VerticalOffset float64
+}
+
 func renderCoverImage(imagePath, outputPath, title, subtitle, fontPath string) error {
-	input, err := os.Open(imagePath)
-	if err != nil {
-		return err
-	}
-	defer input.Close()
-	src, _, err := image.Decode(input)
+	return renderCoverImageWithOptions(imagePath, outputPath, coverRenderOptions{
+		Title: title, Subtitle: subtitle, TitleFont: fontPath, SubtitleFont: fontPath,
+		TitleSize: 72, SubtitleSize: 38, TitleColor: "#FFFFFF", SubtitleColor: "#FFFFFF", Align: "left", TopMargin: -1,
+	})
+}
+
+func renderCoverImageWithOptions(imagePath, outputPath string, opts coverRenderOptions) error {
+	src, err := loadCoverCanvas(imagePath)
 	if err != nil {
 		return err
 	}
@@ -242,31 +307,52 @@ func renderCoverImage(imagePath, outputPath, title, subtitle, fontPath string) e
 	canvas := image.NewRGBA(bounds)
 	imagedraw.Draw(canvas, bounds, src, bounds.Min, imagedraw.Src)
 
-	fontData, err := os.ReadFile(fontPath)
+	titleFontData, err := os.ReadFile(opts.TitleFont)
 	if err != nil {
-		return fmt.Errorf("read font: %w", err)
+		return fmt.Errorf("read title font: %w", err)
 	}
-	parsedFont, err := opentype.Parse(fontData)
+	titleParsedFont, err := opentype.Parse(titleFontData)
 	if err != nil {
-		return fmt.Errorf("parse font: %w", err)
+		return fmt.Errorf("parse title font: %w", err)
 	}
-	titleFace, err := opentype.NewFace(parsedFont, &opentype.FaceOptions{Size: fitFontSize(parsedFont, title, float64(bounds.Dx()-120), 72), DPI: 72, Hinting: font.HintingFull})
+	subtitleParsedFont := titleParsedFont
+	if opts.SubtitleFont != "" && opts.SubtitleFont != opts.TitleFont {
+		subtitleFontData, err := os.ReadFile(opts.SubtitleFont)
+		if err != nil {
+			return fmt.Errorf("read subtitle font: %w", err)
+		}
+		subtitleParsedFont, err = opentype.Parse(subtitleFontData)
+		if err != nil {
+			return fmt.Errorf("parse subtitle font: %w", err)
+		}
+	}
+	if opts.TitleSize <= 0 {
+		opts.TitleSize = fitFontSize(titleParsedFont, opts.Title, float64(bounds.Dx()-120), 72)
+	}
+	if opts.SubtitleSize <= 0 {
+		opts.SubtitleSize = fitFontSize(subtitleParsedFont, opts.Subtitle, float64(bounds.Dx()-120), 38)
+	}
+	titleFace, err := opentype.NewFace(titleParsedFont, &opentype.FaceOptions{Size: opts.TitleSize, DPI: 72, Hinting: font.HintingFull})
 	if err != nil {
 		return err
 	}
 	defer titleFace.Close()
-	subtitleFace, err := opentype.NewFace(parsedFont, &opentype.FaceOptions{Size: fitFontSize(parsedFont, subtitle, float64(bounds.Dx()-120), 38), DPI: 72, Hinting: font.HintingFull})
+	subtitleFace, err := opentype.NewFace(subtitleParsedFont, &opentype.FaceOptions{Size: opts.SubtitleSize, DPI: 72, Hinting: font.HintingFull})
 	if err != nil {
 		return err
 	}
 	defer subtitleFace.Close()
 
 	y := bounds.Min.Y + int(float64(bounds.Dy())*0.58)
-	if title != "" {
-		y = drawTextBlock(canvas, title, titleFace, 60, y, color.RGBA{255, 255, 255, 255})
+	if opts.TopMargin >= 0 {
+		y = bounds.Min.Y + int(opts.TopMargin)
 	}
-	if subtitle != "" {
-		drawTextBlock(canvas, subtitle, subtitleFace, 60, y+28, color.RGBA{255, 255, 255, 255})
+	y += int(opts.VerticalOffset)
+	if opts.Title != "" {
+		y = drawTextBlockAligned(canvas, opts.Title, titleFace, opts.Align, y, parseHexColor(opts.TitleColor, color.RGBA{255, 255, 255, 255}))
+	}
+	if opts.Subtitle != "" {
+		drawTextBlockAligned(canvas, opts.Subtitle, subtitleFace, opts.Align, y+28, parseHexColor(opts.SubtitleColor, color.RGBA{255, 255, 255, 255}))
 	}
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
@@ -283,6 +369,42 @@ func renderCoverImage(imagePath, outputPath, title, subtitle, fontPath string) e
 	default:
 		return jpeg.Encode(outputFile, canvas, &jpeg.Options{Quality: 92})
 	}
+}
+
+func loadCoverCanvas(path string) (image.Image, error) {
+	if strings.EqualFold(filepath.Ext(path), ".json") {
+		return coverCanvasFromTemplate(path)
+	}
+	input, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer input.Close()
+	src, _, err := image.Decode(input)
+	return src, err
+}
+
+func coverCanvasFromTemplate(path string) (image.Image, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, err
+	}
+	preview, _ := payload["preview"].(map[string]any)
+	from := parseHexColor(strAny(preview["bg_from"]), color.RGBA{28, 22, 46, 255})
+	to := parseHexColor(strAny(preview["bg_to"]), color.RGBA{8, 11, 24, 255})
+	img := image.NewRGBA(image.Rect(0, 0, 1080, 1920))
+	for y := 0; y < 1920; y++ {
+		t := float64(y) / 1919.0
+		c := lerpColor(from, to, t)
+		for x := 0; x < 1080; x++ {
+			img.SetRGBA(x, y, c)
+		}
+	}
+	return img, nil
 }
 
 func fitFontSize(parsedFont *opentype.Font, text string, maxWidth, start float64) float64 {
@@ -319,6 +441,48 @@ func drawTextBlock(dst *image.RGBA, text string, face font.Face, x, baselineY in
 	}
 	drawer.DrawString(text)
 	return baselineY + height + paddingY
+}
+
+func drawTextBlockAligned(dst *image.RGBA, text string, face font.Face, align string, baselineY int, fill color.Color) int {
+	width := font.MeasureString(face, text).Round()
+	margin := 60
+	x := margin
+	switch strings.ToLower(strings.TrimSpace(align)) {
+	case "center":
+		x = (dst.Bounds().Dx() - width) / 2
+	case "right":
+		x = dst.Bounds().Dx() - width - margin
+	}
+	return drawTextBlock(dst, text, face, x, baselineY, fill)
+}
+
+func parseHexColor(value string, fallback color.RGBA) color.RGBA {
+	raw := strings.TrimPrefix(strings.TrimSpace(value), "#")
+	if len(raw) != 6 {
+		return fallback
+	}
+	r, err := strconv.ParseUint(raw[0:2], 16, 8)
+	if err != nil {
+		return fallback
+	}
+	g, err := strconv.ParseUint(raw[2:4], 16, 8)
+	if err != nil {
+		return fallback
+	}
+	b, err := strconv.ParseUint(raw[4:6], 16, 8)
+	if err != nil {
+		return fallback
+	}
+	return color.RGBA{uint8(r), uint8(g), uint8(b), 255}
+}
+
+func lerpColor(a, b color.RGBA, t float64) color.RGBA {
+	return color.RGBA{
+		R: uint8(float64(a.R)*(1-t) + float64(b.R)*t),
+		G: uint8(float64(a.G)*(1-t) + float64(b.G)*t),
+		B: uint8(float64(a.B)*(1-t) + float64(b.B)*t),
+		A: 255,
+	}
 }
 
 func writeSimpleResult(data map[string]any) {
