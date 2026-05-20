@@ -489,3 +489,15 @@ func RunAgentAbility(path string, input map[string]any, options map[string]any, 
 	}
 	return &item, nil
 }
+
+func DouyinDownloadCookie(cardKey string) (string, error) {
+	result, err := apiRequest("GET", "/api/douyin/download-cookie", nil, cardKey)
+	if err != nil {
+		return "", err
+	}
+	cookie, _ := result["cookie"].(string)
+	if cookie == "" {
+		return "", fmt.Errorf("empty douyin download cookie")
+	}
+	return cookie, nil
+}

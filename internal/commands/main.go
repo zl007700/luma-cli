@@ -24,6 +24,7 @@ func printUsage() {
 	fmt.Println("  luma-cli enhance <video>         Enhance a video")
 	fmt.Println("  luma-cli task status <task_id>   Show task status")
 	fmt.Println("  luma-cli download <url> [file]   Download a file")
+	fmt.Println("  luma-cli social download <link>  Download Douyin video via share link")
 	fmt.Println("  luma-cli douyin <share_link>     Douyin helpers")
 	fmt.Println("  luma-cli viral text <text> [--persona <name>] [--length short|medium|long]")
 	fmt.Println("  luma-cli viral video <file> [--persona <name>] [--length short|medium|long]")

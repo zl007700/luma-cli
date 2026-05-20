@@ -27,6 +27,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "resource", Description: "Cloud-managed client resources", Handler: cmdResource},
 		{Name: "runtime", Description: "Local runtime installation", Handler: cmdRuntime},
 		{Name: "script", Description: "Cloud script generation helpers", Handler: cmdScript},
+		{Name: "social", Description: "Social platform video download (Douyin)", Handler: cmdSocial},
 		{Name: "subtitle", Description: "Subtitle generation and rendering", Handler: cmdSubtitle},
 		{Name: "task", Description: "Cloud task status", Handler: cmdTask},
 		{Name: "tools", Description: "Agent tool discovery", Handler: cmdTools},

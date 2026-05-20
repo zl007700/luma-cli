@@ -46,6 +46,7 @@ logs/
 *.tmp
 *.temp
 .cache/
+tmp/
 
 # Node (if needed for frontend)
 node_modules/
@@ -62,6 +63,7 @@ htmlcov/
 *.pem
 *.key
 credentials.json
+data/social/
 luma-cli
 luma-cli.exe
 bin/

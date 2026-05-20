@@ -1,7 +1,7 @@
 package commands
 
 func cmdDouyin(args []string) {
-	println("not implemented: douyin")
+	cmdSocialDownload(args)
 }
 
 func cmdViral(args []string) {
