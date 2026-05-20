@@ -54,6 +54,36 @@ type ClientResource struct {
 	ExpireSeconds int      `json:"expire_seconds,omitempty"`
 }
 
+type SubtitleDefaults struct {
+	Font             string `json:"font"`
+	FontSize         int    `json:"font_size"`
+	Color            string `json:"color"`
+	StrokeColor      string `json:"stroke_color"`
+	HighlightColor   string `json:"highlight_color"`
+	MaxChars         int    `json:"max_chars"`
+	EffectsEnabled   bool   `json:"effects_enabled"`
+	HighlightEnabled bool   `json:"highlight_enabled"`
+}
+
+type CoverDefaults struct {
+	Template     string `json:"template"`
+	Font         string `json:"font"`
+	TitleSize    int    `json:"title_size"`
+	SubtitleSize int    `json:"subtitle_size"`
+}
+
+type BGMDefaults struct {
+	Default     string  `json:"default"`
+	VoiceVolume float64 `json:"voice_volume"`
+	BGMVolume   float64 `json:"bgm_volume"`
+}
+
+type ClientDefaults struct {
+	Subtitle SubtitleDefaults `json:"subtitle"`
+	Cover    CoverDefaults    `json:"cover"`
+	BGM      BGMDefaults      `json:"bgm"`
+}
+
 type ScriptRewriteResponse struct {
 	Ability   string         `json:"ability"`
 	RequestID string         `json:"request_id"`
@@ -445,6 +475,22 @@ func SignClientResource(resourceID, cardKey string) (*ClientResource, error) {
 	item, err := mapToStruct[ClientResource](result)
 	if err != nil {
 		return nil, fmt.Errorf("parse resource sign response failed: %w", err)
+	}
+	return &item, nil
+}
+
+func ClientResourceDefaults(cardKey string) (*ClientDefaults, error) {
+	result, err := apiRequest("GET", "/v1/client-resources/defaults", nil, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	defaults, ok := result["defaults"].(map[string]any)
+	if !ok {
+		defaults = result
+	}
+	item, err := mapToStruct[ClientDefaults](defaults)
+	if err != nil {
+		return nil, fmt.Errorf("parse client defaults response failed: %w", err)
 	}
 	return &item, nil
 }

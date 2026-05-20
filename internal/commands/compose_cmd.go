@@ -22,24 +22,30 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-const defaultCoverFontResourceID = "font_22b2e39414"
-
 func cmdBGM(args []string) {
 	if len(args) < 1 || args[0] != "mix" {
-		fmt.Println("usage: luma-cli bgm mix <video> --bgm <file_or_resource_id> [--output <mp4>] [--voice-volume 1.0] [--bgm-volume 0.25]")
+		fmt.Println("usage: luma-cli bgm mix <video> [--bgm <file_or_resource_id>] [--output <mp4>] [--voice-volume 1.0] [--bgm-volume 0.25]")
 		return
 	}
 	parsed := cmdutil.Parse(args[1:])
 	videoPath := parsed.Pos(0)
 	bgmValue := parsed.String("bgm", "")
-	if videoPath == "" || bgmValue == "" {
-		fmt.Println("usage: luma-cli bgm mix <video> --bgm <file_or_resource_id> [--output <mp4>]")
+	if videoPath == "" {
+		fmt.Println("usage: luma-cli bgm mix <video> [--bgm <file_or_resource_id>] [--output <mp4>]")
+		return
+	}
+	cfg := loadConfig()
+	defaults := loadClientDefaults(cfg)
+	if bgmValue == "" {
+		bgmValue = defaults.BGM.Default
+	}
+	if bgmValue == "" {
+		fmt.Println("Error: no BGM specified and no default BGM configured")
 		return
 	}
 	outputPath := parsed.String("output", "bgm_video.mp4")
-	voiceVolume := parsed.String("voice-volume", "1.0")
-	bgmVolume := parsed.String("bgm-volume", "0.25")
-	cfg := loadConfig()
+	voiceVolume := parsed.String("voice-volume", formatVolume(defaults.BGM.VoiceVolume, "1.0"))
+	bgmVolume := parsed.String("bgm-volume", formatVolume(defaults.BGM.BGMVolume, "0.25"))
 	bgmPath, err := resolveLocalCachedOrCloudResource(bgmValue, cfg)
 	if err != nil {
 		fmt.Printf("Error: resolve bgm failed: %v\n", err)
@@ -118,22 +124,35 @@ func cmdCoverFrame(raw []string) {
 
 func cmdCoverRender(raw []string) {
 	parsed := cmdutil.Parse(raw)
+	cfg := loadConfig()
+	defaults := loadClientDefaults(cfg)
 	imagePath := parsed.String("image", "")
 	if imagePath == "" {
 		imagePath = parsed.Pos(0)
 	}
 	if imagePath == "" {
-		fmt.Println("usage: luma-cli cover render <image> --title <text> [--subtitle <text>] [--output title_cover.jpg]")
-		return
+		imagePath = defaults.Cover.Template
 	}
 	outputPath := parsed.String("output", "title_cover.jpg")
 	title := parsed.String("title", "")
 	subtitle := parsed.String("subtitle", "")
 	font := parsed.String("font", "")
 	if font == "" {
-		font = defaultCoverFontResourceID
+		font = defaults.Cover.Font
 	}
-	cfg := loadConfig()
+	if imagePath == "" {
+		fmt.Println("usage: luma-cli cover render <image> --title <text> [--subtitle <text>] [--output title_cover.jpg]")
+		return
+	}
+	if resolved, err := resolveLocalCachedOrCloudResource(imagePath, cfg); err == nil {
+		imagePath = resolved
+	} else if parsed.String("image", "") != "" || parsed.Pos(0) != "" {
+		fmt.Printf("Error: resolve cover image failed: %v\n", err)
+		return
+	} else {
+		fmt.Printf("Error: resolve default cover template failed: %v\n", err)
+		return
+	}
 	if resolved, err := resolveLocalCachedOrCloudResource(font, cfg); err == nil {
 		font = resolved
 	} else if parsed.String("font", "") != "" {
@@ -167,7 +186,7 @@ func cmdCoverRender(raw []string) {
 func printCoverUsage() {
 	fmt.Println("luma-cli cover <subcommand>")
 	fmt.Println("  frame <video> [--time 1.0] [--output cover_frame.png]")
-	fmt.Println("  render <image> --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--output title_cover.jpg]")
+	fmt.Println("  render [image] --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--output title_cover.jpg]")
 }
 
 func installedFFmpegPath() (string, error) {

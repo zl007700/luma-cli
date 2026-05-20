@@ -120,7 +120,7 @@ func renderEffectPython(text, effectType string, start, end float64, cfg EffectC
 		"anchor_y":     anchorY,
 		"text_color":   fmt.Sprintf("#%02X%02X%02X", cfg.TextColor.R, cfg.TextColor.G, cfg.TextColor.B),
 		"stroke_color": fmt.Sprintf("#%02X%02X%02X", cfg.StrokeColor.R, cfg.StrokeColor.G, cfg.StrokeColor.B),
-		"stroke_width":  cfg.StrokeWidth,
+		"stroke_width": cfg.StrokeWidth,
 	}
 
 	cfgJSON, err := json.Marshal(pythonCfg)
@@ -302,7 +302,7 @@ func renderTextImage(text string, cfg EffectConfig) *image.RGBA {
 	// Draw a text-colored rectangle representing the text
 	// (Simplified - proper font rendering needs external lib)
 	rectH := fontSize * 8 / 10
-	rectY := padding + (height - rectH) / 2
+	rectY := padding + (height-rectH)/2
 
 	for py := rectY; py < rectY+rectH && py < imgHeight; py++ {
 		for px := padding; px < padding+width && px < imgWidth; px++ {
@@ -562,7 +562,7 @@ func boxBlurApprox(src *image.RGBA, radius float64) *image.RGBA {
 
 // ApplyEffectOverlays renders effect MOV clips and overlays them onto the video.
 // effectsDir is used for intermediate files; falls back to os.TempDir() if empty.
-func ApplyEffectOverlays(videoPath string, segments []Segment, width, height, fontSize int, colorHex, strokeColorHex, highlightColorHex string, effectsDir string) (string, error) {
+func ApplyEffectOverlays(videoPath string, segments []Segment, width, height, fontSize int, colorHex, strokeColorHex, highlightColorHex string, fontPath string, effectsDir string) (string, error) {
 	if len(segments) == 0 {
 		return videoPath, nil
 	}
@@ -578,6 +578,7 @@ func ApplyEffectOverlays(videoPath string, segments []Segment, width, height, fo
 		Width:       width,
 		Height:      height,
 		FPS:         30,
+		FontPath:    fontPath,
 		FontSize:    fontSize,
 		AnchorX:     float64(width / 2),
 		AnchorY:     anchorY,

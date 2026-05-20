@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/luma-cli/lumer-cli/cloud"
 	"github.com/luma-cli/lumer-cli/internal/atom"
 	"github.com/luma-cli/lumer-cli/project"
 	"github.com/luma-cli/lumer-cli/subtitle"
@@ -19,6 +20,7 @@ type subtitleOptions struct {
 	projectName    string
 	maxChars       int
 	fontSize       int
+	fontResource   string
 	color          string
 	strokeColor    string
 	highlightColor string
@@ -44,6 +46,7 @@ func cmdSubtitle(args []string) {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
 		return
 	}
+	defaults := loadClientDefaults(cfg)
 
 	// Resolve project
 	proj := resolveProjectByName(opts.projectName)
@@ -58,6 +61,7 @@ func cmdSubtitle(args []string) {
 	// Determine output paths
 	projDirs := getProjectDirs(proj)
 	outputPath := resolveOutputPath(opts, proj, projDirs)
+	applySubtitleDefaults(opts, defaults)
 
 	// Run pipeline
 	rawText := opts.input
@@ -111,10 +115,17 @@ func cmdSubtitle(args []string) {
 	fmt.Println("Step 6/6: Generating ASS and burning subtitles...")
 	width, height := resolveVideoSize(opts.isTextMode, opts.input)
 	fontSize, marginV := resolveFontSize(opts.fontSize, height)
+	fontPath := ""
+	if opts.fontResource != "" {
+		fontPath, err = cacheDefaultResource(opts.fontResource, cfg)
+		if err != nil {
+			fmt.Printf("  Warning: resolve subtitle font failed: %v\n", err)
+		}
+	}
 
 	opts2 := subtitle.ASSOptions{
 		PlayResX: width, PlayResY: height,
-		FontName: "Microsoft YaHei", FontSize: fontSize,
+		FontName: fontNameFromPath(fontPath), FontSize: fontSize,
 		Color: opts.color, StrokeColor: opts.strokeColor,
 		BackColor: "#000000", HighlightColor: opts.highlightColor,
 		HighlightScale: 1.25, MarginL: 60, MarginR: 60, MarginV: marginV,
@@ -122,6 +133,14 @@ func cmdSubtitle(args []string) {
 	}
 
 	assPath := resolveAssPath(outputPath, proj, projDirs)
+	fontDir := filepath.Dir(assPath)
+	if fontPath != "" {
+		if copiedFont, err := copyFontToDir(fontPath, fontDir); err == nil {
+			fontPath = copiedFont
+		} else {
+			fmt.Printf("  Warning: copy subtitle font failed: %v\n", err)
+		}
+	}
 	if err := subtitle.WriteASS(segments, assPath, opts2); err != nil {
 		fmt.Printf("Error writing ASS: %v\n", err)
 		return
@@ -136,7 +155,6 @@ func cmdSubtitle(args []string) {
 	}
 
 	// Burn subtitles
-	fontDir := filepath.Dir(assPath)
 	if err := subtitle.BurnSubtitles(opts.input, assPath, outputPath, fontDir, ""); err != nil {
 		fmt.Printf("Error burning subtitles: %v\n", err)
 		os.Remove(assPath)
@@ -147,7 +165,7 @@ func cmdSubtitle(args []string) {
 	effectSegments := filterEffectSegments(segments)
 	if len(effectSegments) > 0 {
 		fmt.Printf("  Rendering %d effect overlays...\n", len(effectSegments))
-		finalPath, err := subtitle.ApplyEffectOverlays(outputPath, effectSegments, width, height, fontSize, opts.color, opts.strokeColor, opts.highlightColor, projDirs.effects)
+		finalPath, err := subtitle.ApplyEffectOverlays(outputPath, effectSegments, width, height, fontSize, opts.color, opts.strokeColor, opts.highlightColor, fontPath, projDirs.effects)
 		if err != nil {
 			fmt.Printf("  Warning: effect overlay failed: %v (continuing without effects)\n", err)
 		} else if finalPath != outputPath {
@@ -236,6 +254,11 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 				fmt.Sscanf(args[i+1], "%d", &opts.fontSize)
 				i++
 			}
+		case "--font":
+			if i+1 < len(args) {
+				opts.fontResource = args[i+1]
+				i++
+			}
 		case "--color":
 			if i+1 < len(args) {
 				opts.color = args[i+1]
@@ -264,6 +287,36 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 	}
 
 	return opts
+}
+
+func applySubtitleDefaults(opts *subtitleOptions, defaults *cloud.ClientDefaults) {
+	if opts == nil || defaults == nil {
+		return
+	}
+	if opts.fontResource == "" {
+		opts.fontResource = defaults.Subtitle.Font
+	}
+	if opts.fontSize <= 0 && defaults.Subtitle.FontSize > 0 {
+		opts.fontSize = defaults.Subtitle.FontSize
+	}
+	if defaults.Subtitle.MaxChars > 0 && opts.maxChars == 15 {
+		opts.maxChars = defaults.Subtitle.MaxChars
+	}
+	if opts.color == "#FDFDFF" && defaults.Subtitle.Color != "" {
+		opts.color = defaults.Subtitle.Color
+	}
+	if opts.strokeColor == "#1F0101" && defaults.Subtitle.StrokeColor != "" {
+		opts.strokeColor = defaults.Subtitle.StrokeColor
+	}
+	if opts.highlightColor == "#FFD95A" && defaults.Subtitle.HighlightColor != "" {
+		opts.highlightColor = defaults.Subtitle.HighlightColor
+	}
+	if !defaults.Subtitle.EffectsEnabled {
+		opts.skipEffects = true
+	}
+	if !defaults.Subtitle.HighlightEnabled {
+		opts.skipHighlight = true
+	}
 }
 
 func isBoolFlag(flag string) bool {
@@ -425,6 +478,7 @@ func printSubtitleUsage() {
 	fmt.Println("    --project <name>         - Use specified project for output organization")
 	fmt.Println("    --max-chars <n>          - Max chars per segment (default: 15)")
 	fmt.Println("    --font-size <n>          - Font size in px (default: auto)")
+	fmt.Println("    --font <path_or_resource_id> - Subtitle font (default: product setting)")
 	fmt.Println("    --color <hex>            - Font color (default: #FDFDFF)")
 	fmt.Println("    --stroke <hex>           - Stroke color (default: #1F0101)")
 	fmt.Println("    --highlight-color <hex>  - Highlight color (default: #FFD95A)")
