@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -73,6 +75,7 @@ func cmdPIPScan(raw []string) {
 		fmt.Printf("Error: write output failed: %v\n", err)
 		return
 	}
+	recordProjectArtifact("materials", absOut, "pip.scan")
 	writeSimpleResult(map[string]any{"output_path": absOut, "count": len(materials)})
 }
 
@@ -81,10 +84,10 @@ func cmdPIPPlan(raw []string) {
 	segmentsPath := strings.TrimSpace(args.String("segments", ""))
 	materialsPath := strings.TrimSpace(args.String("materials", ""))
 	if segmentsPath == "" || materialsPath == "" {
-		fmt.Println("usage: luma-cli pip plan --segments segments.json --materials materials.json [--output pip_plan.json]")
+		fmt.Println("usage: luma-cli pip plan --segments segments.json --materials materials.json [--output step5_picture_in_picture_plan.json]")
 		return
 	}
-	outputPath := args.String("output", "pip_plan.json")
+	outputPath := args.String("output", "step5_picture_in_picture_plan.json")
 	landscapeRatio, err := args.Float("landscape-height-ratio", 0.32)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -122,27 +125,28 @@ func cmdPIPPlan(raw []string) {
 		fmt.Printf("Error: material match failed: %v\n", err)
 		return
 	}
-	inserts := anyListFromPayload(matchResp.Result, "inserts")
-	pipResp, err := cloud.RunAgentAbility("/v1/agent/pip/plan", map[string]any{"scene_units": sceneUnits, "materials": materials, "inserts": inserts}, nil, cfg.CardKey)
-	if err != nil {
-		fmt.Printf("Error: pip plan failed: %v\n", err)
-		return
-	}
+	rawInserts := anyListFromPayload(matchResp.Result, "inserts")
+	inserts := normalizePIPInserts(rawInserts, listMapFromAny(sceneUnits), listMapFromAny(materials))
+	assignments := buildPIPAssignments(inserts)
 	plan := map[string]any{
 		"enabled":                len(inserts) > 0,
 		"landscape_height_ratio": landscapeRatio,
+		"match_looseness":        args.String("match-looseness", "normal"),
 		"scene_units":            sceneUnits,
 		"material_candidates":    materials,
 		"materials":              materials,
+		"assignments":            assignments,
 		"inserts":                inserts,
-		"pip_plan":               pipResp.Result["pip_plan"],
-		"worker_payload":         pipResp.Result["worker_payload"],
+		"planning_mode":          "agent",
 		"render_rules": map[string]any{
 			"portrait":  "replace",
 			"landscape": "center_with_blurred_background",
 			"empty":     "keep_original",
 		},
 		"status": "planned",
+	}
+	if len(inserts) == 0 {
+		plan["status"] = "empty"
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
@@ -153,6 +157,7 @@ func cmdPIPPlan(raw []string) {
 		fmt.Printf("Error: write output failed: %v\n", err)
 		return
 	}
+	recordProjectArtifact("pip_plan", absOut, "pip.plan")
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"output_path": absOut, "scene_count": len(sceneUnits), "matched_count": len(inserts)}})
 		return
@@ -166,11 +171,15 @@ func cmdPIPRender(raw []string) {
 	videoPath := parsed.Pos(0)
 	planPath := parsed.String("plan", "")
 	if videoPath == "" || planPath == "" {
-		fmt.Println("usage: luma-cli pip render <video> --plan pip_plan.json [--output pip_video.mp4]")
+		fmt.Println("usage: luma-cli pip render <video> --plan step5_picture_in_picture_plan.json [--output step5_picture_in_picture.mp4]")
 		return
 	}
-	outputPath := parsed.String("output", "pip_video.mp4")
-	landscapeRatio, err := parsed.Float("landscape-height-ratio", 0.32)
+	outputPath := parsed.String("output", "step5_picture_in_picture.mp4")
+	landscapeRatio := 0.0
+	var err error
+	if parsed.Has("landscape-height-ratio") {
+		landscapeRatio, err = parsed.Float("landscape-height-ratio", 0.32)
+	}
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -191,8 +200,8 @@ func cmdPIPRender(raw []string) {
 func printPIPUsage() {
 	fmt.Println("luma-cli pip <subcommand>")
 	fmt.Println("  scan <material_dir> [--output materials.json]")
-	fmt.Println("  plan --segments segments.json --materials materials.json [--output pip_plan.json]")
-	fmt.Println("  render <video> --plan pip_plan.json [--output pip_video.mp4] [--landscape-height-ratio 0.32]")
+	fmt.Println("  plan --segments segments.json --materials materials.json [--output step5_picture_in_picture_plan.json]")
+	fmt.Println("  render <video> --plan step5_picture_in_picture_plan.json [--output step5_picture_in_picture.mp4] [--landscape-height-ratio 0.32]")
 }
 
 func renderPIPVideo(sourceVideo, planPath, outputPath string, landscapeRatio float64) error {
@@ -203,6 +212,13 @@ func renderPIPVideo(sourceVideo, planPath, outputPath string, landscapeRatio flo
 	var plan map[string]any
 	if err := json.Unmarshal(planData, &plan); err != nil {
 		return err
+	}
+	if landscapeRatio <= 0 {
+		if value, ok := numberAny(plan["landscape_height_ratio"]); ok && value > 0 {
+			landscapeRatio = value
+		} else {
+			landscapeRatio = 0.32
+		}
 	}
 	ffmpeg, err := installedFFmpegPath()
 	if err != nil {
@@ -289,7 +305,11 @@ func buildPIPRenderSpecs(plan map[string]any, ffprobe string, sourceDuration flo
 	}
 	cfg := loadConfig()
 	var specs []pipRenderSpec
-	for _, insert := range listMap(plan["inserts"]) {
+	inserts := listMap(plan["inserts"])
+	if len(inserts) == 0 {
+		inserts = listMap(plan["pip_plan"])
+	}
+	for _, insert := range inserts {
 		start, end := pipInsertRange(insert, sceneMap, sourceDuration)
 		if end <= start {
 			continue
@@ -325,14 +345,25 @@ func buildPIPRenderSpecs(plan map[string]any, ffprobe string, sourceDuration flo
 			Replace:          info.Height >= info.Width,
 		})
 	}
+	sort.SliceStable(specs, func(i, j int) bool {
+		return specs[i].Start < specs[j].Start
+	})
 	return specs, nil
 }
 
 func pipInsertRange(insert map[string]any, scenes map[string]map[string]any, sourceDuration float64) (float64, float64) {
 	if start, ok := numberAny(insert["start"]); ok {
 		end, _ := numberAny(insert["end"])
+		if end <= start {
+			_, end = pipInsertSceneRange(insert, scenes)
+		}
 		return maxFloat(start, 0), minFloat(end, sourceDuration)
 	}
+	start, end := pipInsertSceneRange(insert, scenes)
+	return start, minFloat(end, sourceDuration)
+}
+
+func pipInsertSceneRange(insert map[string]any, scenes map[string]map[string]any) (float64, float64) {
 	startScene := scenes[firstString(insert, "start_scene_id", "start_sent_id", "scene_id")]
 	endSceneID := firstString(insert, "end_scene_id", "end_sent_id")
 	if endSceneID == "" {
@@ -341,7 +372,7 @@ func pipInsertRange(insert map[string]any, scenes map[string]map[string]any, sou
 	endScene := scenes[endSceneID]
 	start, _ := numberAny(startScene["start"])
 	end, _ := numberAny(endScene["end"])
-	return maxFloat(start, 0), minFloat(end, sourceDuration)
+	return maxFloat(start, 0), end
 }
 
 func buildPIPPrepareFilter(inputIndex int, outputLabel string, spec pipRenderSpec, sourceWidth, sourceHeight int, landscapeRatio float64) string {
@@ -351,6 +382,133 @@ func buildPIPPrepareFilter(inputIndex int, outputLabel string, spec pipRenderSpe
 		scale = fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,setsar=1", sourceWidth, sourceHeight, sourceWidth, sourceHeight)
 	}
 	return fmt.Sprintf("[%d:v]setpts=PTS-STARTPTS+%.6f/TB,%s,trim=duration=%.6f[%s]", inputIndex, spec.Start, scale, spec.Duration, outputLabel)
+}
+
+func normalizePIPInserts(raw []any, scenes []map[string]any, materials []map[string]any) []map[string]any {
+	sceneMap := map[string]map[string]any{}
+	for _, scene := range scenes {
+		id := firstString(scene, "scene_id", "sent_id", "segment_id", "id")
+		if id != "" {
+			sceneMap[id] = scene
+		}
+	}
+	materialIDs := map[string]bool{}
+	for _, material := range materials {
+		id := firstString(material, "material_id", "id", "resource_id")
+		if id != "" {
+			materialIDs[id] = true
+		}
+	}
+	inserts := make([]map[string]any, 0, len(raw))
+	for _, item := range raw {
+		insert, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		normalized := cloneMap(insert)
+		materialID := firstString(normalized, "material_id", "id", "resource_id")
+		if materialID == "" {
+			continue
+		}
+		normalized["material_id"] = materialID
+		if !materialIDs[materialID] {
+			normalized["material_known"] = false
+		}
+		sceneID := firstString(normalized, "scene_id", "start_scene_id", "start_sent_id")
+		if sceneID != "" {
+			if normalized["start_scene_id"] == nil {
+				normalized["start_scene_id"] = sceneID
+			}
+			if normalized["end_scene_id"] == nil {
+				normalized["end_scene_id"] = firstNonEmpty(firstString(normalized, "end_scene_id", "end_sent_id"), sceneID)
+			}
+			if scene, ok := sceneMap[sceneID]; ok {
+				if _, ok := normalized["start"]; !ok {
+					normalized["start"] = scene["start"]
+				}
+				if _, ok := normalized["end"]; !ok {
+					normalized["end"] = scene["end"]
+				}
+				if _, ok := normalized["start_segment_id"]; !ok {
+					normalized["start_segment_id"] = firstString(scene, "start_segment_id", "segment_id", "sent_id")
+				}
+				if _, ok := normalized["end_segment_id"]; !ok {
+					normalized["end_segment_id"] = firstString(scene, "end_segment_id", "segment_id", "sent_id")
+				}
+			}
+		}
+		inserts = append(inserts, normalized)
+	}
+	sort.SliceStable(inserts, func(i, j int) bool {
+		return insertSortValue(inserts[i]) < insertSortValue(inserts[j])
+	})
+	filtered := make([]map[string]any, 0, len(inserts))
+	lastEnd := -1.0
+	for _, insert := range inserts {
+		start, _ := numberAny(insert["start"])
+		end, _ := numberAny(insert["end"])
+		if end > start && start < lastEnd {
+			continue
+		}
+		if end > lastEnd {
+			lastEnd = end
+		}
+		filtered = append(filtered, insert)
+	}
+	return filtered
+}
+
+func buildPIPAssignments(inserts []map[string]any) []map[string]any {
+	assignments := make([]map[string]any, 0, len(inserts))
+	for _, insert := range inserts {
+		assignments = append(assignments, map[string]any{
+			"scene_id":    firstString(insert, "scene_id", "start_scene_id"),
+			"material_id": firstString(insert, "material_id"),
+			"start":       insert["start"],
+			"end":         insert["end"],
+			"reason":      firstString(insert, "reason", "match_reason"),
+		})
+	}
+	return assignments
+}
+
+func insertSortValue(insert map[string]any) float64 {
+	if start, ok := numberAny(insert["start"]); ok {
+		return start
+	}
+	if id := firstString(insert, "start_segment_id", "segment_id", "sent_id"); id != "" {
+		if n, err := strconv.ParseFloat(strings.TrimLeft(id, "s_"), 64); err == nil {
+			return n
+		}
+	}
+	return 0
+}
+
+func listMapFromAny(items []any) []map[string]any {
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		if m, ok := item.(map[string]any); ok {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+func cloneMap(in map[string]any) map[string]any {
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func installedFFprobePath(ffmpeg string) (string, error) {
@@ -433,6 +591,7 @@ func readJSONObject(path string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 	var payload map[string]any
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, err

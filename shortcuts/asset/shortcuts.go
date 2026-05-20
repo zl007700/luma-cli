@@ -33,7 +33,7 @@ func Shortcuts() []common.Shortcut {
 			Skills:   []string{"luma-assets"},
 		},
 		{
-			ID:          "material.understand",
+			ID:          "asset.understand",
 			Service:     "asset",
 			Command:     "understand",
 			Description: "Run cloud VLM understanding for an uploaded material.",
