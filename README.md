@@ -2,114 +2,128 @@
 
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.23-blue.svg)](https://go.dev/)
 
-[中文](./README.md) | [English](./README.en.md)
+中文 | [English](./README.en.md)
 
-给 AI Agent 配上的视频运营与内容制作技能包。`luma-cli` 让 Agent 具备一组可调用的专业视频能力：识别素材、合成语音、生成数字人口播、制作字幕、增强画质、管理制作项目，并把产物整理成适合运营使用的短视频资产。
+`luma-cli` 是给 AI Agent 使用的视频运营与内容制作能力包。它把 PikGeo / Luma 的视频制作能力包装成稳定的命令行原子能力，让 Agent 可以完成爆款仿写、内容研究、脚本改写、语音合成、声音克隆、数字人口播、画中画素材穿插、字幕、BGM、封面和项目产物管理。
 
-它不是一个面向开发者炫技的命令集合，而是一个面向创作者、运营团队和 Agent 使用者的专业能力包：你把需求交给 Agent，Agent 通过 `luma-cli` 调用视频制作能力，完成从脚本、配音、数字人到字幕和成片增强的工作。
-
-[快速开始](#快速开始) · [适合做什么](#适合做什么) · [核心能力](#核心能力) · [给-agent-使用](#给-agent-使用) · [项目工作区](#项目工作区)
+它不是给用户手工点来点去的工具，而是给 Agent 配上的一套专业视频制作技能。复杂 workflow 放在 `skills/` 说明书里，CLI 本身保持为可组合、可测试、可复用的原子能力。
 
 ## 适合做什么
 
-- **短视频批量制作**：把文案变成配音、数字人口播、字幕和可发布视频。
-- **运营内容生产**：围绕直播、产品介绍、营销素材、知识讲解等场景快速生成视频资产。
-- **素材整理和复用**：管理音色、数字人、原始视频、输出视频和中间产物。
-- **字幕与包装**：生成适合短视频观看节奏的字幕，并支持高亮、样式和烧录。
-- **Agent 视频技能增强**：让 Claude Code、Codex、Clawhub 等 Agent 不只是写代码，也能调用视频制作能力。
+- 给 Agent 增加短视频制作能力。
+- 从对标内容研究到脚本仿写，再到数字人口播成片。
+- 管理音色、数字人、素材、字幕、BGM、封面等中间产物。
+- 让运营 SOP 沉淀成 `skills/`，由 Agent 按步骤执行。
 
-## 为什么需要 luma-cli？
-
-- **让 Agent 真的能做视频**：Agent 可以直接调用 ASR、TTS、数字人口型、字幕、增强、素材管理等能力。
-- **面向运营工作流**：不是单点 API 示例，而是围绕“做一条可用的视频”组织能力。
-- **安装后即可发现能力**：`luma-cli tools list` 可以列出 Agent 能调用的所有工具。
-- **适合团队沉淀经验**：视频制作方法、运营 SOP、字幕风格、数字人使用方式可以沉淀在 `skills/` 里。
-- **后端能力托管**：注册、计费、模型执行、任务调度在 PikGeo 后端完成，CLI 只负责把能力带到用户和 Agent 身边。
-
-## 核心能力
-
-| 场景 | 命令 | 说明 |
-| --- | --- | --- |
-| 登录 | `auth login`, `auth status` | 保存和查看后端调用所需的 card key。 |
-| 素材 | `asset upload`, `asset list` | 上传素材，查看音色、数字人等资源。 |
-| 语音识别 | `asr` | 从音频或视频中识别文字。 |
-| 语音合成 | `tts` | 把文案合成为指定音色的语音。 |
-| 数字人口播 | `lipsync` | 用数字人形象和音频生成口播视频。 |
-| 视频增强 | `enhance` | 对视频进行画质增强或超分。 |
-| 字幕制作 | `subtitle` | 生成字幕，并可烧录到视频。 |
-| 项目管理 | `project create/list/use/info/clean` | 管理本地视频项目、产物和处理历史。 |
-| 任务查询 | `task status` | 查询云端任务状态。 |
-| Agent 工具发现 | `tools list`, `tools describe` | 查看 Agent 可调用能力和参数说明。 |
-
-## 快速开始
-
-安装：
+## 安装
 
 ```bash
 npm install -g @lumageo/luma-cli
 ```
 
-登录：
+首次使用需要登录：
 
 ```bash
 luma-cli auth login <CARD_KEY>
 luma-cli auth status
 ```
 
-查看 Agent 可用能力：
+安装本地视频运行时：
+
+```bash
+luma-cli runtime install ffmpeg
+```
+
+## Agent 工具发现
 
 ```bash
 luma-cli tools list
 luma-cli tools describe tts.synthesize
+luma-cli --json tools describe pip.plan
 ```
 
-第一次制作：
+常用能力：
+
+| 能力 | 命令 |
+| --- | --- |
+| 内容研究 | `research run`, `research export` |
+| 爆款改写 | `script rewrite` |
+| 声音克隆 | `voice clone`, `voice list` |
+| 语音合成 | `tts` |
+| 数字人口播 | `lipsync` |
+| 本地素材描述 | `material describe`, `material merge`, `material understand` |
+| 画中画 | `pip plan`, `pip render` |
+| 字幕 | `subtitle` |
+| BGM | `bgm mix` |
+| 封面 | `cover frame`, `cover render` |
+| 项目管理 | `project create/use/info` |
+
+## 爆款仿写流程
+
+内置 skill：
+
+```text
+skills/luma-viral-remix-workflow/SKILL.md
+```
+
+标准流程：
 
 ```bash
-# 文案转语音
-luma-cli tts "你好，欢迎来到直播间" --voice 男声3
+luma-cli project create viral-demo
+luma-cli project use viral-demo
 
-# 数字人口播
-luma-cli lipsync --avatar 数字人男 --audio tts_output.wav --output output.mp4
+luma-cli research run --role "AI工具创业者，想找适合口播拆解的爆款选题" --output step0_content_research.json
+luma-cli research export --input step0_content_research.json --output step0_content_research.csv
 
-# 加字幕
-luma-cli subtitle output.mp4 --output output_subtitled.mp4
+luma-cli script rewrite --input source_script.txt --output step1_rewrite.json
+luma-cli tts "<rewritten_text>" --voice 男声3 --output step2_tts.wav
+luma-cli lipsync --avatar 数字人男 --audio step2_tts.wav --output step3_lipsync.mp4
 
-# 增强画质
-luma-cli enhance output_subtitled.mp4 --scale 2
+luma-cli material describe ./materials --output step4_materials.json
+luma-cli material merge --materials step4_materials.json --meta ./materials_meta --output step4_materials_enriched.json
+luma-cli pip plan --segments step4_segments.json --materials step4_materials_enriched.json --output step4_picture_in_picture_plan.json
+luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
+
+luma-cli subtitle step4_picture_in_picture.mp4 --output step5_subtitle.mp4
+luma-cli cover frame step5_subtitle.mp4 --output step6_cover_frame.png
+luma-cli cover render step6_cover_frame.png --title "封面标题" --output step6_cover.jpg
 ```
 
-## 给 Agent 使用
+## 声音克隆
 
-Agent 不需要猜命令怎么用，先让它发现能力：
+上传一段参考音频，保存为后续 TTS 可使用的音色：
 
 ```bash
-luma-cli tools list
-luma-cli --json tools describe asr.transcribe
+luma-cli voice clone ./sample.wav --name my_voice
+luma-cli voice list
+luma-cli tts "这是一段测试口播" --voice my_voice --output step2_tts.wav
 ```
 
-典型 Agent 流程：
+## 标准中间产物
 
-1. 根据用户目标选择视频制作技能。
-2. 用 `tools list` 查看当前 CLI 支持什么。
-3. 用 `tools describe <tool_id>` 查看参数、风险和输出。
-4. 调用一个个原子能力完成制作。
-5. 把多步任务产物放入 project 工作区。
+建议 Agent 在多步任务中使用这些文件名：
+
+| 步骤 | 文件 |
+| --- | --- |
+| 内容研究 | `step0_content_research.json`, `step0_content_research.csv` |
+| 改写 | `step1_rewrite.json` |
+| 音频 | `step2_tts.wav` |
+| 数字人 | `step3_lipsync.mp4` |
+| 画中画 | `step4_segments.json`, `step4_materials.json`, `step4_picture_in_picture_plan.json`, `step4_picture_in_picture.mp4` |
+| 字幕 | `step5_subtitle.mp4` |
+| 封面 | `step6_cover_frame.png`, `step6_cover.jpg` |
 
 ## 内置 Skills
 
-`skills/` 是给 Agent 看的专业说明书，用来告诉 Agent 如何把多个能力组合成运营和视频制作工作流。
-
 | Skill | 说明 |
 | --- | --- |
-| `luma-video-workflow` | 从素材到成片的完整视频制作流程。 |
-| `luma-digital-human` | 数字人口播、配音、口型同步相关流程。 |
-| `luma-subtitle` | 字幕生成、切分、样式和烧录流程。 |
-| `luma-assets` | 音色、数字人、素材上传和选择流程。 |
+| `luma-viral-remix-workflow` | 爆款仿写完整流程 |
+| `luma-video-workflow` | 视频制作通用流程 |
+| `luma-digital-human` | 数字人、TTS、声音克隆相关流程 |
+| `luma-subtitle` | 字幕生成、切分、样式和烧录 |
+| `luma-assets` | 素材上传、选择和复用 |
 
 ## 项目工作区
-
-多步视频任务建议创建项目，方便整理素材和产物：
 
 ```bash
 luma-cli project create demo-video
@@ -124,12 +138,8 @@ source/     原始素材
 audio/      配音和音频
 subtitles/  字幕文件
 effects/    特效文件
-output/     最终成片
+output/     输出视频和封面
 tmp/        临时文件
 ```
 
-## 安全说明
-
-`luma-cli` 可以被 AI Agent 调用，并通过当前配置的 card key 创建、上传、下载或修改媒体资源。所有 `risk: write` 的工具都应被视为有副作用的操作。
-
-安全问题请参考 [SECURITY.md](./SECURITY.md)。
+`project.json` 会记录 history 和 artifacts，方便 Agent 恢复上下文、定位中间产物和复跑步骤。

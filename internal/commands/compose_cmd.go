@@ -274,7 +274,14 @@ func recordProjectArtifact(artifactType, path, step string) {
 	if proj == nil {
 		return
 	}
-	_ = proj.AddArtifact(project.Artifact{Type: artifactType, Path: path, Step: step})
+	_ = proj.AddArtifact(project.Artifact{
+		Type:    artifactType,
+		Path:    path,
+		Step:    step,
+		Ability: step,
+		Outputs: []string{path},
+		Status:  "completed",
+	})
 }
 
 type coverRenderOptions struct {

@@ -36,6 +36,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "tools", Description: "Agent tool discovery", Handler: cmdTools},
 		{Name: "tts", Description: "Text to speech", Handler: cmdTTS},
 		{Name: "viral", Description: "Viral copy helpers", Handler: cmdViral},
+		{Name: "voice", Description: "Voice clone and listing", Handler: cmdVoice},
 	}
 
 	registry := make(map[string]commandSpec, len(specs))

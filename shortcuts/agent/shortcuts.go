@@ -86,7 +86,7 @@ func Shortcuts() []common.Shortcut {
 			Skills:      []string{"luma-video-workflow"},
 		},
 		{
-			ID:          "pip.plan",
+			ID:          "agent.pip.plan",
 			Service:     "agent",
 			Command:     "run pip.plan",
 			Description: "Build a worker-facing picture-in-picture insert payload from scenes and matched materials.",

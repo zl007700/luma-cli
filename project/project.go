@@ -34,6 +34,11 @@ type Artifact struct {
 	Type      string    `json:"type"`
 	Path      string    `json:"path"`
 	Step      string    `json:"step,omitempty"`
+	Ability   string    `json:"ability,omitempty"`
+	Command   string    `json:"command,omitempty"`
+	Inputs    []string  `json:"inputs,omitempty"`
+	Outputs   []string  `json:"outputs,omitempty"`
+	Status    string    `json:"status,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	Meta      any       `json:"meta,omitempty"`
 }

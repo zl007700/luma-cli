@@ -22,6 +22,7 @@ func printUsage() {
 	fmt.Println("  luma-cli defaults show           Show product default settings")
 	fmt.Println("  luma-cli pip scan|plan|render    Plan and render picture-in-picture")
 	fmt.Println("  luma-cli tts <text>              Synthesize speech")
+	fmt.Println("  luma-cli voice clone <audio>     Clone a voice from reference audio")
 	fmt.Println("  luma-cli lipsync --avatar <name> Create a lip-sync video")
 	fmt.Println("  luma-cli material describe <dir> Build local material metadata")
 	fmt.Println("  luma-cli material understand <file> Upload and understand one material")

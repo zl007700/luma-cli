@@ -196,6 +196,11 @@ func guessResourceType(mimeType string) string {
 
 // UploadFile uploads a local file to the cloud and returns the object key.
 func UploadFile(filePath, cardKey, groupName string) (string, error) {
+	return UploadFileWithName(filePath, cardKey, groupName, "")
+}
+
+// UploadFileWithName uploads a local file with an optional resource filename.
+func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (string, error) {
 	stat, err := os.Stat(filePath)
 	if err != nil {
 		return "", err
@@ -205,6 +210,12 @@ func UploadFile(filePath, cardKey, groupName string) (string, error) {
 	resourceType := guessResourceType(mimeType)
 
 	filename := filepath.Base(filePath)
+	if strings.TrimSpace(resourceName) != "" {
+		filename = strings.TrimSpace(resourceName)
+		if filepath.Ext(filename) == "" {
+			filename += filepath.Ext(filePath)
+		}
+	}
 
 	if fileSize >= multipartThreshold {
 		return uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey)
