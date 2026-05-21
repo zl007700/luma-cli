@@ -97,3 +97,28 @@ Recommended intermediate files:
 | Cover | `step6_cover_frame.png`, `step6_cover.jpg` |
 
 `project.json` records history and artifacts so agents can resume, inspect, and rerun multi-step jobs.
+
+## Project Structure
+
+`luma-cli` is organized around a command shell, atomic capability modules, and agent-facing skills:
+
+```text
+cmd/luma-cli/             CLI entrypoint
+internal/commands/        Command argument parsing, output, and light orchestration
+internal/commands/pip_*   Picture-in-picture scene, match, and render implementation
+internal/commands/material_* Local material libraries, groups, and search
+internal/clientruntime/   Local runtime cache for ffmpeg, fonts, BGM, and templates
+cloud/                    PikGeo / Luma backend API client
+project/                  Project workspace, history, and artifacts
+shortcuts/                Agent-discoverable tool descriptions
+skills/                   Agent workflow instructions
+scripts/                  npm install and run entrypoints
+```
+
+Maintenance rules:
+
+- Keep CLI commands atomic; do not hard-code full business workflows in Go.
+- Put multi-step video workflows in `skills/` and let agents execute them through intermediate artifacts.
+- Keep prompt, material understanding, and semantic matching logic on the backend when it should stay closed-source.
+- Keep local logic focused on stable cross-platform work: files, resource cache, ffmpeg rendering, and result formatting.
+- When adding a capability, update `tools describe` / `shortcuts` so agents can discover the parameters automatically.

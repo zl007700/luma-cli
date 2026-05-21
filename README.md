@@ -146,3 +146,28 @@ tmp/        临时文件
 ```
 
 `project.json` 会记录 history 和 artifacts，方便 Agent 恢复上下文、定位中间产物和复跑步骤。
+
+## 项目结构
+
+`luma-cli` 按“命令壳 + 原子能力模块 + skills 说明书”的方式组织：
+
+```text
+cmd/luma-cli/             CLI 入口
+internal/commands/        命令参数解析、输出和轻量调度
+internal/commands/pip_*   画中画 scene/match/render 相关实现
+internal/commands/material_* 本地素材库、素材组、素材检索
+internal/clientruntime/   ffmpeg、字体、BGM、模板等本地运行时缓存
+cloud/                    PikGeo / Luma 后端 API 客户端
+project/                  项目目录、history、artifacts
+shortcuts/                Agent 可发现的工具说明
+skills/                   给 Agent 使用的流程说明书
+scripts/                  npm 安装和运行入口
+```
+
+维护原则：
+
+- CLI 命令保持原子化，不把完整业务流程写死在 Go 代码里。
+- 多步骤视频制作流程放在 `skills/`，由 Agent 按中间产物逐步执行。
+- prompt、素材理解、语义匹配等闭源能力优先放在后端。
+- 本地只保留跨平台稳定的能力，例如文件组织、资源缓存、ffmpeg 渲染、结果整理。
+- 新增能力时优先补 `tools describe` / `shortcuts`，让 Agent 能自动发现和理解参数。
