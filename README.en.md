@@ -45,7 +45,7 @@ luma-cli --json tools describe pip.plan
 See:
 
 ```text
-skills/luma-viral-remix-workflow/SKILL.md
+skills/luma-workflow-viral-remix/SKILL.md
 ```
 
 Typical flow:
@@ -97,6 +97,10 @@ Recommended intermediate files:
 | Cover | `step6_cover_frame.png`, `step6_cover.jpg` |
 
 `project.json` records history and artifacts so agents can resume, inspect, and rerun multi-step jobs.
+
+## Skills Distribution
+
+Luma skills are distributed separately from the npm binary installer. npm installs `luma-cli`; GitHub Release also uploads `luma-skills-vX.Y.Z.zip` for skills platforms and agent runtimes. See [docs/SKILLS.md](./docs/SKILLS.md).
 
 ## Project Structure
 

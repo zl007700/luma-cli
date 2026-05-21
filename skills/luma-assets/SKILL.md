@@ -6,11 +6,16 @@ metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools describe asset.upload"
+  category: "capability"
+  entrypoint: false
+  relatedSkills: ["luma-shared", "luma-material", "luma-digital-human"]
 ---
 
 # Luma Assets
 
 Use this skill when an agent needs to inspect or upload reusable media assets for Luma workflows.
+
+For local material libraries and PIP material matching, prefer `../luma-material/SKILL.md`.
 
 ## Common Groups
 

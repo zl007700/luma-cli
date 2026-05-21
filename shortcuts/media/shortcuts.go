@@ -31,7 +31,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"name", "object_key"},
 			Examples: []string{"luma-cli voice clone ./voice.wav --name my_voice"},
-			Skills:   []string{"luma-digital-human", "luma-video-workflow", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-digital-human", "luma-video-workflow", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "voice.list",
@@ -109,7 +109,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"output_path", "ass_path", "segments"},
 			Examples: []string{"luma-cli subtitle input.mp4 --project demo"},
-			Skills:   []string{"luma-subtitle", "luma-video-workflow", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-subtitle", "luma-video-workflow", "luma-workflow-viral-remix"},
 		},
 	}
 }

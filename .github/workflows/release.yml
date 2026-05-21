@@ -33,6 +33,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload skills bundle
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          zip -r "luma-skills-${GITHUB_REF_NAME}.zip" skills docs/SKILLS.md
+          gh release upload "${GITHUB_REF_NAME}" "luma-skills-${GITHUB_REF_NAME}.zip" --clobber
+
   publish-npm:
     needs: goreleaser
     runs-on: ubuntu-22.04

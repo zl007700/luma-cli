@@ -6,11 +6,16 @@ metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools list"
+  category: "capability"
+  entrypoint: true
+  relatedSkills: ["luma-shared", "luma-subtitle", "luma-workflow-viral-remix"]
 ---
 
 # Luma Digital Human
 
 Use this skill when an agent needs to create a digital-human spoken video from script text, a voice, and an avatar.
+
+Read `../luma-shared/SKILL.md` first for common auth, project, output, and artifact rules.
 
 ## Asset First
 
@@ -62,6 +67,7 @@ luma-cli asset upload avatar.mp4 --group roles
 - Use `voice.clone` when a user provides a voice sample.
 - Use `voice.list` and `asset.list roles` when the user asks what is available.
 - Use the latest project TTS output for lip-sync unless the user explicitly provides `--audio`.
+- Keep the script text outside media commands until it is final enough for this generation attempt.
 - Do not enhance every draft; enhance only the selected final render.
 - Keep script revisions outside the media commands. The CLI should receive the final text for each generation attempt.
 - Use advanced backend parameters only when the user asks for them:

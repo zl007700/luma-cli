@@ -19,7 +19,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"response", "output_path"},
 			Examples: []string{"luma-cli research run --role \"AI工具创业者\" --mode precise --output step0_content_research.json"},
-			Skills:   []string{"luma-content-research", "luma-viral-remix-workflow", "luma-video-workflow"},
+			Skills:   []string{"luma-content-research", "luma-workflow-viral-remix", "luma-video-workflow"},
 		},
 		{
 			ID:          "research.export",
@@ -33,7 +33,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"output_path", "count"},
 			Examples: []string{"luma-cli research export --input step0_content_research.json --output step0_content_research.csv"},
-			Skills:   []string{"luma-content-research", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-content-research", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "research.keywords",
@@ -48,7 +48,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"keywords", "summary", "output_path", "csv_path"},
 			Examples: []string{"luma-cli research keywords --input step0_content_research.json --output step0_keywords.json --csv step0_keywords.csv"},
-			Skills:   []string{"luma-content-research", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-content-research", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "persona.save",
@@ -62,7 +62,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"id", "name", "summary", "role_description"},
 			Examples: []string{"luma-cli research persona save ai_founder --role \"AI工具创业者\""},
-			Skills:   []string{"luma-content-research", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-content-research", "luma-workflow-viral-remix"},
 		},
 	}
 }

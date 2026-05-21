@@ -17,7 +17,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"materials", "output_path"},
 			Examples: []string{"luma-cli material describe ./materials --output materials.json"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-material", "luma-video-workflow"},
 		},
 		{
 			ID:          "material.group.list",
@@ -31,7 +31,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"groups", "output_path"},
 			Examples: []string{"luma-cli material group list ./material_library/groups --output material_groups.json"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-material", "luma-video-workflow"},
 		},
 		{
 			ID:          "material.group.describe",
@@ -45,7 +45,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"group", "materials", "output_path"},
 			Examples: []string{"luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-material", "luma-video-workflow"},
 		},
 		{
 			ID:          "material.understand",
@@ -61,7 +61,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"group", "object_name", "output_path", "descriptor_output_path"},
 			Examples: []string{"luma-cli material understand ./materials/a.mp4 --output a.meta.json --descriptor-output a.material.json"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-material", "luma-video-workflow"},
 		},
 		{
 			ID:          "material.search",
@@ -77,7 +77,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"query", "matches", "output_path"},
 			Examples: []string{"luma-cli material search --materials step4_materials_enriched.json --query \"AI assistant\" --limit 5"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-material", "luma-video-workflow"},
 		},
 		{
 			ID:          "material.merge",
@@ -92,7 +92,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"materials", "output_path"},
 			Examples: []string{"luma-cli material merge --materials materials.json --meta ./meta --output materials_enriched.json"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-material", "luma-video-workflow"},
 		},
 		{
 			ID:          "pip.scan",
@@ -120,7 +120,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"output_path", "scene_count"},
 			Examples: []string{"luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json"},
-			Skills:   []string{"luma-video-workflow", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-video-workflow", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "pip.match",
@@ -137,7 +137,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"output_path", "matched_count", "mode"},
 			Examples: []string{"luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json"},
-			Skills:   []string{"luma-video-workflow", "luma-viral-remix-workflow"},
+			Skills:   []string{"luma-video-workflow", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "pip.plan",

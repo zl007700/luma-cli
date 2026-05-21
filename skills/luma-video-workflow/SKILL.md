@@ -6,11 +6,16 @@ metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools list"
+  category: "workflow"
+  entrypoint: false
+  relatedSkills: ["luma-shared", "luma-digital-human", "luma-material", "luma-subtitle"]
 ---
 
 # Luma Video Workflow
 
 Use this skill when an agent needs to produce or inspect short-video generation work through `luma-cli`.
+
+Read `../luma-shared/SKILL.md` first for common project, artifact, and runtime rules.
 
 ## Core Rule
 

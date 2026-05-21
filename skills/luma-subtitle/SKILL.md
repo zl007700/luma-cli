@@ -6,11 +6,16 @@ metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools describe subtitle.render"
+  category: "capability"
+  entrypoint: true
+  relatedSkills: ["luma-shared", "luma-workflow-viral-remix"]
 ---
 
 # Luma Subtitle
 
 Use this skill when an agent needs to add subtitles to a video or generate styled subtitle assets from text.
+
+Read `../luma-shared/SKILL.md` first for common output and artifact rules.
 
 ## Decision Rules
 

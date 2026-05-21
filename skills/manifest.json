@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "package": "luma-skills",
+  "description": "Agent skills for Luma short-video production workflows.",
+  "skills": [
+    {
+      "name": "luma-shared",
+      "category": "shared",
+      "entrypoint": false,
+      "path": "luma-shared/SKILL.md"
+    },
+    {
+      "name": "luma-content-research",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-content-research/SKILL.md"
+    },
+    {
+      "name": "luma-material",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-material/SKILL.md"
+    },
+    {
+      "name": "luma-digital-human",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-digital-human/SKILL.md"
+    },
+    {
+      "name": "luma-subtitle",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-subtitle/SKILL.md"
+    },
+    {
+      "name": "luma-workflow-viral-remix",
+      "category": "workflow",
+      "entrypoint": true,
+      "path": "luma-workflow-viral-remix/SKILL.md"
+    }
+  ]
+}
