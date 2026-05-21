@@ -28,13 +28,13 @@ luma-cli --json tools describe pip.plan
 
 | Capability | Command |
 | --- | --- |
-| Content research | `research run`, `research export` |
+| Content research | `research run`, `research export`, `research keywords` |
 | Script rewrite | `script rewrite` |
 | Voice clone | `voice clone`, `voice list` |
 | Text to speech | `tts` |
 | Digital human | `lipsync` |
 | Materials | `material describe`, `material group list`, `material group describe`, `material search`, `material merge`, `material understand` |
-| Picture-in-picture | `pip plan`, `pip render` |
+| Picture-in-picture | `pip scene`, `pip match`, `pip plan`, `pip render` |
 | Subtitles | `subtitle` |
 | BGM | `bgm mix` |
 | Cover | `cover frame`, `cover render` |
@@ -56,6 +56,7 @@ luma-cli project use viral-demo
 
 luma-cli research run --role "AI tool founder looking for short-video topics" --output step0_content_research.json
 luma-cli research export --input step0_content_research.json --output step0_content_research.csv
+luma-cli research keywords --input step0_content_research.json --output step0_keywords.json --csv step0_keywords.csv
 
 luma-cli script rewrite --input source_script.txt --output step1_rewrite.json
 luma-cli tts "<rewritten_text>" --voice male3 --output step2_tts.wav
@@ -63,6 +64,8 @@ luma-cli lipsync --avatar avatar_male --audio step2_tts.wav --output step3_lipsy
 
 luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
 luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json
+luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
+luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
 luma-cli pip plan --segments step4_segments.json --materials step4_materials_enriched.json --output step4_picture_in_picture_plan.json
 luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
 

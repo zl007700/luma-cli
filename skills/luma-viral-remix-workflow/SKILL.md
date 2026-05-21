@@ -20,10 +20,13 @@ Use these names unless the user asks for different paths:
 
 - `step0_content_research.json`
 - `step0_content_research.csv`
+- `step0_keywords.json`
+- `step0_keywords.csv`
 - `step1_rewrite.json`
 - `step2_tts.wav`
 - `step3_lipsync.mp4`
 - `step4_segments.json`
+- `step4_scene_units.json`
 - `step4_materials.json`
 - `step4_materials_enriched.json`
 - `step4_material_matches.json`
@@ -45,6 +48,7 @@ Use these names unless the user asks for different paths:
    ```bash
    luma-cli research run --role "AI工具创业者，想找适合口播拆解的爆款选题" --mode precise --date-range 7d --output step0_content_research.json
    luma-cli research export --input step0_content_research.json --output step0_content_research.csv
+   luma-cli research keywords --input step0_content_research.json --output step0_keywords.json --csv step0_keywords.csv
    ```
 
 3. Pick one reference title or script and rewrite it:
@@ -65,12 +69,14 @@ Use these names unless the user asks for different paths:
 6. Create timed text segments for PIP planning:
    ```bash
    luma-cli subtitle "<rewritten_text>" --text --segments-output step4_segments.json --no-effects --no-highlight
+   luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
    ```
 
 7. Prepare local PIP materials:
    ```bash
    luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
    luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json
+   luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
    ```
 
    If the project does not use a ZA-AGENT style material group, describe and merge a plain directory instead:

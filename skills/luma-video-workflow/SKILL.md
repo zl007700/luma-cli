@@ -31,6 +31,9 @@ Do not assume one CLI command should hide the whole product workflow.
 - `lipsync.create`: `luma-cli lipsync --avatar <name> --audio <file>`
 - `video.enhance`: `luma-cli enhance <video> --scale 2`
 - `subtitle.render`: `luma-cli subtitle <video> [options]`
+- `pip.scene`: `luma-cli pip scene --segments segments.json --output scene_units.json`
+- `pip.match`: `luma-cli pip match --scenes scene_units.json --materials materials.json --mode auto`
+- `pip.render`: `luma-cli pip render input.mp4 --plan pip_plan.json --output output.mp4`
 - `asset.upload`: `luma-cli asset upload <file> --group <name>`
 - `asset.list`: `luma-cli asset list <group>`
 - `task.status`: `luma-cli task status <task_id>`

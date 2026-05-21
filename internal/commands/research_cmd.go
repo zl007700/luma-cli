@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -37,10 +38,71 @@ func cmdResearch(args []string) {
 		cmdResearchRun(args[1:])
 	case "export":
 		cmdResearchExport(args[1:])
+	case "keywords":
+		cmdResearchKeywords(args[1:])
 	case "persona":
 		cmdResearchPersona(args[1:])
 	default:
 		printResearchUsage()
+	}
+}
+
+func cmdResearchKeywords(raw []string) {
+	args := cmdutil.Parse(raw)
+	inputPath := strings.TrimSpace(args.String("input", ""))
+	if inputPath == "" {
+		inputPath = strings.TrimSpace(args.Pos(0))
+	}
+	if inputPath == "" {
+		fmt.Println("usage: luma-cli research keywords --input step0_content_research.json [--output step0_keywords.json] [--csv step0_keywords.csv]")
+		return
+	}
+	outputPath := strings.TrimSpace(args.String("output", "step0_keywords.json"))
+	csvPath := strings.TrimSpace(args.String("csv", ""))
+	payload, err := readJSONObject(inputPath)
+	if err != nil {
+		printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
+		return
+	}
+	rows, summary := extractResearchKeywords(researchResults(payload))
+	savedPath := ""
+	if outputPath != "" {
+		abs, err := absoluteOutputPath(outputPath)
+		if err != nil {
+			printResearchError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
+			return
+		}
+		if err := writeJSONFile(abs, map[string]any{"keywords": rows, "summary": summary}); err != nil {
+			printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
+			return
+		}
+		savedPath = abs
+		recordProjectArtifact("research_keywords", abs, "research.keywords")
+	}
+	csvSavedPath := ""
+	if csvPath != "" {
+		abs, err := absoluteOutputPath(csvPath)
+		if err != nil {
+			printResearchError("bad_output_path", fmt.Sprintf("Error: bad csv path: %v\n", err))
+			return
+		}
+		if err := writeResearchKeywordsCSV(abs, rows); err != nil {
+			printResearchError("write_output_failed", fmt.Sprintf("Error: write csv failed: %v\n", err))
+			return
+		}
+		csvSavedPath = abs
+		recordProjectArtifact("research_keywords_table", abs, "research.keywords")
+	}
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"keywords": rows, "summary": summary, "output_path": savedPath, "csv_path": csvSavedPath}})
+		return
+	}
+	fmt.Printf("Keywords: %d\n", len(rows))
+	if savedPath != "" {
+		fmt.Printf("Saved to: %s\n", savedPath)
+	}
+	if csvSavedPath != "" {
+		fmt.Printf("CSV saved to: %s\n", csvSavedPath)
 	}
 }
 
@@ -313,6 +375,7 @@ func printResearchUsage() {
 	fmt.Println("Subcommands:")
 	fmt.Println("  run --role <description> [--mode precise|expanded] [--date-range 24h|7d] [--output step0_content_research.json]")
 	fmt.Println("  export --input step0_content_research.json [--output step0_content_research.csv]")
+	fmt.Println("  keywords --input step0_content_research.json [--output step0_keywords.json] [--csv step0_keywords.csv]")
 	fmt.Println("  run --persona <name_or_id> [--mode precise|expanded] [--output step0_content_research.json]")
 	fmt.Println("  persona list")
 	fmt.Println("  persona get <name_or_id>")
@@ -327,6 +390,135 @@ func researchResults(payload map[string]any) []map[string]any {
 		return listMap(result["results"])
 	}
 	return nil
+}
+
+func extractResearchKeywords(results []map[string]any) ([]map[string]any, map[string]any) {
+	type keywordAgg struct {
+		Keyword string
+		Count   int
+		Likes   float64
+		Links   []string
+		Titles  []string
+	}
+	index := map[string]*keywordAgg{}
+	for _, item := range results {
+		keywords := researchItemKeywords(item)
+		for _, keyword := range keywords {
+			key := strings.ToLower(keyword)
+			agg := index[key]
+			if agg == nil {
+				agg = &keywordAgg{Keyword: keyword}
+				index[key] = agg
+			}
+			agg.Count++
+			if likes, ok := numberAny(item["likes"]); ok {
+				agg.Likes += likes
+			}
+			if link := firstString(item, "link", "url", "share_url"); link != "" {
+				agg.Links = appendUniqueLimit(agg.Links, link, 3)
+			}
+			if title := firstString(item, "title", "desc", "description"); title != "" {
+				agg.Titles = appendUniqueLimit(agg.Titles, title, 3)
+			}
+		}
+	}
+	rows := make([]map[string]any, 0, len(index))
+	for _, agg := range index {
+		rows = append(rows, map[string]any{
+			"keyword":       agg.Keyword,
+			"count":         agg.Count,
+			"total_likes":   int(agg.Likes),
+			"sample_links":  agg.Links,
+			"sample_titles": agg.Titles,
+		})
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		ci, _ := intAny(rows[i]["count"])
+		cj, _ := intAny(rows[j]["count"])
+		if ci == cj {
+			li, _ := intAny(rows[i]["total_likes"])
+			lj, _ := intAny(rows[j]["total_likes"])
+			return li > lj
+		}
+		return ci > cj
+	})
+	return rows, map[string]any{"keyword_count": len(rows), "source_count": len(results)}
+}
+
+func researchItemKeywords(item map[string]any) []string {
+	keywords := []string{}
+	for _, key := range []string{"keyword", "query", "search_keyword", "topic", "category"} {
+		if value := firstString(item, key); value != "" {
+			keywords = append(keywords, value)
+		}
+	}
+	keywords = append(keywords, stringListFromKeys(item, "keywords", "tags", "labels", "hashtags")...)
+	if len(keywords) == 0 {
+		title := firstString(item, "title", "desc", "description")
+		keywords = append(keywords, compactTitleTerms(title)...)
+	}
+	return uniqueStrings(keywords)
+}
+
+func compactTitleTerms(title string) []string {
+	parts := strings.FieldsFunc(title, func(r rune) bool {
+		return r == ' ' || r == '\t' || r == '\n' || r == ',' || r == ';' || r == '#' || r == '，' || r == '。' || r == '、' || r == '：' || r == ':'
+	})
+	out := []string{}
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if len([]rune(part)) >= 2 {
+			out = append(out, part)
+		}
+	}
+	if len(out) > 6 {
+		return out[:6]
+	}
+	return out
+}
+
+func writeResearchKeywordsCSV(path string, rows []map[string]any) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
+		return err
+	}
+	writer := csv.NewWriter(file)
+	headers := []string{"keyword", "count", "total_likes", "sample_titles", "sample_links"}
+	_ = writer.Write(headers)
+	for _, row := range rows {
+		_ = writer.Write([]string{
+			strAny(row["keyword"]),
+			strAny(row["count"]),
+			strAny(row["total_likes"]),
+			strings.Join(stringListFromKeys(row, "sample_titles"), " | "),
+			strings.Join(stringListFromKeys(row, "sample_links"), " | "),
+		})
+	}
+	writer.Flush()
+	return writer.Error()
+}
+
+func appendUniqueLimit(items []string, value string, limit int) []string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return items
+	}
+	for _, item := range items {
+		if item == value {
+			return items
+		}
+	}
+	if len(items) >= limit {
+		return items
+	}
+	return append(items, value)
 }
 
 func writeJSONFile(path string, value any) error {

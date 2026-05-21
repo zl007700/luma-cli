@@ -41,6 +41,10 @@ func cmdPIP(args []string) {
 	switch args[0] {
 	case "scan":
 		cmdPIPScan(args[1:])
+	case "scene":
+		cmdPIPScene(args[1:])
+	case "match":
+		cmdPIPMatch(args[1:])
 	case "plan":
 		cmdPIPPlan(args[1:])
 	case "render":
@@ -48,6 +52,98 @@ func cmdPIP(args []string) {
 	default:
 		printPIPUsage()
 	}
+}
+
+func cmdPIPScene(raw []string) {
+	args := cmdutil.Parse(raw)
+	segmentsPath := strings.TrimSpace(args.String("segments", ""))
+	if segmentsPath == "" {
+		segmentsPath = strings.TrimSpace(args.Pos(0))
+	}
+	if segmentsPath == "" {
+		fmt.Println("usage: luma-cli pip scene --segments segments.json [--output step4_scene_units.json]")
+		return
+	}
+	outputPath := args.String("output", "step4_scene_units.json")
+	cfg := loadConfig()
+	if cfg == nil {
+		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
+		return
+	}
+	segments, err := loadSegmentsForPIP(segmentsPath)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	sceneUnits, err := cloudSceneUnits(segments, cfg.CardKey)
+	if err != nil {
+		fmt.Printf("Error: scene plan failed: %v\n", err)
+		return
+	}
+	absOut, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: bad output path: %v\n", err)
+		return
+	}
+	if err := writeJSONFile(absOut, map[string]any{"scene_units": sceneUnits, "segments": segments}); err != nil {
+		fmt.Printf("Error: write output failed: %v\n", err)
+		return
+	}
+	recordProjectArtifact("scene_units", absOut, "pip.scene")
+	writeSimpleResult(map[string]any{"output_path": absOut, "scene_count": len(sceneUnits)})
+}
+
+func cmdPIPMatch(raw []string) {
+	args := cmdutil.Parse(raw)
+	scenesPath := strings.TrimSpace(args.String("scenes", ""))
+	if scenesPath == "" {
+		scenesPath = strings.TrimSpace(args.String("scene-units", ""))
+	}
+	materialsPath := strings.TrimSpace(args.String("materials", ""))
+	if scenesPath == "" || materialsPath == "" {
+		fmt.Println("usage: luma-cli pip match --scenes step4_scene_units.json --materials materials.json [--mode auto|cloud|local] [--output step4_material_matches.json]")
+		return
+	}
+	outputPath := args.String("output", "step4_material_matches.json")
+	mode := strings.ToLower(strings.TrimSpace(args.String("mode", "auto")))
+	maxInserts, err := args.Int("max-inserts", 8)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	sceneUnits, err := loadSceneUnitsForPIP(scenesPath)
+	if err != nil {
+		fmt.Printf("Error: read scenes failed: %v\n", err)
+		return
+	}
+	materials, err := loadMaterialMapsForPIP(materialsPath)
+	if err != nil {
+		fmt.Printf("Error: read materials failed: %v\n", err)
+		return
+	}
+	inserts, modeUsed, err := matchPIPMaterials(sceneUnits, materials, mode, maxInserts)
+	if err != nil {
+		fmt.Printf("Error: material match failed: %v\n", err)
+		return
+	}
+	assignments := buildPIPAssignments(inserts)
+	absOut, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		fmt.Printf("Error: bad output path: %v\n", err)
+		return
+	}
+	if err := writeJSONFile(absOut, map[string]any{
+		"scene_units": sceneUnits,
+		"materials":   materials,
+		"assignments": assignments,
+		"inserts":     inserts,
+		"mode":        modeUsed,
+	}); err != nil {
+		fmt.Printf("Error: write output failed: %v\n", err)
+		return
+	}
+	recordProjectArtifact("material_matches", absOut, "pip.match")
+	writeSimpleResult(map[string]any{"output_path": absOut, "matched_count": len(inserts), "mode": modeUsed})
 }
 
 func cmdPIPScan(raw []string) {
@@ -93,45 +189,48 @@ func cmdPIPPlan(raw []string) {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
+	matchMode := strings.ToLower(strings.TrimSpace(args.String("match-mode", "auto")))
+	maxInserts, err := args.Int("max-inserts", 8)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
 		return
 	}
-	segmentsPayload, err := readJSONObject(segmentsPath)
+	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {
 		fmt.Printf("Error: read segments failed: %v\n", err)
 		return
 	}
-	materialsPayload, err := readJSONObject(materialsPath)
+	materials, err := loadMaterialsForPIP(materialsPath)
 	if err != nil {
 		fmt.Printf("Error: read materials failed: %v\n", err)
 		return
 	}
-	segments := anyListFromPayload(segmentsPayload, "segments")
-	materials := anyListFromPayload(materialsPayload, "materials")
 	if len(segments) == 0 || len(materials) == 0 {
 		fmt.Println("Error: segments and materials cannot be empty")
 		return
 	}
-	sceneResp, err := cloud.RunAgentAbility("/v1/agent/storyboard/scene", map[string]any{"segments": segments}, nil, cfg.CardKey)
+	sceneUnits, err := cloudSceneUnits(segments, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: scene plan failed: %v\n", err)
 		return
 	}
-	sceneUnits := anyListFromPayload(sceneResp.Result, "scene_units")
-	matchResp, err := cloud.RunAgentAbility("/v1/agent/material/match", map[string]any{"scene_units": sceneUnits, "materials": materials}, nil, cfg.CardKey)
+	materialMaps := listMapFromAny(materials)
+	inserts, modeUsed, err := matchPIPMaterials(listMapFromAny(sceneUnits), materialMaps, matchMode, maxInserts)
 	if err != nil {
 		fmt.Printf("Error: material match failed: %v\n", err)
 		return
 	}
-	rawInserts := anyListFromPayload(matchResp.Result, "inserts")
-	inserts := normalizePIPInserts(rawInserts, listMapFromAny(sceneUnits), listMapFromAny(materials))
 	assignments := buildPIPAssignments(inserts)
 	plan := map[string]any{
 		"enabled":                len(inserts) > 0,
 		"landscape_height_ratio": landscapeRatio,
 		"match_looseness":        args.String("match-looseness", "normal"),
+		"match_mode":             modeUsed,
 		"scene_units":            sceneUnits,
 		"material_candidates":    materials,
 		"materials":              materials,
@@ -200,7 +299,9 @@ func cmdPIPRender(raw []string) {
 func printPIPUsage() {
 	fmt.Println("luma-cli pip <subcommand>")
 	fmt.Println("  scan <material_dir> [--output materials.json]")
-	fmt.Println("  plan --segments segments.json --materials materials.json [--output step5_picture_in_picture_plan.json]")
+	fmt.Println("  scene --segments segments.json [--output step4_scene_units.json]")
+	fmt.Println("  match --scenes step4_scene_units.json --materials materials.json [--mode auto|cloud|local] [--output step4_material_matches.json]")
+	fmt.Println("  plan --segments segments.json --materials materials.json [--match-mode auto|cloud|local] [--output step5_picture_in_picture_plan.json]")
 	fmt.Println("  render <video> --plan step5_picture_in_picture_plan.json [--output step5_picture_in_picture.mp4] [--landscape-height-ratio 0.32]")
 }
 
@@ -382,6 +483,190 @@ func buildPIPPrepareFilter(inputIndex int, outputLabel string, spec pipRenderSpe
 		scale = fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,setsar=1", sourceWidth, sourceHeight, sourceWidth, sourceHeight)
 	}
 	return fmt.Sprintf("[%d:v]setpts=PTS-STARTPTS+%.6f/TB,%s,trim=duration=%.6f[%s]", inputIndex, spec.Start, scale, spec.Duration, outputLabel)
+}
+
+func loadSegmentsForPIP(path string) ([]any, error) {
+	payload, err := readJSONObject(path)
+	if err != nil {
+		return nil, err
+	}
+	segments := anyListFromPayload(payload, "segments")
+	if len(segments) == 0 {
+		return nil, fmt.Errorf("segments cannot be empty")
+	}
+	return segments, nil
+}
+
+func loadMaterialsForPIP(path string) ([]any, error) {
+	payload, err := readJSONObject(path)
+	if err != nil {
+		return nil, err
+	}
+	materials := anyListFromPayload(payload, "materials")
+	if len(materials) == 0 {
+		return nil, fmt.Errorf("materials cannot be empty")
+	}
+	return materials, nil
+}
+
+func loadMaterialMapsForPIP(path string) ([]map[string]any, error) {
+	materials, err := loadMaterialsForPIP(path)
+	if err != nil {
+		return nil, err
+	}
+	return listMapFromAny(materials), nil
+}
+
+func loadSceneUnitsForPIP(path string) ([]map[string]any, error) {
+	payload, err := readJSONObject(path)
+	if err != nil {
+		return nil, err
+	}
+	sceneUnits := anyListFromPayload(payload, "scene_units")
+	if len(sceneUnits) == 0 {
+		sceneUnits = anyListFromPayload(payload, "scenes")
+	}
+	if len(sceneUnits) == 0 {
+		return nil, fmt.Errorf("scene_units cannot be empty")
+	}
+	return listMapFromAny(sceneUnits), nil
+}
+
+func cloudSceneUnits(segments []any, cardKey string) ([]any, error) {
+	sceneResp, err := cloud.RunAgentAbility("/v1/agent/storyboard/scene", map[string]any{"segments": segments}, nil, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	sceneUnits := anyListFromPayload(sceneResp.Result, "scene_units")
+	if len(sceneUnits) == 0 {
+		return nil, fmt.Errorf("backend returned no scene_units")
+	}
+	return sceneUnits, nil
+}
+
+func matchPIPMaterials(sceneUnits, materials []map[string]any, mode string, maxInserts int) ([]map[string]any, string, error) {
+	if maxInserts <= 0 {
+		maxInserts = 8
+	}
+	if mode == "" {
+		mode = "auto"
+	}
+	if mode != "local" {
+		cfg := loadConfig()
+		if cfg != nil {
+			matchResp, err := cloud.RunAgentAbility("/v1/agent/material/match", map[string]any{"scene_units": sceneUnits, "materials": materials, "max_inserts": maxInserts}, nil, cfg.CardKey)
+			if err == nil {
+				rawInserts := anyListFromPayload(matchResp.Result, "inserts")
+				inserts := normalizePIPInserts(rawInserts, sceneUnits, materials)
+				if len(inserts) > maxInserts {
+					inserts = inserts[:maxInserts]
+				}
+				return inserts, "cloud", nil
+			}
+			if mode == "cloud" {
+				return nil, "cloud", err
+			}
+		} else if mode == "cloud" {
+			return nil, "cloud", fmt.Errorf("not logged in. Run: luma-cli auth login <card_key>")
+		}
+	}
+	return localPIPMaterialMatches(sceneUnits, materials, maxInserts), "local", nil
+}
+
+func localPIPMaterialMatches(sceneUnits, materials []map[string]any, maxInserts int) []map[string]any {
+	descriptors := materialDescriptorsFromMaps(materials)
+	inserts := []map[string]any{}
+	used := map[string]bool{}
+	for _, scene := range sceneUnits {
+		query := sceneSearchText(scene)
+		if query == "" {
+			continue
+		}
+		matches := searchMaterials(descriptors, query, len(descriptors))
+		if len(matches) == 0 {
+			continue
+		}
+		var chosen materialSearchMatch
+		found := false
+		for _, match := range matches {
+			id := match.Material.MaterialID
+			if id == "" {
+				id = match.Material.Path
+			}
+			if !used[id] {
+				chosen = match
+				used[id] = true
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+		sceneID := firstString(scene, "scene_id", "id", "segment_id", "sent_id")
+		insert := map[string]any{
+			"scene_id":        sceneID,
+			"start_scene_id":  sceneID,
+			"end_scene_id":    sceneID,
+			"material_id":     chosen.Material.MaterialID,
+			"material_path":   chosen.Material.Path,
+			"media_type":      chosen.Material.MediaType,
+			"start":           scene["start"],
+			"end":             scene["end"],
+			"score":           chosen.Score,
+			"matched_fields":  chosen.MatchedFields,
+			"reason":          "local keyword match",
+			"planning_source": "local",
+		}
+		inserts = append(inserts, insert)
+		if len(inserts) >= maxInserts {
+			break
+		}
+	}
+	return normalizePIPInserts(anySliceFromMaps(inserts), sceneUnits, materials)
+}
+
+func materialDescriptorsFromMaps(items []map[string]any) []materialDescriptor {
+	out := make([]materialDescriptor, 0, len(items))
+	for _, item := range items {
+		descriptor := materialDescriptor{
+			MaterialID:    firstString(item, "material_id", "id", "resource_id"),
+			MediaType:     firstNonEmpty(firstString(item, "media_type", "type"), "video"),
+			Path:          firstString(item, "path", "file_path", "local_path", "material_path"),
+			Title:         firstString(item, "title", "name", "file_name"),
+			Summary:       firstString(item, "summary", "description", "content_summary", "visual_summary"),
+			Description:   firstString(item, "description", "summary", "content_summary", "visual_summary"),
+			Tags:          stringListFromKeys(item, "tags", "keywords", "labels"),
+			VisualFocus:   firstString(item, "visual_focus", "main_object", "subject", "scene"),
+			SellingPoints: stringListFromKeys(item, "selling_points", "highlights", "features"),
+		}
+		if descriptor.MaterialID == "" && descriptor.Path != "" {
+			descriptor.MaterialID = materialID(descriptor.Path)
+		}
+		if descriptor.Title == "" {
+			descriptor.Title = strings.TrimSuffix(filepath.Base(descriptor.Path), filepath.Ext(descriptor.Path))
+		}
+		out = append(out, descriptor)
+	}
+	return out
+}
+
+func sceneSearchText(scene map[string]any) string {
+	parts := []string{
+		firstString(scene, "title", "topic", "scene_title"),
+		firstString(scene, "summary", "description", "content", "text", "script"),
+		firstString(scene, "visual_focus", "main_object", "subject"),
+		strings.Join(stringListFromKeys(scene, "keywords", "tags", "labels"), " "),
+	}
+	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
+func anySliceFromMaps(items []map[string]any) []any {
+	out := make([]any, 0, len(items))
+	for _, item := range items {
+		out = append(out, item)
+	}
+	return out
 }
 
 func normalizePIPInserts(raw []any, scenes []map[string]any, materials []map[string]any) []map[string]any {

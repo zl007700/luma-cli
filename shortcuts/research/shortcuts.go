@@ -36,6 +36,21 @@ func Shortcuts() []common.Shortcut {
 			Skills:   []string{"luma-content-research", "luma-viral-remix-workflow"},
 		},
 		{
+			ID:          "research.keywords",
+			Service:     "research",
+			Command:     "keywords",
+			Description: "Extract keyword/topic rows from content research JSON into agent-readable JSON and optional CSV.",
+			Risk:        "write",
+			Flags: []common.Flag{
+				{Name: "input", Description: "Research JSON path.", Required: true},
+				{Name: "output", Description: "Output keyword JSON path.", Default: "step0_keywords.json"},
+				{Name: "csv", Description: "Optional Excel-friendly CSV output path."},
+			},
+			Outputs:  []string{"keywords", "summary", "output_path", "csv_path"},
+			Examples: []string{"luma-cli research keywords --input step0_content_research.json --output step0_keywords.json --csv step0_keywords.csv"},
+			Skills:   []string{"luma-content-research", "luma-viral-remix-workflow"},
+		},
+		{
 			ID:          "persona.save",
 			Service:     "research",
 			Command:     "persona save",
