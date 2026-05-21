@@ -28,6 +28,11 @@ luma-cli asset list voice
 luma-cli asset list roles
 luma-cli asset upload avatar.mp4 --group roles
 luma-cli asset upload voice.wav --group voice
+luma-cli voice clone ./sample.wav --name my_voice
+luma-cli voice list
+luma-cli material group list ./material_library/groups --output material_groups.json
+luma-cli material group describe ./material_library/groups/vlm_ai --output materials.json
+luma-cli material search --materials materials.json --query "AI assistant" --limit 5 --output material_matches.json
 ```
 
 ## Agent Rules
@@ -36,3 +41,5 @@ luma-cli asset upload voice.wav --group voice
 - Use full `object_key` only when a command needs an exact asset.
 - Upload local files before referencing them in cloud-only workflows.
 - Keep asset upload separate from creative workflow planning.
+- For ZA-AGENT style local material libraries, prefer `material group describe` over hand-building a materials file.
+- Use `material search` before PIP planning when the script is long or the material group has many candidates.

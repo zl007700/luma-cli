@@ -26,6 +26,7 @@ Use these names unless the user asks for different paths:
 - `step4_segments.json`
 - `step4_materials.json`
 - `step4_materials_enriched.json`
+- `step4_material_matches.json`
 - `step4_picture_in_picture_plan.json`
 - `step4_picture_in_picture.mp4`
 - `step5_subtitle.mp4`
@@ -67,6 +68,12 @@ Use these names unless the user asks for different paths:
    ```
 
 7. Prepare local PIP materials:
+   ```bash
+   luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
+   luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json
+   ```
+
+   If the project does not use a ZA-AGENT style material group, describe and merge a plain directory instead:
    ```bash
    luma-cli material describe ./materials --output step4_materials.json
    luma-cli material merge --materials step4_materials.json --meta ./materials_meta --output step4_materials_enriched.json

@@ -33,12 +33,12 @@ luma-cli --json tools describe pip.plan
 | Voice clone | `voice clone`, `voice list` |
 | Text to speech | `tts` |
 | Digital human | `lipsync` |
-| Materials | `material describe`, `material merge`, `material understand` |
+| Materials | `material describe`, `material group list`, `material group describe`, `material search`, `material merge`, `material understand` |
 | Picture-in-picture | `pip plan`, `pip render` |
 | Subtitles | `subtitle` |
 | BGM | `bgm mix` |
 | Cover | `cover frame`, `cover render` |
-| Project workspace | `project create/use/info` |
+| Project workspace | `project create/use/info`, `project artifact list/schema` |
 
 ## Viral Remix Workflow
 
@@ -61,8 +61,8 @@ luma-cli script rewrite --input source_script.txt --output step1_rewrite.json
 luma-cli tts "<rewritten_text>" --voice male3 --output step2_tts.wav
 luma-cli lipsync --avatar avatar_male --audio step2_tts.wav --output step3_lipsync.mp4
 
-luma-cli material describe ./materials --output step4_materials.json
-luma-cli material merge --materials step4_materials.json --meta ./materials_meta --output step4_materials_enriched.json
+luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
+luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json
 luma-cli pip plan --segments step4_segments.json --materials step4_materials_enriched.json --output step4_picture_in_picture_plan.json
 luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
 
