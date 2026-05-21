@@ -521,17 +521,6 @@ func appendUniqueLimit(items []string, value string, limit int) []string {
 	return append(items, value)
 }
 
-func writeJSONFile(path string, value any) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0644)
-}
-
 func slugForID(value string) string {
 	sum := sha1.Sum([]byte(strings.TrimSpace(value)))
 	return fmt.Sprintf("%x", sum[:6])

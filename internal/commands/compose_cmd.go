@@ -17,7 +17,6 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 	"github.com/luma-cli/lumer-cli/internal/output"
-	"github.com/luma-cli/lumer-cli/project"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
@@ -267,21 +266,6 @@ func resolveLocalCachedOrCloudResource(value string, cfg *config) (string, error
 		return "", fmt.Errorf("not a local file or cloud resource: %s", value)
 	}
 	return cached.Path, nil
-}
-
-func recordProjectArtifact(artifactType, path, step string) {
-	proj, _ := project.GetActiveProject()
-	if proj == nil {
-		return
-	}
-	_ = proj.AddArtifact(project.Artifact{
-		Type:    artifactType,
-		Path:    path,
-		Step:    step,
-		Ability: step,
-		Outputs: []string{path},
-		Status:  "completed",
-	})
 }
 
 type coverRenderOptions struct {
