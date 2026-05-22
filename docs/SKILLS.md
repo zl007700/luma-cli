@@ -23,7 +23,7 @@ Current core skills:
 
 ## Distribution
 
-The npm package installs and runs `luma-cli`. Skills are distributed separately, following the same split used by Lark CLI: CLI binaries come from npm/GitHub Release, while agent skills are installed through the skills installer.
+The npm package installs and runs `luma-cli`. Skills are distributed separately: CLI binaries come from npm/GitHub Release, while agent skills are installed through the skills installer.
 
 Recommended user flow:
 

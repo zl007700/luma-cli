@@ -129,7 +129,7 @@ luma-cli material group describe vlm_ai --output materials.json
 
 ## Skills Distribution
 
-Luma follows the Lark CLI-style split: npm installs the CLI, while skills are synced separately through the skills installer. Users usually install the full Luma skill pack once:
+Luma distributes the command-line tool and agent skills separately: npm installs the CLI, while skills are synced through the skills installer. Users usually install the full Luma skill pack once:
 
 ```bash
 npm install -g @lumageo/luma-cli

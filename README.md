@@ -156,7 +156,7 @@ luma-cli material group list
 luma-cli material group describe vlm_ai --output materials.json
 ```
 
-Luma 采用和 Lark CLI 类似的分发方式：npm 负责安装 `luma-cli`，skills 通过 skills installer 单独同步。用户通常只需要执行一次全量同步：
+Luma 将命令行工具和 Agent skills 分开分发：npm 负责安装 `luma-cli`，skills 通过 skills installer 单独同步。用户通常只需要执行一次全量同步：
 
 ```bash
 npm install -g @lumageo/luma-cli
