@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -138,23 +137,23 @@ func BurnSubtitles(videoPath, assPath, outputPath string, fontDir, ffmpegPath st
 
 // ASSOptions controls ASS subtitle generation.
 type ASSOptions struct {
-	PlayResX        int
-	PlayResY        int
-	FontName        string
-	FontSize        int
-	Color           string
-	StrokeColor     string
-	BackColor       string
-	HighlightColor  string
-	HighlightScale   float64
-	MarginL         int
-	MarginR         int
-	MarginV         int
-	Outline         float64
-	Shadow          float64
-	Spacing         float64
-	Bold            int
-	Italic          int
+	PlayResX       int
+	PlayResY       int
+	FontName       string
+	FontSize       int
+	Color          string
+	StrokeColor    string
+	BackColor      string
+	HighlightColor string
+	HighlightScale float64
+	MarginL        int
+	MarginR        int
+	MarginV        int
+	Outline        float64
+	Shadow         float64
+	Spacing        float64
+	Bold           int
+	Italic         int
 }
 
 // ---- Internal helpers ----
@@ -243,42 +242,29 @@ func appendEffect(text, effectType string) string {
 }
 
 func wrapTextByPixelWidth(text string, maxWidth int, fontSize int) string {
+	runes := []rune(strings.TrimSpace(text))
+	if len(runes) <= 18 {
+		return string(runes)
+	}
 	if maxWidth <= 0 {
 		maxWidth = 800
 	}
 	if fontSize <= 0 {
 		fontSize = 48
 	}
-	charWidth := float64(fontSize) * 0.95
+	charWidth := float64(fontSize) * 0.72
 	maxChars := int(float64(maxWidth) / charWidth)
-	if maxChars < 6 {
-		maxChars = 6
+	if maxChars < 12 {
+		maxChars = 12
 	}
 
-	// Split by punctuation for better rhythm
-	re := regexp.MustCompile(`[。！？；：，、]+`)
-	sentences := re.Split(text, -1)
 	var lines []string
-	for _, sentence := range sentences {
-		sentence = strings.TrimSpace(sentence)
-		if sentence == "" {
-			continue
+	for start := 0; start < len(runes); start += maxChars {
+		end := start + maxChars
+		if end > len(runes) {
+			end = len(runes)
 		}
-		if len([]rune(sentence)) <= maxChars {
-			lines = append(lines, sentence)
-			continue
-		}
-		var current strings.Builder
-		for _, r := range sentence {
-			current.WriteRune(r)
-			if current.Len() >= maxChars {
-				lines = append(lines, current.String())
-				current.Reset()
-			}
-		}
-		if current.Len() > 0 {
-			lines = append(lines, current.String())
-		}
+		lines = append(lines, string(runes[start:end]))
 	}
 	return strings.Join(lines, "\\N")
 }
