@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/luma-cli/lumer-cli/cloud"
+	"github.com/luma-cli/lumer-cli/internal/atom"
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 	"github.com/luma-cli/lumer-cli/internal/output"
@@ -85,6 +87,8 @@ func cmdCover(args []string) {
 		cmdCoverFrame(args[1:])
 	case "render":
 		cmdCoverRender(args[1:])
+	case "generate":
+		cmdCoverGenerate(args[1:])
 	default:
 		printCoverUsage()
 	}
@@ -231,10 +235,216 @@ func cmdCoverRender(raw []string) {
 	writeSimpleResult(map[string]any{"output_path": absOut, "meta_path": metaPath})
 }
 
+func cmdCoverGenerate(raw []string) {
+	parsed := cmdutil.Parse(raw)
+	sourcePath := parsed.String("video", "")
+	if sourcePath == "" {
+		sourcePath = parsed.String("image", "")
+	}
+	if sourcePath == "" {
+		sourcePath = parsed.String("frame", "")
+	}
+	if sourcePath == "" {
+		sourcePath = parsed.Pos(0)
+	}
+	title := strings.TrimSpace(parsed.String("title", ""))
+	subtitle := strings.TrimSpace(parsed.String("subtitle", ""))
+	if sourcePath == "" || title == "" {
+		fmt.Println("usage: luma-cli cover generate <video_or_image> --title <text> [--subtitle <text>] [--count 6] [--output-dir covers]")
+		return
+	}
+	if _, err := os.Stat(sourcePath); err != nil {
+		fmt.Printf("Error: source file not found: %s\n", sourcePath)
+		return
+	}
+	cfg := loadConfig()
+	if cfg == nil {
+		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
+		return
+	}
+	defaults := loadClientDefaults(cfg)
+	count, err := parsed.Int("count", 6)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	if count <= 0 {
+		count = 6
+	}
+	if count > 20 {
+		count = 20
+	}
+	frameSecond, err := parsed.Float("frame-second", 1.0)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	timeoutSec, err := parsed.Int("timeout", 600)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	outputDir := parsed.String("output-dir", "covers")
+	absOutputDir, err := absoluteOutputPath(outputDir)
+	if err != nil {
+		fmt.Printf("Error: bad output dir: %v\n", err)
+		return
+	}
+	if err := os.MkdirAll(absOutputDir, 0755); err != nil {
+		fmt.Printf("Error: create output dir failed: %v\n", err)
+		return
+	}
+
+	fmt.Println("Uploading cover source...")
+	sourceKey, err := cloud.UploadFile(sourcePath, cfg.CardKey, "cover_input")
+	if err != nil {
+		fmt.Printf("Error: upload source failed: %v\n", err)
+		return
+	}
+	sourceKey = atom.NormalizeResourceKey(sourceKey, cfg.CardKey)
+
+	input := map[string]any{
+		"mode":         parsed.String("mode", "template"),
+		"title":        title,
+		"subtitle":     subtitle,
+		"count":        count,
+		"frame_second": frameSecond,
+	}
+	ext := strings.ToLower(filepath.Ext(sourcePath))
+	if parsed.String("frame", "") != "" || ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" {
+		if parsed.String("video", "") != "" {
+			input["source_video_object_key"] = sourceKey
+		} else {
+			input["source_image_object_key"] = sourceKey
+		}
+	} else {
+		input["source_video_object_key"] = sourceKey
+	}
+
+	fontRef := parsed.String("font", "")
+	titleFontRef := parsed.String("title-font", fontRef)
+	subtitleFontRef := parsed.String("subtitle-font", fontRef)
+	if titleFontRef != "" && (parsed.Has("font") || parsed.Has("title-font")) {
+		if key, err := atom.ResolveAssetKey("font", titleFontRef, cfg.CardKey); err == nil {
+			input["title_font_object_key"] = key
+		} else {
+			input["title_font_object_key"] = atom.NormalizeResourceKey(titleFontRef, cfg.CardKey)
+		}
+	}
+	if subtitleFontRef != "" && (parsed.Has("font") || parsed.Has("subtitle-font")) {
+		if key, err := atom.ResolveAssetKey("font", subtitleFontRef, cfg.CardKey); err == nil {
+			input["subtitle_font_object_key"] = key
+		} else {
+			input["subtitle_font_object_key"] = atom.NormalizeResourceKey(subtitleFontRef, cfg.CardKey)
+		}
+	}
+	_ = defaults
+	templateRef := parsed.String("template", "")
+	if templateRef != "" && parsed.Has("template") {
+		if key, err := atom.ResolveAssetKey("cover_templates", templateRef, cfg.CardKey); err == nil {
+			input["template_object_keys"] = []string{key}
+		} else {
+			input["template_object_keys"] = []string{atom.NormalizeResourceKey(templateRef, cfg.CardKey)}
+		}
+	}
+
+	fmt.Println("Submitting cover task...")
+	fmt.Printf("  Source: %s\n", sourceKey)
+	fmt.Printf("  Count: %d\n", count)
+	taskResult, err := cloud.SubmitTask("cover", "cover_output", input, cfg.CardKey)
+	if err != nil {
+		fmt.Printf("Error: submit cover task failed: %v\n", err)
+		return
+	}
+	taskID, _ := taskResult["task_id"].(string)
+	if taskID == "" {
+		fmt.Println("Error: no task_id returned")
+		return
+	}
+	fmt.Printf("  Task ID: %s\n", taskID)
+
+	status, stillRunning := cloud.WaitTaskComplete(taskID, cfg.CardKey, timeoutSec)
+	if stillRunning {
+		fmt.Println("Error: cover task timed out")
+		return
+	}
+	if msg := atom.TaskFailure(status); msg != "" {
+		fmt.Printf("Error: cover task failed: %s\n", msg)
+		return
+	}
+	manifestURL := atom.ResultURL(status)
+	manifestPath := filepath.Join(absOutputDir, "cover_manifest.json")
+	if manifestURL != "" {
+		if err := atom.DownloadFile(manifestURL, manifestPath); err != nil {
+			fmt.Printf("Error: download manifest failed: %v\n", err)
+			return
+		}
+	}
+
+	downloaded := downloadCoverCandidates(status, absOutputDir)
+	recordProjectArtifact("cover", absOutputDir, "cover.generate")
+	result := map[string]any{
+		"task_id":       taskID,
+		"output_dir":    absOutputDir,
+		"manifest_path": manifestPath,
+		"downloaded":    downloaded,
+	}
+	writeSimpleResult(result)
+	if !runtimeOpts.JSON {
+		fmt.Printf("manifest_path: %s\n", manifestPath)
+		if downloaded > 0 {
+			fmt.Printf("downloaded: %d\n", downloaded)
+		}
+	}
+}
+
+func downloadCoverCandidates(status map[string]any, outputDir string) int {
+	result, ok := nestedMap(status, "output", "result")
+	if !ok {
+		return 0
+	}
+	rawCovers, ok := result["covers"].([]any)
+	if !ok {
+		return 0
+	}
+	downloaded := 0
+	for i, raw := range rawCovers {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		url := strAny(item["image_url"])
+		if url == "" {
+			url = strAny(item["url"])
+		}
+		if url == "" {
+			continue
+		}
+		outPath := filepath.Join(outputDir, fmt.Sprintf("cover_%02d.jpg", i+1))
+		if err := atom.DownloadFile(url, outPath); err == nil {
+			downloaded++
+		}
+	}
+	return downloaded
+}
+
+func nestedMap(root map[string]any, path ...string) (map[string]any, bool) {
+	current := root
+	for _, key := range path {
+		next, ok := current[key].(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		current = next
+	}
+	return current, true
+}
+
 func printCoverUsage() {
 	fmt.Println("luma-cli cover <subcommand>")
 	fmt.Println("  frame <video> [--time 1.0] [--output step6_cover_frame.png]")
 	fmt.Println("  render [image] --title <text> [--subtitle <text>] [--font <path_or_resource_id>] [--template <resource_id>] [--output step6_cover.jpg]")
+	fmt.Println("  generate <video_or_image> --title <text> [--subtitle <text>] [--count 6] [--output-dir covers]")
 }
 
 func installedFFmpegPath() (string, error) {
