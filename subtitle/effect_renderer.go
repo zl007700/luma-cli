@@ -655,7 +655,9 @@ func ApplyEffectOverlays(videoPath string, segments []Segment, width, height, fo
 	args = append(args,
 		"-filter_complex", strings.Join(filterParts, ";"),
 		"-map", fmt.Sprintf("[%s]", currentLabel),
+		"-map", "0:a?",
 		"-c:v", "libx264", "-preset", "fast", "-crf", "18",
+		"-c:a", "copy",
 		intermediatePath,
 	)
 
