@@ -25,6 +25,23 @@ type ASRResult struct {
 	Status    map[string]any
 }
 
+// AlignmentOptions describes an audio/text alignment task.
+type AlignmentOptions struct {
+	AudioPath  string
+	TextList   []string
+	Language   string
+	CardKey    string
+	TimeoutSec int
+}
+
+// AlignmentSegment is one cloud-aligned subtitle segment.
+type AlignmentSegment struct {
+	SegID int
+	Start float64
+	End   float64
+	Text  string
+}
+
 // RunASR uploads media, submits ASR, waits for completion, and extracts text.
 func RunASR(opts ASROptions) (*ASRResult, error) {
 	if opts.Language == "" {
@@ -79,6 +96,156 @@ func RunASR(opts ASROptions) (*ASRResult, error) {
 		Segments:  segments,
 		Status:    status,
 	}, nil
+}
+
+// RunAlignment uploads audio, submits alignment, waits for completion, and extracts segment timing.
+func RunAlignment(opts AlignmentOptions) ([]AlignmentSegment, error) {
+	if opts.Language == "" {
+		opts.Language = "zh"
+	}
+	if opts.TimeoutSec <= 0 {
+		opts.TimeoutSec = 300
+	}
+	if len(opts.TextList) == 0 {
+		return nil, fmt.Errorf("alignment text list is empty")
+	}
+
+	objectKey, err := cloud.UploadFile(opts.AudioPath, opts.CardKey, "alignment_input")
+	if err != nil {
+		return nil, fmt.Errorf("upload alignment audio failed: %w", err)
+	}
+
+	taskResult, err := cloud.SubmitTask("alignment", filepath.Base(opts.AudioPath), map[string]any{
+		"audio_object_key": objectKey,
+		"language":         opts.Language,
+		"text_list":        opts.TextList,
+	}, opts.CardKey)
+	if err != nil {
+		return nil, fmt.Errorf("submit alignment failed: %w", err)
+	}
+
+	taskID, _ := taskResult["task_id"].(string)
+	if taskID == "" {
+		return nil, fmt.Errorf("no alignment task_id returned")
+	}
+
+	status, stillRunning := cloud.WaitTaskComplete(taskID, opts.CardKey, opts.TimeoutSec)
+	if stillRunning {
+		return nil, fmt.Errorf("alignment task timed out")
+	}
+	if msg := TaskFailure(status); msg != "" {
+		return nil, fmt.Errorf("alignment task failed: %s", msg)
+	}
+
+	result := alignmentResultPayload(status)
+	if result == nil {
+		return nil, fmt.Errorf("alignment returned no result")
+	}
+	rawSegments := listFromAny(result["segments"])
+	if len(rawSegments) == 0 {
+		rawSegments = listFromAny(result["aligned_segments"])
+	}
+	if len(rawSegments) == 0 {
+		return nil, fmt.Errorf("alignment returned no segments")
+	}
+
+	segments := make([]AlignmentSegment, 0, len(rawSegments))
+	for index, raw := range rawSegments {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		start := floatFromAny(firstPresent(item, "start", "start_time"))
+		end := floatFromAny(firstPresent(item, "end", "end_time"))
+		if end <= start {
+			continue
+		}
+		segments = append(segments, AlignmentSegment{
+			SegID: intFromAny(firstPresent(item, "seg_id", "id", "index"), index),
+			Start: start,
+			End:   end,
+			Text:  stringFromAny(item["text"]),
+		})
+	}
+	if len(segments) == 0 {
+		return nil, fmt.Errorf("alignment returned no valid timed segments")
+	}
+	return segments, nil
+}
+
+func alignmentResultPayload(status map[string]any) map[string]any {
+	if output, ok := status["output"].(map[string]any); ok {
+		if result, ok := output["result"].(map[string]any); ok {
+			return result
+		}
+	}
+	if result, ok := status["result"].(map[string]any); ok {
+		return result
+	}
+	return nil
+}
+
+func listFromAny(value any) []any {
+	if items, ok := value.([]any); ok {
+		return items
+	}
+	return nil
+}
+
+func firstPresent(item map[string]any, keys ...string) any {
+	for _, key := range keys {
+		if value, ok := item[key]; ok {
+			return value
+		}
+	}
+	return nil
+}
+
+func floatFromAny(value any) float64 {
+	switch v := value.(type) {
+	case float64:
+		return v
+	case float32:
+		return float64(v)
+	case int:
+		return float64(v)
+	case int64:
+		return float64(v)
+	case json.Number:
+		out, _ := v.Float64()
+		return out
+	default:
+		var out float64
+		fmt.Sscanf(fmt.Sprint(value), "%f", &out)
+		return out
+	}
+}
+
+func intFromAny(value any, fallback int) int {
+	switch v := value.(type) {
+	case float64:
+		return int(v)
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case json.Number:
+		out, _ := v.Int64()
+		return int(out)
+	default:
+		var out int
+		if _, err := fmt.Sscanf(fmt.Sprint(value), "%d", &out); err == nil {
+			return out
+		}
+		return fallback
+	}
+}
+
+func stringFromAny(value any) string {
+	if value == nil {
+		return ""
+	}
+	return fmt.Sprint(value)
 }
 
 // TTSOptions describes a TTS atomic capability invocation.

@@ -16,6 +16,7 @@ import (
 type subtitleOptions struct {
 	input          string // video file path or raw text
 	isTextMode     bool
+	transcriptPath string
 	outputPath     string
 	segmentsOutput string
 	projectName    string
@@ -70,10 +71,24 @@ func cmdSubtitle(args []string) {
 
 	// Step 1: ASR (video mode only)
 	if !opts.isTextMode {
-		rawText, err = runASR(opts.input, cfg.CardKey, projDirs)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return
+		if opts.transcriptPath != "" {
+			data, err := os.ReadFile(opts.transcriptPath)
+			if err != nil {
+				fmt.Printf("Error: read transcript failed: %v\n", err)
+				return
+			}
+			rawText = strings.TrimSpace(string(data))
+			fmt.Printf("Step 1/6: Using transcript: %s\n", opts.transcriptPath)
+			if rawText == "" {
+				fmt.Println("Error: transcript is empty")
+				return
+			}
+		} else {
+			rawText, err = runASR(opts.input, cfg.CardKey, projDirs)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				return
+			}
 		}
 	}
 
@@ -87,7 +102,11 @@ func cmdSubtitle(args []string) {
 	fmt.Printf("  Generated %d segments, %d sentence groups\n", len(segments), len(sentenceGroups))
 
 	// Step 3: Align
-	segments = runAlignment(segments, opts.isTextMode, opts.input)
+	segments, err = runAlignment(segments, sentenceGroups, opts.isTextMode, opts.input, cfg.CardKey, projDirs)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 
 	// Step 4: Highlight
 	if !opts.skipHighlight {
@@ -212,6 +231,7 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 		color:          "#FDFDFF",
 		strokeColor:    "#1F0101",
 		highlightColor: "#FFD95A",
+		skipEffects:    true,
 	}
 
 	// First pass: find positional arg and --text flag
@@ -251,6 +271,11 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 		case "--output":
 			if i+1 < len(args) {
 				opts.outputPath = args[i+1]
+				i++
+			}
+		case "--transcript":
+			if i+1 < len(args) {
+				opts.transcriptPath = args[i+1]
 				i++
 			}
 		case "--segments-output":
@@ -293,7 +318,9 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 				opts.highlightColor = args[i+1]
 				i++
 			}
-		case "--no-effects":
+		case "--effects":
+			opts.skipEffects = false
+		case "--no-effects", "--skip-effects":
 			opts.skipEffects = true
 		case "--no-highlight":
 			opts.skipHighlight = true
@@ -339,7 +366,7 @@ func applySubtitleDefaults(opts *subtitleOptions, defaults *cloud.ClientDefaults
 }
 
 func isBoolFlag(flag string) bool {
-	return flag == "--text" || flag == "--no-effects" || flag == "--no-highlight"
+	return flag == "--text" || flag == "--effects" || flag == "--no-effects" || flag == "--skip-effects" || flag == "--no-highlight"
 }
 
 // --- Pipeline steps ---
@@ -364,22 +391,123 @@ func runASR(videoPath, cardKey string, dirs projectDirs) (string, error) {
 	return result.Text, nil
 }
 
-func runAlignment(segments []subtitle.Segment, isTextMode bool, videoPath string) []subtitle.Segment {
+func runAlignment(segments []subtitle.Segment, sentenceGroups []subtitle.SentenceGroup, isTextMode bool, videoPath, cardKey string, dirs projectDirs) ([]subtitle.Segment, error) {
 	fmt.Println("Step 3/6: Aligning segments to audio timestamps...")
 	if isTextMode {
 		totalDuration := float64(len(segments) * 3)
 		segments = subtitle.FallbackEvenAlign(segments, totalDuration)
 		fmt.Println("  Text-only mode: using estimated even alignment")
-		return segments
+		return segments, nil
 	}
 
-	dur, err := subtitle.GetVideoDuration(videoPath, "")
-	if err != nil || dur <= 0 {
-		dur = float64(len(segments) * 3)
+	audioPath := filepath.Join(dirs.audio, "subtitle_align.wav")
+	if dirs.audio == "" {
+		tmp, err := os.CreateTemp("", "luma-subtitle-align-*.wav")
+		if err != nil {
+			return nil, fmt.Errorf("create alignment audio temp file failed: %w", err)
+		}
+		audioPath = tmp.Name()
+		tmp.Close()
+		defer os.Remove(audioPath)
+	} else if err := os.MkdirAll(dirs.audio, 0755); err != nil {
+		return nil, fmt.Errorf("create project audio dir failed: %w", err)
 	}
-	segments = subtitle.FallbackEvenAlign(segments, dur)
-	fmt.Printf("  Using even alignment (duration: %.1fs)\n", dur)
+
+	if err := subtitle.ExtractAudio(videoPath, audioPath, ""); err != nil {
+		return nil, fmt.Errorf("extract audio for alignment failed: %w", err)
+	}
+
+	alignTargets := sentenceGroups
+	if len(alignTargets) == 0 {
+		alignTargets = buildFallbackSentenceGroups(segments)
+	}
+	texts := make([]string, 0, len(alignTargets))
+	for _, group := range alignTargets {
+		texts = append(texts, group.Text)
+	}
+	aligned, err := atom.RunAlignment(atom.AlignmentOptions{
+		AudioPath:  audioPath,
+		TextList:   texts,
+		Language:   "zh",
+		CardKey:    cardKey,
+		TimeoutSec: 300,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(aligned) < len(alignTargets) {
+		return nil, fmt.Errorf("cloud alignment returned too few segments: got %d, want %d", len(aligned), len(alignTargets))
+	}
+	segments = applySentenceGroupAlignment(segments, alignTargets, aligned)
+	if hasUntimedSegments(segments) {
+		return nil, fmt.Errorf("cloud alignment left some subtitle segments without timing")
+	}
+	fmt.Printf("  Cloud alignment applied: %d sentence groups -> %d subtitle segments\n", len(aligned), len(segments))
+	return segments, nil
+}
+
+func buildFallbackSentenceGroups(segments []subtitle.Segment) []subtitle.SentenceGroup {
+	groups := make([]subtitle.SentenceGroup, 0, len(segments))
+	for _, seg := range segments {
+		groups = append(groups, subtitle.SentenceGroup{StartSegID: seg.SegID, EndSegID: seg.SegID, Text: seg.Text})
+	}
+	return groups
+}
+
+func applySentenceGroupAlignment(segments []subtitle.Segment, groups []subtitle.SentenceGroup, aligned []atom.AlignmentSegment) []subtitle.Segment {
+	segmentIndex := make(map[int]int, len(segments))
+	for i, seg := range segments {
+		segmentIndex[seg.SegID] = i
+	}
+	for i, group := range groups {
+		if i >= len(aligned) {
+			break
+		}
+		distributeGroupTiming(segments, segmentIndex, group, aligned[i].Start, aligned[i].End)
+	}
 	return segments
+}
+
+func distributeGroupTiming(segments []subtitle.Segment, segmentIndex map[int]int, group subtitle.SentenceGroup, start, end float64) {
+	if end <= start {
+		return
+	}
+	childIndexes := make([]int, 0, group.EndSegID-group.StartSegID+1)
+	totalChars := 0
+	for segID := group.StartSegID; segID <= group.EndSegID; segID++ {
+		idx, ok := segmentIndex[segID]
+		if !ok {
+			continue
+		}
+		childIndexes = append(childIndexes, idx)
+		totalChars += len([]rune(segments[idx].Text))
+	}
+	if len(childIndexes) == 0 {
+		return
+	}
+	cursor := start
+	duration := end - start
+	for i, idx := range childIndexes {
+		if i == len(childIndexes)-1 {
+			segments[idx].Start = cursor
+			segments[idx].End = end
+			break
+		}
+		chars := len([]rune(segments[idx].Text))
+		next := cursor + duration*(float64(chars)/float64(max(totalChars, 1)))
+		segments[idx].Start = cursor
+		segments[idx].End = next
+		cursor = next
+	}
+}
+
+func hasUntimedSegments(segments []subtitle.Segment) bool {
+	for _, seg := range segments {
+		if seg.End <= seg.Start {
+			return true
+		}
+	}
+	return false
 }
 
 // --- Helpers ---
@@ -491,6 +619,7 @@ func printSubtitleUsage() {
 	fmt.Println("")
 	fmt.Println("  Options:")
 	fmt.Println("    --text                   - Treat argument as raw text instead of video file")
+	fmt.Println("    --transcript <path>      - Use previous-step transcript text instead of ASR")
 	fmt.Println("    --output <path>          - Output video path (default: <input>_subtitled.mp4)")
 	fmt.Println("    --segments-output <path> - Output segment JSON path")
 	fmt.Println("    --project <name>         - Use specified project for output organization")
@@ -500,7 +629,8 @@ func printSubtitleUsage() {
 	fmt.Println("    --color <hex>            - Font color (default: #FDFDFF)")
 	fmt.Println("    --stroke <hex>           - Stroke color (default: #1F0101)")
 	fmt.Println("    --highlight-color <hex>  - Highlight color (default: #FFD95A)")
-	fmt.Println("    --no-effects             - Skip LLM subtitle effects")
+	fmt.Println("    --effects                - Enable experimental effect subtitles")
+	fmt.Println("    --no-effects             - Skip experimental subtitle effects (default)")
 	fmt.Println("    --no-highlight           - Skip LLM keyword highlight")
 	fmt.Println("    --persona <text>         - Persona hint for LLM splitting")
 	fmt.Println("")
