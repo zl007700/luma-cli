@@ -88,8 +88,7 @@ luma-cli pip plan --segments step4_segments.json --materials step4_materials_enr
 luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
 
 luma-cli subtitle step4_picture_in_picture.mp4 --output step5_subtitle.mp4
-luma-cli cover frame step5_subtitle.mp4 --output step6_cover_frame.png
-luma-cli cover render step6_cover_frame.png --title "Cover title" --output step6_cover.jpg
+luma-cli cover generate step4_picture_in_picture.mp4 --title "Cover title" --count 12 --output-dir step6_covers
 ```
 
 ## Voice Clone

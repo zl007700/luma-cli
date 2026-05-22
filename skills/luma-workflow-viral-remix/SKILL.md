@@ -107,9 +107,9 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 10. Create a cover:
     ```bash
-    luma-cli cover frame step5_subtitle.mp4 --time 1.0 --output step6_cover_frame.png
-    luma-cli cover render step6_cover_frame.png --title "<cover_title>" --subtitle "<cover_subtitle>" --output step6_cover.jpg
+    luma-cli cover generate step4_picture_in_picture.mp4 --title "<cover_title>" --subtitle "<cover_subtitle>" --count 12 --output-dir step6_covers
     ```
+    Use the original visual video for cover frames: prefer `step4_picture_in_picture.mp4`; if PIP was skipped, use `step3_lipsync.mp4`. Do not extract the cover frame from `step5_subtitle.mp4`, because burned subtitles will become part of the cover background.
 
 ## Agent Rules
 

@@ -171,6 +171,7 @@ func cmdLipSync(args []string) {
 	fmt.Println("    --no-superres               Disable super-resolution")
 	fmt.Println("    --superres-scale <n>        Super-resolution scale (default: 2)")
 	fmt.Println("    --multi-shot-json <file>    JSON payload for backend multi_shot")
+	fmt.Println("    --timeout <seconds>         Wait timeout for cloud task (default: 600)")
 	fmt.Println("")
 	fmt.Println("  List avatars: luma-cli asset list roles")
 
@@ -194,6 +195,11 @@ func cmdLipSync(args []string) {
 		return
 	}
 	superresScale, err := parsed.Int("superres-scale", 2)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	timeoutSec, err := parsed.Int("timeout", 600)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -272,6 +278,7 @@ func cmdLipSync(args []string) {
 		MultiShot:         multiShot,
 		CardKey:           cfg.CardKey,
 		OutputPath:        outputPath,
+		TimeoutSec:        timeoutSec,
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
