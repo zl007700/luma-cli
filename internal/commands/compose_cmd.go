@@ -350,9 +350,9 @@ func cmdCoverGenerate(raw []string) {
 			input["subtitle_font_resource_id"] = subtitleFontRef
 		}
 	}
-	templateRef := parsed.String("template", strings.TrimSpace(defaults.Cover.Template))
-	if templateRef != "" {
-		if parsed.Has("template") {
+	if parsed.Has("template") {
+		templateRef := parsed.String("template", "")
+		if templateRef != "" {
 			if key, err := atom.ResolveAssetKey("cover_templates", templateRef, cfg.CardKey); err == nil {
 				input["template_object_keys"] = []string{key}
 			} else if isObjectKeyRef(templateRef) {
@@ -360,8 +360,16 @@ func cmdCoverGenerate(raw []string) {
 			} else {
 				input["template_resource_ids"] = []string{templateRef}
 			}
+		}
+	} else {
+		templateIDs := defaultCoverTemplateResourceIDs(cfg, defaults, count)
+		if len(templateIDs) > 0 {
+			input["template_resource_ids"] = templateIDs
 		} else {
-			input["template_resource_ids"] = []string{templateRef}
+			templateRef := strings.TrimSpace(defaults.Cover.Template)
+			if templateRef != "" {
+				input["template_resource_ids"] = []string{templateRef}
+			}
 		}
 	}
 
@@ -452,6 +460,43 @@ func cmdCoverGenerate(raw []string) {
 func isObjectKeyRef(value string) bool {
 	value = strings.TrimSpace(value)
 	return strings.Contains(value, "/") || strings.HasPrefix(value, "prod/") || strings.HasPrefix(value, "resource/")
+}
+
+func defaultCoverTemplateResourceIDs(cfg *config, defaults *cloud.ClientDefaults, count int) []string {
+	if cfg == nil {
+		return nil
+	}
+	limit := count
+	if limit <= 0 {
+		limit = 6
+	}
+	items, err := cloud.ListClientResources("cover_template", "", cfg.CardKey)
+	if err != nil || len(items) == 0 {
+		items, err = cloud.ListClientResources("template", "cover", cfg.CardKey)
+		if err != nil || len(items) == 0 {
+			return nil
+		}
+	}
+	ids := []string{}
+	seen := map[string]bool{}
+	add := func(id string) {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			return
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	if defaults != nil {
+		add(defaults.Cover.Template)
+	}
+	for _, item := range items {
+		add(item.ID)
+		if len(ids) >= limit {
+			break
+		}
+	}
+	return ids
 }
 
 func downloadCoverCandidates(status map[string]any, outputDir string) int {
