@@ -47,6 +47,13 @@ logs/
 *.temp
 .cache/
 tmp/
+smoke/
+
+# Local/internal notes
+.internal/
+docs/internal/
+*.local.md
+*.private.md
 
 # Node (if needed for frontend)
 node_modules/

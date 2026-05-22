@@ -43,8 +43,8 @@ luma-cli material search --materials materials.json --query "AI assistant" --lim
 ## Agent Rules
 
 - Prefer friendly names from `asset list` when available.
-- Use full `object_key` only when a command needs an exact asset.
+- Prefer stable asset names or IDs returned by CLI commands.
 - Upload local files before referencing them in cloud-only workflows.
 - Keep asset upload separate from creative workflow planning.
-- For ZA-AGENT style local material libraries, prefer `material group describe` over hand-building a materials file.
+- For local material libraries, prefer `material group describe` over hand-building a materials file.
 - Use `material search` before PIP planning when the script is long or the material group has many candidates.

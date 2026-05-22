@@ -1,7 +1,7 @@
 ---
 name: luma-material
 version: 0.1.0
-description: "Use when an agent needs to inspect local material libraries, describe ZA-AGENT style material groups, upload or understand materials, search candidates, or prepare PIP matching inputs."
+description: "Use when an agent needs to inspect local material libraries, describe material groups, upload or understand materials, search candidates, or prepare PIP matching inputs."
 metadata:
   requires:
     bins: ["luma-cli"]
@@ -34,7 +34,7 @@ luma-cli material library path
 luma-cli material group list --output material_groups.json
 ```
 
-Import a ZA-AGENT style group into the default library when needed:
+Import a reusable material group into the default library when needed:
 
 ```bash
 luma-cli material library import ./material_library/groups/vlm_ai --replace
@@ -74,7 +74,7 @@ Use `--mode cloud` when semantic matching must be backend-only. Use `--mode loca
 
 ## Agent Rules
 
-- Prefer the default material library and `material group describe <group_name>` for ZA-AGENT style local libraries.
+- Prefer the default material library and `material group describe <group_name>` for local material libraries.
 - Do not upload an entire local library unless the user explicitly asks; upload only materials that need cloud understanding.
 - If matching returns zero inserts, report that no suitable materials were found and continue without PIP.
 - Keep `materials.json`, scene units, matches, and PIP plan as separate artifacts.

@@ -118,7 +118,7 @@ Recommended intermediate files:
 
 ## Local Material Library
 
-The default local material library lives under `~/.luma/material-library`. Import ZA-AGENT style material groups once, then agents can refer to them by group name:
+The default local material library lives under `~/.luma/material-library`. Import reusable material groups once, then agents can refer to them by group name:
 
 ```bash
 luma-cli material library path
@@ -133,10 +133,10 @@ Luma distributes the command-line tool and agent skills separately: npm installs
 
 ```bash
 npm install -g @lumageo/luma-cli
-npx -y skills add zl007700/luma-cli -g -y
+luma-cli skills sync
 ```
 
-`luma-cli skills sync` wraps the full skills sync and writes a local sync stamp. `luma-cli update` updates the npm package and syncs skills in one command. GitHub Release also uploads `luma-skills-vX.Y.Z.zip` as a backup/import artifact for skills platforms. See [docs/SKILLS.md](./docs/SKILLS.md).
+`luma-cli skills sync` installs Luma agent skills and writes a local sync stamp. `luma-cli update` updates the npm package and syncs skills in one command. See [docs/SKILLS.md](./docs/SKILLS.md).
 
 ## Project Structure
 
@@ -159,6 +159,6 @@ Maintenance rules:
 
 - Keep CLI commands atomic; do not hard-code full business workflows in Go.
 - Put multi-step video workflows in `skills/` and let agents execute them through intermediate artifacts.
-- Keep prompt, material understanding, and semantic matching logic on the backend when it should stay closed-source.
+- Use Luma cloud services for advanced material understanding and semantic matching.
 - Keep local logic focused on stable cross-platform work: files, resource cache, ffmpeg rendering, and result formatting.
 - When adding a capability, update `tools describe` / `shortcuts` so agents can discover the parameters automatically.

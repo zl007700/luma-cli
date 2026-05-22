@@ -35,17 +35,8 @@ luma-cli skills sync
 `luma-cli skills sync` runs:
 
 ```bash
-npx -y skills add zl007700/luma-cli -g -y
+luma-cli skills sync
 ```
-
-Selective install is a maintainer/platform feature, not the default user path:
-
-```bash
-luma-cli skills sync -s luma-workflow-viral-remix
-npx -y skills add zl007700/luma-cli -s luma-workflow-viral-remix -g -y
-```
-
-User-facing docs should present the full skill pack install. Selective install is useful for marketplace validation, troubleshooting, or future platform ingestion rules.
 
 Update flow:
 
@@ -58,10 +49,9 @@ This updates the CLI through npm and then syncs skills through the skills instal
 Distribution channels:
 
 1. npm installs the CLI shell and native binary launcher.
-2. `npx skills add zl007700/luma-cli -g -y` installs public skills from the repo.
-3. `https://pikgeo.com/skills/luma` can host the same skills through the well-known website format. See [SKILLS_HOSTING.md](./SKILLS_HOSTING.md).
-4. GitHub Release still uploads `luma-skills-vX.Y.Z.zip` as a backup/import artifact for platforms that prefer zip ingestion.
-5. Skills platforms can ingest the repo path, website source, release zip, or individual skill folders.
+2. `luma-cli skills sync` installs the public Luma skill pack.
+3. GitHub Release uploads a versioned skills bundle for compatible agent runtimes.
+4. Skills platforms can ingest the repo path, release bundle, or individual skill folders.
 
 Useful commands:
 
@@ -77,7 +67,7 @@ This gives two paths:
 - Users who discover Luma through npm install the CLI first, then install or sync skills.
 - Users who discover Luma from a skills marketplace install the skills first, then follow the skill instructions to install `luma-cli`.
 
-Do not couple skill publishing to npm only. Skills should be independently packageable and platform-friendly.
+Skills are independently packageable and platform-friendly.
 
 ## Authoring Rules
 
@@ -85,4 +75,4 @@ Do not couple skill publishing to npm only. Skills should be independently packa
 - Put long examples or domain details into `references/`.
 - Use stable intermediate file names so agents can resume work.
 - Reference `luma-cli tools describe <tool_id>` instead of duplicating every flag.
-- Keep prompt-heavy and closed-source logic on the backend.
+- Use Luma cloud services for advanced material understanding and semantic matching.

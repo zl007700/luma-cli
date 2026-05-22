@@ -147,7 +147,7 @@ luma-cli tts "这是一段测试口播" --voice my_voice --output step2_tts.wav
 | `luma-material` | 本地素材库、素材组、素材检索和 PIP 匹配 |
 | `luma-assets` | 素材上传、选择和复用 |
 
-本地素材库默认放在 `~/.luma/material-library`。可以把 ZA-AGENT 或用户自己的素材组导入到默认库，之后 Agent 只需要按素材组名称引用：
+本地素材库默认放在 `~/.luma/material-library`。可以把常用素材组导入到默认库，之后 Agent 只需要按素材组名称引用：
 
 ```bash
 luma-cli material library path
@@ -160,10 +160,10 @@ Luma 将命令行工具和 Agent skills 分开分发：npm 负责安装 `luma-cl
 
 ```bash
 npm install -g @lumageo/luma-cli
-npx -y skills add zl007700/luma-cli -g -y
+luma-cli skills sync
 ```
 
-`luma-cli skills sync` 是对全量 skills 同步的封装，并会写入本地同步记录；`luma-cli update` 会先更新 npm 包，再同步 skills。GitHub Release 仍会额外上传 `luma-skills-vX.Y.Z.zip`，作为 skills 平台导入或离线分发的备用产物。更多说明见 [docs/SKILLS.md](./docs/SKILLS.md)。
+`luma-cli skills sync` 会安装 Luma Agent skills，并写入本地同步记录；`luma-cli update` 会先更新 npm 包，再同步 skills。更多说明见 [docs/SKILLS.md](./docs/SKILLS.md)。
 
 ## 项目工作区
 
@@ -203,10 +203,10 @@ skills/                   给 Agent 使用的流程说明书
 scripts/                  npm 安装和运行入口
 ```
 
-维护原则：
+设计原则：
 
 - CLI 命令保持原子化，不把完整业务流程写死在 Go 代码里。
 - 多步骤视频制作流程放在 `skills/`，由 Agent 按中间产物逐步执行。
-- prompt、素材理解、语义匹配等闭源能力优先放在后端。
+- 素材理解、语义匹配等高级能力由 Luma 云端服务提供。
 - 本地只保留跨平台稳定的能力，例如文件组织、资源缓存、ffmpeg 渲染、结果整理。
 - 新增能力时优先补 `tools describe` / `shortcuts`，让 Agent 能自动发现和理解参数。
