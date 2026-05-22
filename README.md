@@ -34,6 +34,24 @@ luma-cli auth status
 luma-cli runtime install ffmpeg
 ```
 
+同步 Agent skills：
+
+```bash
+luma-cli skills sync
+```
+
+等价于：
+
+```bash
+npx -y skills add zl007700/luma-cli -g -y
+```
+
+后续更新 CLI 和 skills：
+
+```bash
+luma-cli update
+```
+
 ## Agent 工具发现
 
 ```bash
@@ -80,7 +98,7 @@ luma-cli script rewrite --input source_script.txt --output step1_rewrite.json
 luma-cli tts "<rewritten_text>" --voice 男声3 --output step2_tts.wav
 luma-cli lipsync --avatar 数字人男 --audio step2_tts.wav --output step3_lipsync.mp4
 
-luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
+luma-cli material group describe vlm_ai --output step4_materials_enriched.json
 luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json
 luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
 luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
@@ -129,7 +147,23 @@ luma-cli tts "这是一段测试口播" --voice my_voice --output step2_tts.wav
 | `luma-material` | 本地素材库、素材组、素材检索和 PIP 匹配 |
 | `luma-assets` | 素材上传、选择和复用 |
 
-更多 skill 设计和分发说明见 [docs/SKILLS.md](./docs/SKILLS.md)。GitHub Release 会额外上传 `luma-skills-vX.Y.Z.zip`，方便后续接入 skills 平台；npm 包主要负责安装 CLI。
+本地素材库默认放在 `~/.luma/material-library`。可以把 ZA-AGENT 或用户自己的素材组导入到默认库，之后 Agent 只需要按素材组名称引用：
+
+```bash
+luma-cli material library path
+luma-cli material library import ./material_library/groups/vlm_ai --replace
+luma-cli material group list
+luma-cli material group describe vlm_ai --output materials.json
+```
+
+Luma 采用和 Lark CLI 类似的分发方式：npm 负责安装 `luma-cli`，skills 通过 skills installer 单独同步。用户通常只需要执行一次全量同步：
+
+```bash
+npm install -g @lumageo/luma-cli
+npx -y skills add zl007700/luma-cli -g -y
+```
+
+`luma-cli skills sync` 是对全量 skills 同步的封装，并会写入本地同步记录；`luma-cli update` 会先更新 npm 包，再同步 skills。GitHub Release 仍会额外上传 `luma-skills-vX.Y.Z.zip`，作为 skills 平台导入或离线分发的备用产物。更多说明见 [docs/SKILLS.md](./docs/SKILLS.md)。
 
 ## 项目工作区
 

@@ -23,17 +23,53 @@ Current core skills:
 
 ## Distribution
 
-The npm package should install and run `luma-cli`. It does not need to be the only distribution channel for skills.
+The npm package installs and runs `luma-cli`. Skills are distributed separately, following the same split used by Lark CLI: CLI binaries come from npm/GitHub Release, while agent skills are installed through the skills installer.
 
-Recommended distribution model:
+Recommended user flow:
 
-1. GitHub Release remains the source of versioned CLI binaries.
-2. The same release should also publish a separate `luma-skills-vX.Y.Z.zip` artifact.
-3. Skills platforms can ingest the zip, repo path, or individual skill folders directly.
-4. A future CLI command can install skills from the current release:
+```bash
+npm install -g @lumageo/luma-cli
+luma-cli skills sync
+```
+
+`luma-cli skills sync` runs:
+
+```bash
+npx -y skills add zl007700/luma-cli -g -y
+```
+
+Selective install is a maintainer/platform feature, not the default user path:
+
+```bash
+luma-cli skills sync -s luma-workflow-viral-remix
+npx -y skills add zl007700/luma-cli -s luma-workflow-viral-remix -g -y
+```
+
+User-facing docs should present the full skill pack install. Selective install is useful for marketplace validation, troubleshooting, or future platform ingestion rules.
+
+Update flow:
+
+```bash
+luma-cli update
+```
+
+This updates the CLI through npm and then syncs skills through the skills installer. A local stamp is written to `~/.luma/skills.stamp.json`; if the CLI version changes while the synced skills version does not, the CLI prints a short notice asking the user or agent to run `luma-cli update`.
+
+Distribution channels:
+
+1. npm installs the CLI shell and native binary launcher.
+2. `npx skills add zl007700/luma-cli -g -y` installs public skills from the repo.
+3. `https://pikgeo.com/skills/luma` can host the same skills through the well-known website format. See [SKILLS_HOSTING.md](./SKILLS_HOSTING.md).
+4. GitHub Release still uploads `luma-skills-vX.Y.Z.zip` as a backup/import artifact for platforms that prefer zip ingestion.
+5. Skills platforms can ingest the repo path, website source, release zip, or individual skill folders.
+
+Useful commands:
+
    ```bash
    luma-cli skills list
-   luma-cli skills install --target ~/.codex/skills
+   luma-cli skills status
+   luma-cli skills sync
+   luma-cli update
    ```
 
 This gives two paths:

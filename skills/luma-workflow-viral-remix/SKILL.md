@@ -88,7 +88,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 7. Prepare and match local PIP materials:
    ```bash
-   luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
+   luma-cli material group describe vlm_ai --output step4_materials_enriched.json
    luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
    ```
 

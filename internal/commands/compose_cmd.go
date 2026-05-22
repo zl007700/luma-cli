@@ -484,7 +484,7 @@ func writeSimpleResult(data map[string]any) {
 	if p, ok := data["output_path"].(string); ok {
 		fmt.Printf("Output: %s\n", p)
 	}
-	for _, key := range []string{"count", "scene_count", "matched_count", "mode", "task_id", "csv_path"} {
+	for _, key := range []string{"count", "scene_count", "matched_count", "mode", "task_id", "csv_path", "group_path"} {
 		if value, ok := data[key]; ok && strAny(value) != "" {
 			fmt.Printf("%s: %v\n", key, value)
 		}

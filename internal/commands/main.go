@@ -1,6 +1,11 @@
 package commands
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/luma-cli/lumer-cli/internal/skillsync"
+)
 
 var version = "dev"
 
@@ -10,6 +15,9 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  luma-cli version                 Show version")
 	fmt.Println("  luma-cli help                    Show help")
+	fmt.Println("  luma-cli update                  Update CLI and sync skills")
+	fmt.Println("  luma-cli skills sync             Install or update agent skills")
+	fmt.Println("  luma-cli skills status           Show skills sync status")
 	fmt.Println("  luma-cli auth login <key>        Save card key")
 	fmt.Println("  luma-cli auth status             Show login status")
 	fmt.Println("  luma-cli agent run <ability>     Run backend-owned agent ability")
@@ -73,6 +81,8 @@ func Run(args []string) int {
 		}
 	}
 
+	maybePrintSkillsNotice(commandArgs[0])
+
 	switch commandArgs[0] {
 	case "version":
 		fmt.Printf("luma-cli version %s\n", version)
@@ -88,4 +98,19 @@ func Run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+func maybePrintSkillsNotice(command string) {
+	if runtimeOpts.JSON {
+		return
+	}
+	switch command {
+	case "help", "version", "skills", "update":
+		return
+	}
+	stamp, err := skillsync.ReadStamp()
+	if err != nil || !skillsync.IsVersionDrift(version, stamp) {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "Notice: Luma skills were synced for %s, but luma-cli is %s. Run: luma-cli update\n", stamp.Version, version)
 }

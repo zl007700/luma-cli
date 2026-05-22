@@ -35,8 +35,8 @@ luma-cli asset upload avatar.mp4 --group roles
 luma-cli asset upload voice.wav --group voice
 luma-cli voice clone ./sample.wav --name my_voice
 luma-cli voice list
-luma-cli material group list ./material_library/groups --output material_groups.json
-luma-cli material group describe ./material_library/groups/vlm_ai --output materials.json
+luma-cli material group list --output material_groups.json
+luma-cli material group describe vlm_ai --output materials.json
 luma-cli material search --materials materials.json --query "AI assistant" --limit 5 --output material_matches.json
 ```
 

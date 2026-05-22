@@ -46,13 +46,15 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
 
       - name: Download release checksums
         env:
@@ -63,13 +65,16 @@ jobs:
           test -s checksums.txt
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          test "${TAG_VERSION}" = "${PKG_VERSION}"
+          node --version
+          npm --version
           PKG_NAME="$(node -p "require('./package.json').name")"
           if [[ "${PKG_NAME}" == @*/* ]]; then
-            npm publish --access public
+            npm publish --access public --tag latest
           else
-            npm publish
+            npm publish --tag latest
           fi

@@ -16,6 +16,24 @@ luma-cli auth login <CARD_KEY>
 luma-cli runtime install ffmpeg
 ```
 
+Sync agent skills:
+
+```bash
+luma-cli skills sync
+```
+
+Equivalent command:
+
+```bash
+npx -y skills add zl007700/luma-cli -g -y
+```
+
+Update both the CLI and skills:
+
+```bash
+luma-cli update
+```
+
 ## Discover Tools
 
 ```bash
@@ -62,7 +80,7 @@ luma-cli script rewrite --input source_script.txt --output step1_rewrite.json
 luma-cli tts "<rewritten_text>" --voice male3 --output step2_tts.wav
 luma-cli lipsync --avatar avatar_male --audio step2_tts.wav --output step3_lipsync.mp4
 
-luma-cli material group describe ./material_library/groups/vlm_ai --output step4_materials_enriched.json
+luma-cli material group describe vlm_ai --output step4_materials_enriched.json
 luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json
 luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
 luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
@@ -98,9 +116,27 @@ Recommended intermediate files:
 
 `project.json` records history and artifacts so agents can resume, inspect, and rerun multi-step jobs.
 
+## Local Material Library
+
+The default local material library lives under `~/.luma/material-library`. Import ZA-AGENT style material groups once, then agents can refer to them by group name:
+
+```bash
+luma-cli material library path
+luma-cli material library import ./material_library/groups/vlm_ai --replace
+luma-cli material group list
+luma-cli material group describe vlm_ai --output materials.json
+```
+
 ## Skills Distribution
 
-Luma skills are distributed separately from the npm binary installer. npm installs `luma-cli`; GitHub Release also uploads `luma-skills-vX.Y.Z.zip` for skills platforms and agent runtimes. See [docs/SKILLS.md](./docs/SKILLS.md).
+Luma follows the Lark CLI-style split: npm installs the CLI, while skills are synced separately through the skills installer. Users usually install the full Luma skill pack once:
+
+```bash
+npm install -g @lumageo/luma-cli
+npx -y skills add zl007700/luma-cli -g -y
+```
+
+`luma-cli skills sync` wraps the full skills sync and writes a local sync stamp. `luma-cli update` updates the npm package and syncs skills in one command. GitHub Release also uploads `luma-skills-vX.Y.Z.zip` as a backup/import artifact for skills platforms. See [docs/SKILLS.md](./docs/SKILLS.md).
 
 ## Project Structure
 
