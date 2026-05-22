@@ -321,36 +321,59 @@ func cmdCoverGenerate(raw []string) {
 		input["source_video_object_key"] = sourceKey
 	}
 
-	fontRef := parsed.String("font", "")
+	fontRef := parsed.String("font", strings.TrimSpace(defaults.Cover.Font))
 	titleFontRef := parsed.String("title-font", fontRef)
 	subtitleFontRef := parsed.String("subtitle-font", fontRef)
-	if titleFontRef != "" && (parsed.Has("font") || parsed.Has("title-font")) {
-		if key, err := atom.ResolveAssetKey("font", titleFontRef, cfg.CardKey); err == nil {
-			input["title_font_object_key"] = key
+	if titleFontRef != "" {
+		if parsed.Has("font") || parsed.Has("title-font") {
+			if key, err := atom.ResolveAssetKey("font", titleFontRef, cfg.CardKey); err == nil {
+				input["title_font_object_key"] = key
+			} else if isObjectKeyRef(titleFontRef) {
+				input["title_font_object_key"] = atom.NormalizeResourceKey(titleFontRef, cfg.CardKey)
+			} else {
+				input["title_font_resource_id"] = titleFontRef
+			}
 		} else {
-			input["title_font_object_key"] = atom.NormalizeResourceKey(titleFontRef, cfg.CardKey)
+			input["title_font_resource_id"] = titleFontRef
 		}
 	}
-	if subtitleFontRef != "" && (parsed.Has("font") || parsed.Has("subtitle-font")) {
-		if key, err := atom.ResolveAssetKey("font", subtitleFontRef, cfg.CardKey); err == nil {
-			input["subtitle_font_object_key"] = key
+	if subtitleFontRef != "" {
+		if parsed.Has("font") || parsed.Has("subtitle-font") {
+			if key, err := atom.ResolveAssetKey("font", subtitleFontRef, cfg.CardKey); err == nil {
+				input["subtitle_font_object_key"] = key
+			} else if isObjectKeyRef(subtitleFontRef) {
+				input["subtitle_font_object_key"] = atom.NormalizeResourceKey(subtitleFontRef, cfg.CardKey)
+			} else {
+				input["subtitle_font_resource_id"] = subtitleFontRef
+			}
 		} else {
-			input["subtitle_font_object_key"] = atom.NormalizeResourceKey(subtitleFontRef, cfg.CardKey)
+			input["subtitle_font_resource_id"] = subtitleFontRef
 		}
 	}
-	_ = defaults
-	templateRef := parsed.String("template", "")
-	if templateRef != "" && parsed.Has("template") {
-		if key, err := atom.ResolveAssetKey("cover_templates", templateRef, cfg.CardKey); err == nil {
-			input["template_object_keys"] = []string{key}
+	templateRef := parsed.String("template", strings.TrimSpace(defaults.Cover.Template))
+	if templateRef != "" {
+		if parsed.Has("template") {
+			if key, err := atom.ResolveAssetKey("cover_templates", templateRef, cfg.CardKey); err == nil {
+				input["template_object_keys"] = []string{key}
+			} else if isObjectKeyRef(templateRef) {
+				input["template_object_keys"] = []string{atom.NormalizeResourceKey(templateRef, cfg.CardKey)}
+			} else {
+				input["template_resource_ids"] = []string{templateRef}
+			}
 		} else {
-			input["template_object_keys"] = []string{atom.NormalizeResourceKey(templateRef, cfg.CardKey)}
+			input["template_resource_ids"] = []string{templateRef}
 		}
 	}
 
 	fmt.Println("Submitting cover task...")
 	fmt.Printf("  Source: %s\n", sourceKey)
 	fmt.Printf("  Count: %d\n", count)
+	if input["title_font_resource_id"] != nil {
+		fmt.Printf("  Font resource: %s\n", input["title_font_resource_id"])
+	}
+	if input["template_resource_ids"] != nil {
+		fmt.Printf("  Template resources: %v\n", input["template_resource_ids"])
+	}
 	taskResult, err := cloud.SubmitTask("cover", "cover_output", input, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: submit cover task failed: %v\n", err)
@@ -372,30 +395,63 @@ func cmdCoverGenerate(raw []string) {
 		fmt.Printf("Error: cover task failed: %s\n", msg)
 		return
 	}
-	manifestURL := atom.ResultURL(status)
+	if statusText := strings.ToLower(fmt.Sprint(status["status"])); statusText != "" && statusText != "completed" {
+		fmt.Printf("Error: cover task failed: %v\n", status)
+		return
+	}
+
+	output, _ := status["output"].(map[string]any)
+	result, _ := output["result"].(map[string]any)
 	manifestPath := filepath.Join(absOutputDir, "cover_manifest.json")
-	if manifestURL != "" {
+	if len(result) > 0 {
+		data, _ := json.MarshalIndent(result, "", "  ")
+		_ = os.WriteFile(manifestPath, data, 0644)
+	} else if manifestURL := atom.ResultURL(status); manifestURL != "" {
 		if err := atom.DownloadFile(manifestURL, manifestPath); err != nil {
 			fmt.Printf("Error: download manifest failed: %v\n", err)
 			return
 		}
 	}
-
-	downloaded := downloadCoverCandidates(status, absOutputDir)
+	covers, _ := result["covers"].([]any)
+	downloaded := []string{}
+	for idx, item := range covers {
+		cover, _ := item.(map[string]any)
+		url, _ := cover["image_url"].(string)
+		if strings.TrimSpace(url) == "" {
+			continue
+		}
+		target := filepath.Join(absOutputDir, fmt.Sprintf("cover_%02d.jpg", idx+1))
+		if err := atom.DownloadFile(url, target); err != nil {
+			fmt.Printf("  Warning: download cover %d failed: %v\n", idx+1, err)
+			continue
+		}
+		downloaded = append(downloaded, target)
+	}
 	recordProjectArtifact("cover", absOutputDir, "cover.generate")
-	result := map[string]any{
+	writeSimpleResult(map[string]any{
 		"task_id":       taskID,
 		"output_dir":    absOutputDir,
 		"manifest_path": manifestPath,
 		"downloaded":    downloaded,
+	})
+	if runtimeOpts.JSON {
+		return
 	}
-	writeSimpleResult(result)
-	if !runtimeOpts.JSON {
-		fmt.Printf("manifest_path: %s\n", manifestPath)
-		if downloaded > 0 {
-			fmt.Printf("downloaded: %d\n", downloaded)
-		}
+	fmt.Println("Done!")
+	if _, err := os.Stat(manifestPath); err == nil {
+		fmt.Printf("  Manifest: %s\n", manifestPath)
 	}
+	for _, path := range downloaded {
+		fmt.Printf("  Cover: %s\n", path)
+	}
+	if len(downloaded) == 0 {
+		fmt.Println("  Cover images were generated in cloud, but this backend response did not include signed image_url fields.")
+	}
+}
+
+func isObjectKeyRef(value string) bool {
+	value = strings.TrimSpace(value)
+	return strings.Contains(value, "/") || strings.HasPrefix(value, "prod/") || strings.HasPrefix(value, "resource/")
 }
 
 func downloadCoverCandidates(status map[string]any, outputDir string) int {
