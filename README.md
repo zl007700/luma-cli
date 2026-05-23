@@ -106,7 +106,8 @@ luma-cli pip plan --segments step4_segments.json --materials step4_materials_enr
 luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
 
 luma-cli subtitle step4_picture_in_picture.mp4 --output step5_subtitle.mp4
-luma-cli cover generate step4_picture_in_picture.mp4 --title "封面标题" --count 12 --output-dir step6_covers
+luma-cli bgm mix step5_subtitle.mp4 --output step6_bgm.mp4
+luma-cli cover generate step4_picture_in_picture.mp4 --title "封面标题" --count 12 --output-dir step7_covers
 ```
 
 ## 声音克隆
@@ -131,7 +132,8 @@ luma-cli tts "这是一段测试口播" --voice my_voice --output step2_tts.wav
 | 数字人 | `step3_lipsync.mp4` |
 | 画中画 | `step4_segments.json`, `step4_materials.json`, `step4_picture_in_picture_plan.json`, `step4_picture_in_picture.mp4` |
 | 字幕 | `step5_subtitle.mp4` |
-| 封面 | `step6_cover_frame.png`, `step6_cover.jpg` |
+| 背景音乐 | `step6_bgm.mp4` |
+| 封面 | `step7_covers/cover_*.jpg` |
 
 ## 内置 Skills
 

@@ -47,8 +47,9 @@ Do not use this workflow when the user only asks for one atomic operation such a
 - `step4_picture_in_picture_plan.json`
 - `step4_picture_in_picture.mp4`
 - `step5_subtitle.mp4`
-- `step6_cover_frame.png`
-- `step6_cover.jpg`
+- `step6_bgm.mp4`
+- `step7_covers/cover_manifest.json`
+- `step7_covers/cover_01.jpg`
 
 ## Flow
 
@@ -105,9 +106,14 @@ Do not use this workflow when the user only asks for one atomic operation such a
    luma-cli subtitle step4_picture_in_picture.mp4 --output step5_subtitle.mp4 --segments-output step5_subtitle_segments.json
    ```
 
-10. Create a cover:
+10. Add BGM:
     ```bash
-    luma-cli cover generate step4_picture_in_picture.mp4 --title "<cover_title>" --subtitle "<cover_subtitle>" --count 12 --output-dir step6_covers
+    luma-cli bgm mix step5_subtitle.mp4 --output step6_bgm.mp4
+    ```
+
+11. Create a cover:
+    ```bash
+    luma-cli cover generate step4_picture_in_picture.mp4 --title "<cover_title>" --subtitle "<cover_subtitle>" --count 12 --output-dir step7_covers
     ```
     Use the original visual video for cover frames: prefer `step4_picture_in_picture.mp4`; if PIP was skipped, use `step3_lipsync.mp4`. Do not extract the cover frame from `step5_subtitle.mp4`, because burned subtitles will become part of the cover background.
 

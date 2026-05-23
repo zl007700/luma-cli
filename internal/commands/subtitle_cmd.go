@@ -26,6 +26,8 @@ type subtitleOptions struct {
 	color          string
 	strokeColor    string
 	highlightColor string
+	sideMargin     int
+	bottomMargin   int
 	skipEffects    bool
 	skipHighlight  bool
 	persona        string
@@ -147,7 +149,11 @@ func cmdSubtitle(args []string) {
 	// Step 6: Generate ASS and burn
 	fmt.Println("Step 6/6: Generating ASS and burning subtitles...")
 	width, height := resolveVideoSize(opts.isTextMode, opts.input)
-	fontSize, marginV := resolveFontSize(opts.fontSize, height)
+	fontSize, marginV := resolveFontSize(opts.fontSize, opts.bottomMargin, height)
+	sideMargin := opts.sideMargin
+	if sideMargin <= 0 {
+		sideMargin = 60
+	}
 	fontPath := ""
 	if opts.fontResource != "" {
 		fontPath, err = cacheDefaultResource(opts.fontResource, cfg)
@@ -161,7 +167,7 @@ func cmdSubtitle(args []string) {
 		FontName: fontNameFromPath(fontPath), FontSize: fontSize,
 		Color: opts.color, StrokeColor: opts.strokeColor,
 		BackColor: "#000000", HighlightColor: opts.highlightColor,
-		HighlightScale: 1.25, MarginL: 60, MarginR: 60, MarginV: marginV,
+		HighlightScale: 1.25, MarginL: sideMargin, MarginR: sideMargin, MarginV: marginV,
 		Outline: float64(fontSize) * 0.07, Shadow: 0, Spacing: 2.0,
 	}
 
@@ -298,6 +304,16 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 				fmt.Sscanf(args[i+1], "%d", &opts.fontSize)
 				i++
 			}
+		case "--side-margin":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &opts.sideMargin)
+				i++
+			}
+		case "--bottom-margin":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &opts.bottomMargin)
+				i++
+			}
 		case "--font":
 			if i+1 < len(args) {
 				opts.fontResource = args[i+1]
@@ -344,6 +360,12 @@ func applySubtitleDefaults(opts *subtitleOptions, defaults *cloud.ClientDefaults
 	}
 	if opts.fontSize <= 0 && defaults.Subtitle.FontSize > 0 {
 		opts.fontSize = defaults.Subtitle.FontSize
+	}
+	if opts.sideMargin <= 0 && defaults.Subtitle.SideMargin > 0 {
+		opts.sideMargin = defaults.Subtitle.SideMargin
+	}
+	if opts.bottomMargin <= 0 && defaults.Subtitle.BottomMargin > 0 {
+		opts.bottomMargin = defaults.Subtitle.BottomMargin
 	}
 	if defaults.Subtitle.MaxChars > 0 && opts.maxChars == 15 {
 		opts.maxChars = defaults.Subtitle.MaxChars
@@ -571,10 +593,16 @@ func resolveVideoSize(isTextMode bool, videoPath string) (int, int) {
 	return width, height
 }
 
-func resolveFontSize(requestedFontSize, height int) (int, int) {
+func resolveFontSize(requestedFontSize, requestedBottomMargin, height int) (int, int) {
 	autoFontSize, _, _, marginV := subtitle.AutoSizeParams(0, height)
 	if requestedFontSize > 0 {
+		if requestedBottomMargin > 0 {
+			return requestedFontSize, requestedBottomMargin
+		}
 		return requestedFontSize, marginV
+	}
+	if requestedBottomMargin > 0 {
+		return autoFontSize, requestedBottomMargin
 	}
 	return autoFontSize, marginV
 }
@@ -625,6 +653,8 @@ func printSubtitleUsage() {
 	fmt.Println("    --project <name>         - Use specified project for output organization")
 	fmt.Println("    --max-chars <n>          - Max chars per segment (default: 15)")
 	fmt.Println("    --font-size <n>          - Font size in px (default: auto)")
+	fmt.Println("    --side-margin <n>        - Left/right subtitle margin in px (default: product setting)")
+	fmt.Println("    --bottom-margin <n>      - Bottom subtitle margin in px (default: product setting)")
 	fmt.Println("    --font <path_or_resource_id> - Subtitle font (default: product setting)")
 	fmt.Println("    --color <hex>            - Font color (default: #FDFDFF)")
 	fmt.Println("    --stroke <hex>           - Stroke color (default: #1F0101)")

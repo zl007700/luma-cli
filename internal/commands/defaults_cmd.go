@@ -51,7 +51,9 @@ func builtinClientDefaults() *cloud.ClientDefaults {
 	return &cloud.ClientDefaults{
 		Subtitle: cloud.SubtitleDefaults{
 			Font:             fallbackCoverFontResourceID,
-			FontSize:         0,
+			FontSize:         80,
+			SideMargin:       60,
+			BottomMargin:     500,
 			Color:            "#FDFDFF",
 			StrokeColor:      "#1F0101",
 			HighlightColor:   "#FFD95A",
@@ -65,8 +67,8 @@ func builtinClientDefaults() *cloud.ClientDefaults {
 			SubtitleSize: 38,
 		},
 		BGM: cloud.BGMDefaults{
-			VoiceVolume: 1.0,
-			BGMVolume:   0.25,
+			VoiceVolume: 1.2,
+			BGMVolume:   0.15,
 		},
 	}
 }
@@ -77,6 +79,12 @@ func mergeClientDefaults(dst, src *cloud.ClientDefaults) {
 	}
 	if src.Subtitle.FontSize > 0 {
 		dst.Subtitle.FontSize = src.Subtitle.FontSize
+	}
+	if src.Subtitle.SideMargin > 0 {
+		dst.Subtitle.SideMargin = src.Subtitle.SideMargin
+	}
+	if src.Subtitle.BottomMargin > 0 {
+		dst.Subtitle.BottomMargin = src.Subtitle.BottomMargin
 	}
 	if src.Subtitle.Color != "" {
 		dst.Subtitle.Color = src.Subtitle.Color

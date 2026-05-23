@@ -58,6 +58,8 @@ type ClientResource struct {
 type SubtitleDefaults struct {
 	Font             string `json:"font"`
 	FontSize         int    `json:"font_size"`
+	SideMargin       int    `json:"side_margin"`
+	BottomMargin     int    `json:"bottom_margin"`
 	Color            string `json:"color"`
 	StrokeColor      string `json:"stroke_color"`
 	HighlightColor   string `json:"highlight_color"`

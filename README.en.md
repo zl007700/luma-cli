@@ -88,7 +88,8 @@ luma-cli pip plan --segments step4_segments.json --materials step4_materials_enr
 luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
 
 luma-cli subtitle step4_picture_in_picture.mp4 --output step5_subtitle.mp4
-luma-cli cover generate step4_picture_in_picture.mp4 --title "Cover title" --count 12 --output-dir step6_covers
+luma-cli bgm mix step5_subtitle.mp4 --output step6_bgm.mp4
+luma-cli cover generate step4_picture_in_picture.mp4 --title "Cover title" --count 12 --output-dir step7_covers
 ```
 
 ## Voice Clone
@@ -111,7 +112,8 @@ Recommended intermediate files:
 | Digital human | `step3_lipsync.mp4` |
 | PIP | `step4_segments.json`, `step4_materials.json`, `step4_picture_in_picture_plan.json`, `step4_picture_in_picture.mp4` |
 | Subtitles | `step5_subtitle.mp4` |
-| Cover | `step6_cover_frame.png`, `step6_cover.jpg` |
+| BGM | `step6_bgm.mp4` |
+| Cover | `step7_covers/cover_*.jpg` |
 
 `project.json` records history and artifacts so agents can resume, inspect, and rerun multi-step jobs.
 
