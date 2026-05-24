@@ -13,6 +13,7 @@ type commandSpec struct {
 func commandRegistry() map[string]commandSpec {
 	specs := []commandSpec{
 		{Name: "agent", Description: "Backend-owned agent abilities", Handler: cmdAgent},
+		{Name: "align", Description: "Align subtitle segments to audio via cloud API", Handler: cmdAlign},
 		{Name: "auth", Description: "Authentication commands", Handler: cmdAuth},
 		{Name: "asr", Description: "Speech recognition", Handler: cmdASR},
 		{Name: "asset", Description: "Asset upload and listing", Handler: cmdAsset},

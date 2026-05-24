@@ -66,6 +66,117 @@ func cmdASR(args []string) {
 	}
 }
 
+func cmdAlign(args []string) {
+	parsed := cmdutil.Parse(args)
+	audioPath := parsed.String("audio", "")
+	segmentsPath := parsed.String("segments", "")
+	outputPath := parsed.String("output", "")
+	language := parsed.String("language", "zh")
+
+	if audioPath == "" || segmentsPath == "" {
+		fmt.Println("usage: luma-cli align --audio <tts.wav> --segments <segments.json> [--output <path>] [--language zh|en]")
+		fmt.Println("")
+		fmt.Println("  Aligns subtitle segments to audio timestamps via cloud alignment API.")
+		fmt.Println("  Expects a segments JSON file (from subtitle.split or subtitle --text --segments-output).")
+		fmt.Println("  Uses sentence_groups for alignment; falls back to segments.")
+		fmt.Println("")
+		fmt.Println("  Options:")
+		fmt.Println("    --audio <file>       Local audio file (e.g. TTS output WAV)")
+		fmt.Println("    --segments <file>    Segments JSON file with sentence_groups or segments array")
+		fmt.Println("    --output <path>      Output aligned JSON path (default: align_result.json)")
+		fmt.Println("    --language <code>    Recognition language (default: zh)")
+		return
+	}
+
+	if _, err := os.Stat(audioPath); err != nil {
+		fmt.Printf("Error: audio file not found: %s\n", audioPath)
+		return
+	}
+	data, err := os.ReadFile(segmentsPath)
+	if err != nil {
+		fmt.Printf("Error: read segments file failed: %v\n", err)
+		return
+	}
+
+	type segEntry struct {
+		Text string `json:"text"`
+	}
+	var payload struct {
+		Segments       []segEntry `json:"segments"`
+		SentenceGroups []segEntry `json:"sentence_groups"`
+	}
+	if err := json.Unmarshal(data, &payload); err != nil {
+		// try result.Segments wrapper
+		var wrapped struct {
+			Result struct {
+				Segments       []segEntry `json:"segments"`
+				SentenceGroups []segEntry `json:"sentence_groups"`
+			} `json:"result"`
+		}
+		if err2 := json.Unmarshal(data, &wrapped); err2 != nil {
+			fmt.Printf("Error: parse segments JSON failed: %v\n", err)
+			return
+		}
+		payload = wrapped.Result
+	}
+
+	cfg := loadConfig()
+	if cfg == nil {
+		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
+		return
+	}
+
+	// Build text list from sentence_groups (preferred) or segments
+	var texts []string
+	if len(payload.SentenceGroups) > 0 {
+		for _, g := range payload.SentenceGroups {
+			texts = append(texts, g.Text)
+		}
+	} else {
+		for _, seg := range payload.Segments {
+			texts = append(texts, seg.Text)
+		}
+	}
+	if len(texts) == 0 {
+		fmt.Println("Error: no segments or sentence_groups found in input")
+		return
+	}
+
+	fmt.Printf("Aligning %d text items to audio...\n", len(texts))
+	result, err := atom.RunAlignment(atom.AlignmentOptions{
+		AudioPath:  audioPath,
+		TextList:   texts,
+		Language:   language,
+		CardKey:    cfg.CardKey,
+		TimeoutSec: 300,
+	})
+	if err != nil {
+		fmt.Printf("Error: alignment failed: %v\n", err)
+		return
+	}
+	fmt.Printf("  Aligned: %d segments\n", len(result))
+
+	if outputPath == "" {
+		outputPath = "align_result.json"
+	}
+	outputPath, _ = absoluteOutputPath(outputPath)
+
+	outData, _ := json.MarshalIndent(map[string]any{
+		"aligned_segments": result,
+		"count":            len(result),
+	}, "", "  ")
+	if err := os.WriteFile(outputPath, outData, 0644); err != nil {
+		fmt.Printf("Error: write output failed: %v\n", err)
+		return
+	}
+	fmt.Printf("Saved to: %s\n", outputPath)
+
+	proj := resolveProjectByName("")
+	if proj != nil {
+		recordStep(proj, "align", segmentsPath, outputPath)
+	}
+}
+
 func cmdTTS(args []string) {
 	parsed := cmdutil.Parse(args)
 	if len(parsed.Positionals) < 1 {
@@ -159,11 +270,11 @@ func cmdTTS(args []string) {
 }
 
 func cmdLipSync(args []string) {
-	fmt.Println("usage: luma-cli lipsync --avatar <name> [--audio <file>] [--output <path>]")
+	fmt.Println("usage: luma-cli lipsync --avatar <name> --audio <file> [--output <path>]")
 	fmt.Println("")
 	fmt.Println("  Options:")
 	fmt.Println("    --avatar <name>             Digital avatar name")
-	fmt.Println("    --audio <file>              Audio file path. Default: use latest TTS output from project")
+	fmt.Println("    --audio <file>              Audio file path. required")
 	fmt.Println("    --output <path>             Output video path")
 	fmt.Println("    --random-start              Start the avatar video from a random position")
 	fmt.Println("    --guidance-scale <number>   Lip-sync guidance scale (default: 1.0)")
@@ -229,27 +340,22 @@ func cmdLipSync(args []string) {
 		return
 	}
 
-	var audioKey string
-	if audioPath != "" {
-		if _, err := os.Stat(audioPath); err != nil {
-			fmt.Printf("Error: audio file not found: %s\n", audioPath)
-			return
-		}
-		fmt.Println("Uploading audio...")
-		audioKey, err = cloud.UploadFile(audioPath, cfg.CardKey, "lipsync_input")
-		if err != nil {
-			fmt.Printf("Error: audio upload failed: %v\n", err)
-			return
-		}
-		audioKey = atom.NormalizeResourceKey(audioKey, cfg.CardKey)
-		fmt.Printf("  Uploaded: %s\n", audioKey)
-	} else if proj != nil && proj.LatestTTSKey != "" {
-		audioKey = proj.LatestTTSKey
-		fmt.Printf("  Using latest TTS audio: %s\n", audioKey)
-	} else {
-		fmt.Println("Error: no audio source. Use --audio <file> or run 'luma-cli tts' first in a project.")
+	if audioPath == "" {
+		fmt.Println("Error: --audio is required")
 		return
 	}
+	if _, err := os.Stat(audioPath); err != nil {
+		fmt.Printf("Error: audio file not found: %s\n", audioPath)
+		return
+	}
+	fmt.Println("Uploading audio...")
+	audioKey, err := cloud.UploadFile(audioPath, cfg.CardKey, "tts_output")
+	if err != nil {
+		fmt.Printf("Error: audio upload failed: %v\n", err)
+		return
+	}
+	audioKey = atom.NormalizeResourceKey(audioKey, cfg.CardKey)
+	fmt.Printf("  Uploaded: %s\n", audioKey)
 
 	if outputPath == "" {
 		if proj != nil {

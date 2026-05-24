@@ -6,6 +6,21 @@ import "github.com/luma-cli/lumer-cli/shortcuts/common"
 func Shortcuts() []common.Shortcut {
 	return []common.Shortcut{
 		{
+			ID:          "align.run",
+			Service:     "align",
+			Description: "Align subtitle segments to audio timestamps through cloud alignment API.",
+			Risk:        "write",
+			Flags: []common.Flag{
+				{Name: "audio", Description: "Local audio file (e.g. TTS output WAV).", Required: true},
+				{Name: "segments", Description: "Segments JSON file with sentence_groups or segments.", Required: true},
+				{Name: "output", Description: "Output aligned JSON path.", Default: "align_result.json"},
+				{Name: "language", Description: "Recognition language.", Default: "zh"},
+			},
+			Outputs:  []string{"aligned_segments", "count", "output_path"},
+			Examples: []string{"luma-cli align --audio tts.wav --segments step4_segments.json --output step4_aligned.json"},
+			Skills:   []string{"luma-subtitle", "luma-video-workflow"},
+		},
+		{
 			ID:          "asr.transcribe",
 			Service:     "asr",
 			Description: "Transcribe a local video or audio file through cloud ASR.",
@@ -67,7 +82,7 @@ func Shortcuts() []common.Shortcut {
 			Risk:        "write",
 			Flags: []common.Flag{
 				{Name: "avatar", Description: "Avatar friendly name or object key.", Required: true},
-				{Name: "audio", Description: "Local audio file path. Defaults to latest project TTS audio."},
+				{Name: "audio", Description: "Local audio file path.", Required: true},
 				{Name: "output", Description: "Output video path.", Default: "step3_lipsync.mp4"},
 				{Name: "random-start", Description: "Start the avatar video from a random position.", Default: "false"},
 				{Name: "guidance-scale", Description: "Lip-sync guidance scale.", Default: "1.0"},
