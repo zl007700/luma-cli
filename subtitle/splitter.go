@@ -32,6 +32,10 @@ func SplitByLLM(text string, maxCharsPerSeg int, llmClient *LLMClient, persona s
 		return segs, buildSentenceGroups(segs), nil
 	}
 
+	// Client-side safety net: the backend LLM may return segments longer than
+	// maxCharsPerSeg. Split any overlong segment so subtitles never overflow the screen.
+	segments = enforceMaxChars(segments, maxCharsPerSeg)
+
 	return segments, sentenceGroups, nil
 }
 
@@ -106,6 +110,33 @@ func hanziOnly(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// enforceMaxChars splits any segment longer than maxChars into shorter pieces.
+// Segment IDs are re-indexed. Sentence groups are NOT updated here because they
+// carry their own text and are used independently for cloud alignment.
+func enforceMaxChars(segments []Segment, maxChars int) []Segment {
+	out := make([]Segment, 0, len(segments))
+	segID := 0
+	for _, seg := range segments {
+		runes := []rune(seg.Text)
+		if len(runes) <= maxChars {
+			seg.SegID = segID
+			out = append(out, seg)
+			segID++
+			continue
+		}
+		for _, piece := range splitLongLine(seg.Text, maxChars) {
+			out = append(out, Segment{
+				SegID: segID,
+				Start: seg.Start,
+				End:   seg.End,
+				Text:  piece,
+			})
+			segID++
+		}
+	}
+	return out
 }
 
 // splitLongLine splits a line into chunks of maxChars.
