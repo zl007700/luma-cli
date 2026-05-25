@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"github.com/luma-cli/lumer-cli/internal/skillsync"
 )
 
@@ -81,7 +82,7 @@ func Run(args []string) int {
 		}
 	}
 
-	maybePrintSkillsNotice(commandArgs[0])
+	setupNotices(commandArgs[0])
 
 	switch commandArgs[0] {
 	case "version":
@@ -100,17 +101,34 @@ func Run(args []string) int {
 	return 0
 }
 
-func maybePrintSkillsNotice(command string) {
-	if runtimeOpts.JSON {
-		return
-	}
+// setupNotices wires the skills drift check into output.PendingNotice.
+// On mismatch, every JSON envelope gains a _notice.skills block;
+// in text mode a hint is printed to stderr.
+func setupNotices(command string) {
 	switch command {
 	case "help", "version", "skills", "update":
 		return
 	}
+
 	stamp, err := skillsync.ReadStamp()
-	if err != nil || !skillsync.IsVersionDrift(version, stamp) {
+	if err != nil || stamp == nil || !skillsync.IsVersionDrift(version, stamp) {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "Notice: Luma skills were synced for %s, but luma-cli is %s. Run: luma-cli update\n", stamp.Version, version)
+
+	notice := map[string]any{
+		"skills": map[string]any{
+			"current": stamp.Version,
+			"target":  version,
+			"message": fmt.Sprintf("skills %s out of sync with binary %s, run: luma-cli update", stamp.Version, version),
+			"command": "luma-cli update",
+		},
+	}
+
+	output.PendingNotice = func() any {
+		return notice
+	}
+
+	if !runtimeOpts.JSON {
+		fmt.Fprintf(os.Stderr, "Notice: Luma skills were synced for %s, but luma-cli is %s. Run: luma-cli update\n", stamp.Version, version)
+	}
 }
