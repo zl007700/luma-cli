@@ -195,8 +195,28 @@ func cmdAlign(args []string) {
 
 func cmdTTS(args []string) {
 	parsed := cmdutil.Parse(args)
-	if len(parsed.Positionals) < 1 {
-		fmt.Println("usage: luma-cli tts <text> [--voice <name>] [--speech-rate <rate>] [--trim-long-silence] [--output <path>]")
+	filePath := parsed.String("file", "")
+	var text string
+	if filePath != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Printf("Error: read file %s: %v\n", filePath, err)
+			return
+		}
+		text = strings.TrimSpace(string(data))
+		if text == "" {
+			fmt.Printf("Error: file %s is empty\n", filePath)
+			return
+		}
+	} else {
+		text = parsed.Pos(0)
+	}
+	if text == "" {
+		fmt.Println("usage: luma-cli tts <text> [--file <path>] [--voice <name>] [--speech-rate <rate>] [--trim-long-silence] [--output <path>]")
+		fmt.Println("")
+		fmt.Println("  Provide text via positional argument or --file:")
+		fmt.Println("    luma-cli tts \"你好世界\"")
+		fmt.Println("    luma-cli tts --file transcript.txt")
 		fmt.Println("")
 		fmt.Println("  Options:")
 		fmt.Printf("    --voice <name>       Voice name. Default: %s\n", defaultVoiceName)
@@ -210,8 +230,6 @@ func cmdTTS(args []string) {
 		fmt.Println("    task_id, audio_object_key, result_object_key, output_url, output_path")
 		return
 	}
-
-	text := parsed.Pos(0)
 	voiceName := parsed.String("voice", defaultVoiceName)
 	speechRate, err := parsed.Float("speech-rate", 1.1)
 	if err != nil {

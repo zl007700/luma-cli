@@ -58,6 +58,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 - `step0_keywords.json`
 - `step0_keywords.csv`
 - `step1_rewrite.json`
+- `transcript.txt`
 - `step2_tts.wav`
 - `step3_lipsync.mp4`
 - `step4_segments.json`
@@ -75,7 +76,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 1. Create or select a project:
    ```bash
-   luma-cli project create viral-remix --dir ./viral-remix
+   luma-cli project create viral-remix
    luma-cli project use viral-remix
    ```
 
@@ -90,10 +91,11 @@ Do not use this workflow when the user only asks for one atomic operation such a
    ```bash
    luma-cli script rewrite --input source_script.txt --length short --output step1_rewrite.json
    ```
+   Save the rewritten text as `transcript.txt` for later subtitle steps (avoids redundant ASR).
 
 4. Generate speech from the rewritten text:
    ```bash
-   luma-cli --json tts "<rewritten_text>" --voice 男声3 --speech-rate 1.1 --output step2_tts.wav
+   luma-cli --json tts --file transcript.txt --voice 男声3 --speech-rate 1.1 --output step2_tts.wav
    ```
    The `--json` flag outputs `audio_object_key` which can be passed directly to lipsync, avoiding a redundant upload.
 
@@ -105,7 +107,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 6. Segment text and build scene units:
    ```bash
-   luma-cli subtitle "<rewritten_text>" --text --segments-output step4_segments.json --no-effects --no-highlight
+   luma-cli subtitle transcript.txt --text --segments-output step4_segments.json --no-effects --no-highlight
    luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
    ```
 
@@ -123,9 +125,9 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
    If no insert is matched, continue with `step3_lipsync.mp4` as the subtitle input.
 
-9. Add subtitles:
+9. Add subtitles (uses `--transcript` to skip ASR since we already have the exact script):
    ```bash
-   luma-cli subtitle step4_picture_in_picture.mp4 --output step5_subtitle.mp4 --segments-output step5_subtitle_segments.json
+   luma-cli subtitle step4_picture_in_picture.mp4 --transcript transcript.txt --output step5_subtitle.mp4
    ```
 
 10. Add BGM:
