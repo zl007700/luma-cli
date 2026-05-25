@@ -47,18 +47,6 @@ func isObjectKeyRef(value string) bool {
 	return strings.Contains(value, "/") || strings.HasPrefix(value, "prod/") || strings.HasPrefix(value, "resource/")
 }
 
-func nestedMap(root map[string]any, path ...string) (map[string]any, bool) {
-	current := root
-	for _, key := range path {
-		next, ok := current[key].(map[string]any)
-		if !ok {
-			return nil, false
-		}
-		current = next
-	}
-	return current, true
-}
-
 func writeSimpleResult(data map[string]any) {
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data})

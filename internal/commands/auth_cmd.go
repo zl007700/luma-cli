@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/luma-cli/lumer-cli/cloud"
 	appconfig "github.com/luma-cli/lumer-cli/internal/config"
 	"github.com/luma-cli/lumer-cli/internal/output"
 )
@@ -63,15 +64,8 @@ func cmdAuth(args []string) {
 	}
 }
 
-func getAPIBase() string {
-	if url := os.Getenv("LUMA_API_URL"); url != "" {
-		return strings.TrimRight(url, "/")
-	}
-	return "https://api.pikgeo.com"
-}
-
 func deviceFlowLogin() {
-	base := getAPIBase()
+	base := cloud.BaseURL()
 
 	// 1. Activate device
 	type activateResp struct {
