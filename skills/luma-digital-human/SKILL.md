@@ -47,12 +47,15 @@ luma-cli asset upload avatar.mp4 --group roles
    ```
 2. Generate voice:
    ```bash
-   luma-cli tts "script text" --voice my_voice --speech-rate 1.1 --output step2_tts.wav
+   luma-cli --json tts "script text" --voice my_voice --speech-rate 1.1 --output step2_tts.wav
    ```
-3. Generate lip-sync video:
+   The `--json` flag returns `audio_object_key` in the output envelope. Use this key in step 3 to skip a redundant upload.
+
+3. Generate lip-sync video (prefer `--audio-key` over `--audio`):
    ```bash
-   luma-cli lipsync --avatar 数字人男 --audio step2_tts.wav --output step3_lipsync.mp4
+   luma-cli lipsync --avatar 数字人男 --audio-key <audio_object_key> --output step3_lipsync.mp4
    ```
+   If `--audio-key` is omitted, lipsync falls back to the project's `latest_tts_key`, then to `--audio` file upload.
 4. Add subtitles:
    ```bash
    luma-cli subtitle step3_lipsync.mp4 --output step5_subtitle.mp4
@@ -64,6 +67,7 @@ luma-cli asset upload avatar.mp4 --group roles
 
 ## Agent Notes
 
+- **Script must come from research, not imagination.** If the script is for a short-video production, the text source must be backed by `luma-cli research run` data or a known viral reference. Never invent a script topic without data support. See `../luma-workflow-viral-remix/SKILL.md` for the full research → rewrite flow.
 - Use `voice.clone` when a user provides a voice sample.
 - Use `voice.list` and `asset.list roles` when the user asks what is available.
 - Use the latest project TTS output for lip-sync unless the user explicitly provides `--audio`.

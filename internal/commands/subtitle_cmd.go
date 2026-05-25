@@ -212,6 +212,11 @@ func cmdSubtitle(args []string) {
 		}
 	}
 
+	// Rename output to include content hash for traceability.
+	if hashed, err := hashSuffixFile(outputPath); err == nil {
+		outputPath = hashed
+	}
+
 	fmt.Printf("\nDone! Output: %s\n", outputPath)
 	recordStep(proj, "subtitle", opts.input, outputPath)
 

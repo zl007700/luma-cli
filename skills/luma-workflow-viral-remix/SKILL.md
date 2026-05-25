@@ -31,6 +31,26 @@ Read these first when needed:
 
 Do not use this workflow when the user only asks for one atomic operation such as TTS, subtitle, or material search.
 
+## 文案是根基：严禁跳过 Research
+
+爆款仿写的核心是"仿写"，不是"原创"。文案的选题、结构、节奏必须基于真实爆款数据，绝不能凭 AI 自己拍脑袋编。
+
+### 为什么 Step 0 (Research) 不能跳过
+
+- 没有数据支撑的文案是盲猜。你不知道什么选题正在爆、什么结构观众买单、什么钩子点击率高。
+- 仿写的前提是有对标。Step 0 输出的是：热门关键词、对标视频链接、爆款标题、点赞量、口播/非口播分类。这些信息决定了 Step 1 写什么。
+- 跳过 Step 0 直接自己写 = 把"仿写"变成了"盲写"。后面 TTS、lipsync、字幕、BGM 做得再好，方向错了全白费。
+
+### Agent 执行规则（强制）
+
+1. **Step 0 Research 不可跳过。** 不管用户有没有明确要求，必须先跑 `research run`。如果用户说"随便写一个"，你要拒绝，告诉他需要数据支撑选题。
+
+2. **Step 1 必须基于 Research 输出。** 改写时心里要有对标视频：它的钩子是什么、结构是几段式、节奏是快是慢。source_script.txt 要能追溯到 `step0_content_research.json` 里的某个具体爆款。
+
+3. **禁止 AI 自己编文案。** 不允许在没有 research 数据的情况下，凭"我知道这类视频怎么写"直接产出脚本。你看过的训练数据不是当前的抖音热榜。
+
+4. **Research 结果要展示给用户。** 跑完 Step 0 后，列出找到的关键词、Top 3 对标视频（标题+点赞量），让用户知道文案的选题依据是什么。
+
 ## Standard Files
 
 - `step0_content_research.json`
@@ -73,13 +93,15 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 4. Generate speech from the rewritten text:
    ```bash
-   luma-cli tts "<rewritten_text>" --voice 男声3 --speech-rate 1.1 --output step2_tts.wav
+   luma-cli --json tts "<rewritten_text>" --voice 男声3 --speech-rate 1.1 --output step2_tts.wav
    ```
+   The `--json` flag outputs `audio_object_key` which can be passed directly to lipsync, avoiding a redundant upload.
 
-5. Generate digital-human video:
+5. Generate digital-human video (use `--audio-key` to reference the cloud audio directly):
    ```bash
-   luma-cli lipsync --avatar 数字人男 --audio step2_tts.wav --random-start --output step3_lipsync.mp4
+   luma-cli lipsync --avatar 数字人男 --audio-key <audio_object_key> --random-start --output step3_lipsync.mp4
    ```
+   If `--audio-key` is omitted, lipsync falls back to the project's `latest_tts_key`, then to `--audio` file upload.
 
 6. Segment text and build scene units:
    ```bash

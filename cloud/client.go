@@ -2,6 +2,8 @@ package cloud
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -162,6 +164,20 @@ func mapToStruct[T any](payload map[string]any) (T, error) {
 	return out, err
 }
 
+// FileContentHash returns the SHA-256 hex digest of a file.
+func FileContentHash(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 func guessMimeType(filePath string) string {
 	switch ext := filepath.Ext(filePath); ext {
 	case ".mp3":
@@ -217,6 +233,14 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 		if filepath.Ext(filename) == "" {
 			filename += filepath.Ext(filePath)
 		}
+	}
+
+	// Append content hash to the filename so re-uploading a different file
+	// with the same basename never hits a stale server-side cache.
+	if h, err := FileContentHash(filePath); err == nil {
+		ext := filepath.Ext(filename)
+		base := strings.TrimSuffix(filename, ext)
+		filename = base + "_" + h[:12] + ext
 	}
 
 	if fileSize >= multipartThreshold {

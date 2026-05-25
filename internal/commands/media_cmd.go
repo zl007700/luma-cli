@@ -10,6 +10,7 @@ import (
 	"github.com/luma-cli/lumer-cli/cloud"
 	"github.com/luma-cli/lumer-cli/internal/atom"
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"github.com/luma-cli/lumer-cli/project"
 )
 
@@ -189,6 +190,9 @@ func cmdTTS(args []string) {
 		fmt.Println("    --output <path>      Output wav path (default: ./tts_output.wav)")
 		fmt.Println("")
 		fmt.Println("  List voices: luma-cli asset list voice")
+		fmt.Println("")
+		fmt.Println("  JSON mode (luma-cli --json tts ...) outputs:")
+		fmt.Println("    task_id, audio_object_key, result_object_key, output_url, output_path")
 		return
 	}
 
@@ -230,10 +234,12 @@ func cmdTTS(args []string) {
 		return
 	}
 
-	fmt.Println("Submitting TTS task...")
-	fmt.Printf("  Voice: %s\n", voiceName)
-	fmt.Printf("  Text: %s\n", text)
-	fmt.Printf("  Output: %s\n", outputPath)
+	if !runtimeOpts.JSON {
+		fmt.Println("Submitting TTS task...")
+		fmt.Printf("  Voice: %s\n", voiceName)
+		fmt.Printf("  Text: %s\n", text)
+		fmt.Printf("  Output: %s\n", outputPath)
+	}
 	result, err := atom.RunTTS(atom.TTSOptions{
 		Text:            text,
 		VoiceKey:        voiceKey,
@@ -243,9 +249,52 @@ func cmdTTS(args []string) {
 		OutputPath:      outputPath,
 	})
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		if runtimeOpts.JSON {
+			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Error: err.Error()})
+		} else {
+			fmt.Printf("Error: %v\n", err)
+		}
 		return
 	}
+
+	if proj != nil && result.AudioObjectKey != "" {
+		proj.LatestTTSKey = result.AudioObjectKey
+		proj.Save()
+	}
+
+	recordStep(proj, "tts", text, outputPath)
+
+	// Rename output to include content hash for traceability.
+	if hashed, err := hashSuffixFile(outputPath); err == nil {
+		outputPath = hashed
+		result.OutputPath = hashed
+	}
+
+	// Write JSON sidecar so agents can reliably read audio_object_key without parsing stdout.
+	sidecarPath := strings.TrimSuffix(outputPath, filepath.Ext(outputPath)) + ".json"
+	sidecarData, _ := json.MarshalIndent(map[string]any{
+		"task_id":           result.TaskID,
+		"audio_object_key":  result.AudioObjectKey,
+		"result_object_key": result.ResultObjectKey,
+		"output_url":        result.OutputURL,
+		"output_path":       outputPath,
+	}, "", "  ")
+	os.WriteFile(sidecarPath, sidecarData, 0644)
+
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{
+			OK: true,
+			Data: map[string]any{
+				"task_id":           result.TaskID,
+				"audio_object_key":  result.AudioObjectKey,
+				"result_object_key": result.ResultObjectKey,
+				"output_url":        result.OutputURL,
+				"output_path":       outputPath,
+			},
+		})
+		return
+	}
+
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 
 	localFileWritten := false
@@ -255,26 +304,21 @@ func cmdTTS(args []string) {
 		}
 	}
 
-	if proj != nil && result.AudioObjectKey != "" {
-		proj.LatestTTSKey = result.AudioObjectKey
-		proj.Save()
-	}
-
 	if localFileWritten {
 		fmt.Printf("\nDone! Saved to: %s\n", outputPath)
 	} else {
 		fmt.Println("\nDone! Cloud task completed, but no local file was downloaded.")
 		fmt.Println("The backend did not return a downloadable URL for this task.")
 	}
-	recordStep(proj, "tts", text, outputPath)
 }
 
 func cmdLipSync(args []string) {
-	fmt.Println("usage: luma-cli lipsync --avatar <name> --audio <file> [--output <path>]")
+	fmt.Println("usage: luma-cli lipsync --avatar <name> --audio <file> [--audio-key <key>] [--output <path>]")
 	fmt.Println("")
 	fmt.Println("  Options:")
 	fmt.Println("    --avatar <name>             Digital avatar name")
-	fmt.Println("    --audio <file>              Audio file path. required")
+	fmt.Println("    --audio <file>              Audio file path (uploads to cloud)")
+	fmt.Println("    --audio-key <key>           Cloud audio object key (skip upload, use existing)")
 	fmt.Println("    --output <path>             Output video path")
 	fmt.Println("    --random-start              Start the avatar video from a random position")
 	fmt.Println("    --guidance-scale <number>   Lip-sync guidance scale (default: 1.0)")
@@ -289,6 +333,7 @@ func cmdLipSync(args []string) {
 	parsed := cmdutil.Parse(args)
 	avatarName := parsed.String("avatar", "")
 	audioPath := parsed.String("audio", "")
+	audioKey := parsed.String("audio-key", "")
 	outputPath := parsed.String("output", "")
 	randomStart, err := parsed.Bool("random-start", false)
 	if err != nil {
@@ -340,22 +385,31 @@ func cmdLipSync(args []string) {
 		return
 	}
 
-	if audioPath == "" {
-		fmt.Println("Error: --audio is required")
-		return
+	if audioKey == "" && audioPath == "" {
+		if proj != nil && proj.LatestTTSKey != "" {
+			audioKey = proj.LatestTTSKey
+		} else {
+			fmt.Println("Error: --audio or --audio-key is required")
+			return
+		}
 	}
-	if _, err := os.Stat(audioPath); err != nil {
-		fmt.Printf("Error: audio file not found: %s\n", audioPath)
-		return
+
+	if audioKey == "" {
+		if _, err := os.Stat(audioPath); err != nil {
+			fmt.Printf("Error: audio file not found: %s\n", audioPath)
+			return
+		}
+		fmt.Println("Uploading audio...")
+		audioKey, err = cloud.UploadFile(audioPath, cfg.CardKey, "tts_output")
+		if err != nil {
+			fmt.Printf("Error: audio upload failed: %v\n", err)
+			return
+		}
+		audioKey = atom.NormalizeResourceKey(audioKey, cfg.CardKey)
+		fmt.Printf("  Uploaded: %s\n", audioKey)
+	} else {
+		audioKey = atom.NormalizeResourceKey(audioKey, cfg.CardKey)
 	}
-	fmt.Println("Uploading audio...")
-	audioKey, err := cloud.UploadFile(audioPath, cfg.CardKey, "tts_output")
-	if err != nil {
-		fmt.Printf("Error: audio upload failed: %v\n", err)
-		return
-	}
-	audioKey = atom.NormalizeResourceKey(audioKey, cfg.CardKey)
-	fmt.Printf("  Uploaded: %s\n", audioKey)
 
 	if outputPath == "" {
 		if proj != nil {
@@ -372,6 +426,7 @@ func cmdLipSync(args []string) {
 
 	fmt.Println("Submitting LipSync task...")
 	fmt.Printf("  Avatar: %s\n", avatarName)
+	fmt.Printf("  AudioKey: %s\n", audioKey)
 	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunLipSync(atom.LipSyncOptions{
 		VideoKey:          videoKey,
@@ -391,6 +446,11 @@ func cmdLipSync(args []string) {
 		return
 	}
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
+
+	// Rename output to include content hash for traceability.
+	if hashed, err := hashSuffixFile(outputPath); err == nil {
+		outputPath = hashed
+	}
 
 	fmt.Printf("\nDone! Saved to: %s\n", outputPath)
 	recordStep(proj, "lipsync", avatarName, outputPath)

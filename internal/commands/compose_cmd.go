@@ -73,6 +73,11 @@ func cmdBGM(args []string) {
 		fmt.Printf("Error: ffmpeg bgm mix failed: %v\n%s\n", err, string(data))
 		return
 	}
+	// Rename output to include content hash for traceability.
+	if hashed, err := hashSuffixFile(absOut); err == nil {
+		absOut = hashed
+	}
+
 	recordProjectArtifact("bgm", absOut, "bgm.mix")
 	writeSimpleResult(map[string]any{"output_path": absOut, "bgm_path": bgmPath})
 }
@@ -122,6 +127,11 @@ func cmdCoverFrame(raw []string) {
 		fmt.Printf("Error: ffmpeg frame extract failed: %v\n%s\n", err, string(data))
 		return
 	}
+	// Rename output to include content hash for traceability.
+	if hashed, err := hashSuffixFile(absOut); err == nil {
+		absOut = hashed
+	}
+
 	recordProjectArtifact("cover_frame", absOut, "cover.frame")
 	writeSimpleResult(map[string]any{"output_path": absOut})
 }
@@ -226,6 +236,11 @@ func cmdCoverRender(raw []string) {
 		fmt.Printf("Error: cover render failed: %v\n", err)
 		return
 	}
+	// Rename output to include content hash for traceability.
+	if hashed, err := hashSuffixFile(absOut); err == nil {
+		absOut = hashed
+	}
+
 	metaPath := strings.TrimSuffix(absOut, filepath.Ext(absOut)) + ".json"
 	meta := map[string]any{"title": title, "subtitle": subtitle, "image_path": imagePath, "title_font_path": titleFont, "subtitle_font_path": subtitleFont, "output_path": absOut}
 	if data, err := json.MarshalIndent(meta, "", "  "); err == nil {

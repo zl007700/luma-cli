@@ -82,7 +82,8 @@ func Shortcuts() []common.Shortcut {
 			Risk:        "write",
 			Flags: []common.Flag{
 				{Name: "avatar", Description: "Avatar friendly name or object key.", Required: true},
-				{Name: "audio", Description: "Local audio file path.", Required: true},
+				{Name: "audio", Description: "Local audio file path."},
+				{Name: "audio-key", Description: "Cloud audio object key from TTS output. Skips upload when provided."},
 				{Name: "output", Description: "Output video path.", Default: "step3_lipsync.mp4"},
 				{Name: "random-start", Description: "Start the avatar video from a random position.", Default: "false"},
 				{Name: "guidance-scale", Description: "Lip-sync guidance scale.", Default: "1.0"},
@@ -92,7 +93,7 @@ func Shortcuts() []common.Shortcut {
 				{Name: "multi-shot-json", Description: "Path to backend multi_shot JSON payload."},
 			},
 			Outputs:  []string{"task_id", "output_path", "output_url"},
-			Examples: []string{"luma-cli lipsync --avatar 数字人男 --audio tts_output.wav"},
+			Examples: []string{"luma-cli lipsync --avatar 数字人男 --audio tts_output.wav", "luma-cli lipsync --avatar 数字人男 --audio-key prod/resource/xxx/yyy.wav"},
 			Skills:   []string{"luma-digital-human", "luma-video-workflow"},
 		},
 		{
