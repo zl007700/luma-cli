@@ -12,6 +12,7 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 	"github.com/luma-cli/lumer-cli/internal/output"
 	"github.com/luma-cli/lumer-cli/project"
+	"github.com/luma-cli/lumer-cli/subtitle"
 )
 
 const defaultVoiceName = "男声3"
@@ -80,6 +81,7 @@ func cmdAlign(args []string) {
 		fmt.Println("  Aligns subtitle segments to audio timestamps via cloud alignment API.")
 		fmt.Println("  Expects a segments JSON file (from subtitle.split or subtitle --text --segments-output).")
 		fmt.Println("  Uses sentence_groups for alignment; falls back to segments.")
+		fmt.Println("  Distributes sentence-group timing back to individual segments.")
 		fmt.Println("")
 		fmt.Println("  Options:")
 		fmt.Println("    --audio <file>       Local audio file (e.g. TTS output WAV)")
@@ -99,26 +101,24 @@ func cmdAlign(args []string) {
 		return
 	}
 
-	type segEntry struct {
-		Text string `json:"text"`
+	// Parse full segment structure preserving SegID, StartSegID, EndSegID, etc.
+	var fullPayload struct {
+		Segments       []subtitle.Segment       `json:"segments"`
+		SentenceGroups []subtitle.SentenceGroup `json:"sentence_groups"`
 	}
-	var payload struct {
-		Segments       []segEntry `json:"segments"`
-		SentenceGroups []segEntry `json:"sentence_groups"`
-	}
-	if err := json.Unmarshal(data, &payload); err != nil {
+	if err := json.Unmarshal(data, &fullPayload); err != nil {
 		// try result.Segments wrapper
 		var wrapped struct {
 			Result struct {
-				Segments       []segEntry `json:"segments"`
-				SentenceGroups []segEntry `json:"sentence_groups"`
+				Segments       []subtitle.Segment       `json:"segments"`
+				SentenceGroups []subtitle.SentenceGroup `json:"sentence_groups"`
 			} `json:"result"`
 		}
 		if err2 := json.Unmarshal(data, &wrapped); err2 != nil {
 			fmt.Printf("Error: parse segments JSON failed: %v\n", err)
 			return
 		}
-		payload = wrapped.Result
+		fullPayload = wrapped.Result
 	}
 
 	cfg := loadConfig()
@@ -127,15 +127,15 @@ func cmdAlign(args []string) {
 		return
 	}
 
-	// Build text list from sentence_groups (preferred) or segments
+	// Build text list from segments (direct 1:1 alignment)
 	var texts []string
-	if len(payload.SentenceGroups) > 0 {
-		for _, g := range payload.SentenceGroups {
-			texts = append(texts, g.Text)
-		}
-	} else {
-		for _, seg := range payload.Segments {
+	if len(fullPayload.Segments) > 0 {
+		for _, seg := range fullPayload.Segments {
 			texts = append(texts, seg.Text)
+		}
+	} else if len(fullPayload.SentenceGroups) > 0 {
+		for _, g := range fullPayload.SentenceGroups {
+			texts = append(texts, g.Text)
 		}
 	}
 	if len(texts) == 0 {
@@ -157,20 +157,35 @@ func cmdAlign(args []string) {
 	}
 	fmt.Printf("  Aligned: %d segments\n", len(result))
 
+	// Map alignment results directly to segments by index (1:1)
+	if len(fullPayload.Segments) > 0 {
+		for i := range fullPayload.Segments {
+			if i < len(result) {
+				fullPayload.Segments[i].Start = result[i].Start
+				fullPayload.Segments[i].End = result[i].End
+			}
+		}
+		if hasUntimedSegments(fullPayload.Segments) {
+			fmt.Println("Error: cloud alignment left some subtitle segments without timing")
+			return
+		}
+	}
+
 	if outputPath == "" {
 		outputPath = "align_result.json"
 	}
 	outputPath, _ = absoluteOutputPath(outputPath)
 
 	outData, _ := json.MarshalIndent(map[string]any{
-		"aligned_segments": result,
-		"count":            len(result),
+		"segments":        fullPayload.Segments,
+		"sentence_groups": fullPayload.SentenceGroups,
+		"count":           len(fullPayload.Segments),
 	}, "", "  ")
 	if err := os.WriteFile(outputPath, outData, 0644); err != nil {
 		fmt.Printf("Error: write output failed: %v\n", err)
 		return
 	}
-	fmt.Printf("Saved to: %s\n", outputPath)
+	fmt.Printf("Saved to: %s (%d segments, %d sentence groups)\n", outputPath, len(fullPayload.Segments), len(fullPayload.SentenceGroups))
 
 	proj := resolveProjectByName("")
 	if proj != nil {

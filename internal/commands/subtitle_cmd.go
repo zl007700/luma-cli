@@ -104,7 +104,7 @@ func cmdSubtitle(args []string) {
 	fmt.Printf("  Generated %d segments, %d sentence groups\n", len(segments), len(sentenceGroups))
 
 	// Step 3: Align
-	segments, err = runAlignment(segments, sentenceGroups, opts.isTextMode, opts.input, cfg.CardKey, projDirs)
+	segments, err = runAlignment(segments, opts.isTextMode, opts.input, cfg.CardKey, projDirs)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -418,7 +418,7 @@ func runASR(videoPath, cardKey string, dirs projectDirs) (string, error) {
 	return result.Text, nil
 }
 
-func runAlignment(segments []subtitle.Segment, sentenceGroups []subtitle.SentenceGroup, isTextMode bool, videoPath, cardKey string, dirs projectDirs) ([]subtitle.Segment, error) {
+func runAlignment(segments []subtitle.Segment, isTextMode bool, videoPath, cardKey string, dirs projectDirs) ([]subtitle.Segment, error) {
 	fmt.Println("Step 3/6: Aligning segments to audio timestamps...")
 	if isTextMode {
 		totalDuration := float64(len(segments) * 3)
@@ -444,13 +444,9 @@ func runAlignment(segments []subtitle.Segment, sentenceGroups []subtitle.Sentenc
 		return nil, fmt.Errorf("extract audio for alignment failed: %w", err)
 	}
 
-	alignTargets := sentenceGroups
-	if len(alignTargets) == 0 {
-		alignTargets = buildFallbackSentenceGroups(segments)
-	}
-	texts := make([]string, 0, len(alignTargets))
-	for _, group := range alignTargets {
-		texts = append(texts, group.Text)
+	texts := make([]string, len(segments))
+	for i, seg := range segments {
+		texts[i] = seg.Text
 	}
 	aligned, err := atom.RunAlignment(atom.AlignmentOptions{
 		AudioPath:  audioPath,
@@ -462,70 +458,20 @@ func runAlignment(segments []subtitle.Segment, sentenceGroups []subtitle.Sentenc
 	if err != nil {
 		return nil, err
 	}
-	if len(aligned) < len(alignTargets) {
-		return nil, fmt.Errorf("cloud alignment returned too few segments: got %d, want %d", len(aligned), len(alignTargets))
+	if len(aligned) < len(segments) {
+		return nil, fmt.Errorf("cloud alignment returned too few segments: got %d, want %d", len(aligned), len(segments))
 	}
-	segments = applySentenceGroupAlignment(segments, alignTargets, aligned)
+	for i := range segments {
+		if i < len(aligned) {
+			segments[i].Start = aligned[i].Start
+			segments[i].End = aligned[i].End
+		}
+	}
 	if hasUntimedSegments(segments) {
 		return nil, fmt.Errorf("cloud alignment left some subtitle segments without timing")
 	}
-	fmt.Printf("  Cloud alignment applied: %d sentence groups -> %d subtitle segments\n", len(aligned), len(segments))
+	fmt.Printf("  Cloud alignment applied: %d segments\n", len(segments))
 	return segments, nil
-}
-
-func buildFallbackSentenceGroups(segments []subtitle.Segment) []subtitle.SentenceGroup {
-	groups := make([]subtitle.SentenceGroup, 0, len(segments))
-	for _, seg := range segments {
-		groups = append(groups, subtitle.SentenceGroup{StartSegID: seg.SegID, EndSegID: seg.SegID, Text: seg.Text})
-	}
-	return groups
-}
-
-func applySentenceGroupAlignment(segments []subtitle.Segment, groups []subtitle.SentenceGroup, aligned []atom.AlignmentSegment) []subtitle.Segment {
-	segmentIndex := make(map[int]int, len(segments))
-	for i, seg := range segments {
-		segmentIndex[seg.SegID] = i
-	}
-	for i, group := range groups {
-		if i >= len(aligned) {
-			break
-		}
-		distributeGroupTiming(segments, segmentIndex, group, aligned[i].Start, aligned[i].End)
-	}
-	return segments
-}
-
-func distributeGroupTiming(segments []subtitle.Segment, segmentIndex map[int]int, group subtitle.SentenceGroup, start, end float64) {
-	if end <= start {
-		return
-	}
-	childIndexes := make([]int, 0, group.EndSegID-group.StartSegID+1)
-	totalChars := 0
-	for segID := group.StartSegID; segID <= group.EndSegID; segID++ {
-		idx, ok := segmentIndex[segID]
-		if !ok {
-			continue
-		}
-		childIndexes = append(childIndexes, idx)
-		totalChars += len([]rune(segments[idx].Text))
-	}
-	if len(childIndexes) == 0 {
-		return
-	}
-	cursor := start
-	duration := end - start
-	for i, idx := range childIndexes {
-		if i == len(childIndexes)-1 {
-			segments[idx].Start = cursor
-			segments[idx].End = end
-			break
-		}
-		chars := len([]rune(segments[idx].Text))
-		next := cursor + duration*(float64(chars)/float64(max(totalChars, 1)))
-		segments[idx].Start = cursor
-		segments[idx].End = next
-		cursor = next
-	}
 }
 
 func hasUntimedSegments(segments []subtitle.Segment) bool {
