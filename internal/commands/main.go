@@ -82,7 +82,7 @@ func Run(args []string) int {
 		}
 	}
 
-	setupNotices(commandArgs[0])
+	setupNotices()
 
 	switch commandArgs[0] {
 	case "version":
@@ -104,22 +104,35 @@ func Run(args []string) int {
 // setupNotices wires the skills drift check into output.PendingNotice.
 // On mismatch, every JSON envelope gains a _notice.skills block;
 // in text mode a hint is printed to stderr.
-func setupNotices(command string) {
-	switch command {
-	case "help", "version", "skills", "update":
+func setupNotices() {
+	if version == "" || version == "dev" || version == "local" {
 		return
 	}
 
 	stamp, err := skillsync.ReadStamp()
-	if err != nil || stamp == nil || !skillsync.IsVersionDrift(version, stamp) {
+	if err != nil {
 		return
+	}
+
+	var current string
+	if stamp != nil {
+		current = stamp.Version
+	}
+
+	if current == version {
+		return
+	}
+
+	msg := fmt.Sprintf("skills not installed, run: luma-cli update")
+	if current != "" {
+		msg = fmt.Sprintf("skills %s out of sync with binary %s, run: luma-cli update", current, version)
 	}
 
 	notice := map[string]any{
 		"skills": map[string]any{
-			"current": stamp.Version,
+			"current": current,
 			"target":  version,
-			"message": fmt.Sprintf("skills %s out of sync with binary %s, run: luma-cli update", stamp.Version, version),
+			"message": msg,
 			"command": "luma-cli update",
 		},
 	}
@@ -129,6 +142,6 @@ func setupNotices(command string) {
 	}
 
 	if !runtimeOpts.JSON {
-		fmt.Fprintf(os.Stderr, "Notice: Luma skills were synced for %s, but luma-cli is %s. Run: luma-cli update\n", stamp.Version, version)
+		fmt.Fprintf(os.Stderr, "Notice: %s\n", msg)
 	}
 }
