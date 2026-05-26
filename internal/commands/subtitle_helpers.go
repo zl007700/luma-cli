@@ -45,7 +45,7 @@ func resolveProjectByName(name string) *project.Project {
 
 func resolveOutputPath(opts *subtitleOptions, proj *project.Project, dirs projectDirs) string {
 	if opts.outputPath != "" {
-		return opts.outputPath
+		return resolveProjectOutput(proj, opts.outputPath)
 	}
 	if proj != nil {
 		if opts.isTextMode {
