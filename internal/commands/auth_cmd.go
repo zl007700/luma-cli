@@ -35,8 +35,7 @@ func cmdAuth(args []string) error {
 			return nil
 		}
 		// Device flow login
-		deviceFlowLogin()
-		return nil
+		return deviceFlowLogin()
 
 	case "status":
 		cfg := loadConfig()
@@ -46,7 +45,7 @@ func cmdAuth(args []string) error {
 				data["key"] = appconfig.MaskKey(cfg.CardKey)
 			}
 			if err := output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data}); err != nil {
-				fmt.Printf("Error: %v\n", err)
+				return output.ErrSystem("%v", err)
 			}
 			return nil
 		}
@@ -64,7 +63,7 @@ func cmdAuth(args []string) error {
 	return nil
 }
 
-func deviceFlowLogin() {
+func deviceFlowLogin() error {
 	base := cloud.BaseURL()
 
 	// 1. Activate device
@@ -76,8 +75,7 @@ func deviceFlowLogin() {
 	}
 	var act activateResp
 	if err := postJSON(base+"/api/auth/device/activate", nil, &act); err != nil {
-		fmt.Printf("Error: activate device: %v\n", err)
-		return
+		return output.ErrNetwork("activate device: %v", err)
 	}
 
 	// 2. Open browser
@@ -107,18 +105,18 @@ func deviceFlowLogin() {
 		if pr.Status == "success" {
 			fmt.Println("\nAuthorized!")
 			if err := appconfig.SaveCardKey(pr.AccessToken); err != nil {
-				fmt.Printf("Error: save token: %v\n", err)
-				return
+				return output.ErrSystem("save token: %v", err)
 			}
 			fmt.Println("Login saved.")
-			return
+			return nil
 		}
 		if pr.Status == "expired" {
 			fmt.Println("\nAuthorization expired. Run luma-cli auth login again.")
-			return
+			return nil
 		}
 	}
 	fmt.Println("\nAuthorization timed out. Run luma-cli auth login again.")
+	return nil
 }
 
 func postJSON(url string, body any, result any) error {

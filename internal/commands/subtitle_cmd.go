@@ -111,8 +111,7 @@ func cmdSubtitle(args []string) error {
 			return output.ErrValidation("bad segments output path: %v\n", err)
 		}
 		if err := writeJSONFile(segmentsPath, map[string]any{"segments": segments, "sentence_groups": sentenceGroups}); err != nil {
-			fmt.Printf("Error writing segments: %v\n", err)
-			return nil
+			return output.ErrSystem("write segments: %v", err)
 		}
 		recordProjectArtifact("segments", segmentsPath, "subtitle.segments")
 		fmt.Printf("  Segments written: %s\n", segmentsPath)
@@ -153,8 +152,7 @@ func cmdSubtitle(args []string) error {
 		}
 	}
 	if err := subtitle.WriteASS(segments, assPath, opts2); err != nil {
-		fmt.Printf("Error writing ASS: %v\n", err)
-		return nil
+		return output.ErrSystem("write ASS: %v", err)
 	}
 	fmt.Printf("  ASS written: %s\n", assPath)
 
@@ -167,9 +165,8 @@ func cmdSubtitle(args []string) error {
 
 	// Burn subtitles
 	if err := subtitle.BurnSubtitles(opts.input, assPath, outputPath, fontDir, ""); err != nil {
-		fmt.Printf("Error burning subtitles: %v\n", err)
 		os.Remove(assPath)
-		return nil
+		return output.ErrSystem("burn subtitles: %v", err)
 	}
 
 	// Apply effect overlays
