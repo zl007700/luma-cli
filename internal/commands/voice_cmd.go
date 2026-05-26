@@ -24,8 +24,7 @@ func cmdVoice(args []string) error {
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	switch args[0] {
 	case "clone":
@@ -49,14 +48,12 @@ func cmdVoiceClone(raw []string, cfg *config) error {
 		return nil
 	}
 	if _, err := os.Stat(audioPath); err != nil {
-		fmt.Printf("Error: audio file not found: %s\n", audioPath)
-		return nil
+		return output.ErrValidation(fmt.Sprintf("audio file not found: %s\n", audioPath))
 	}
 	name := strings.TrimSpace(parsed.String("name", ""))
 	objectKey, err := cloud.UploadFileWithName(audioPath, cfg.CardKey, "voice", name)
 	if err != nil {
-		fmt.Printf("Error: voice upload failed: %v\n", err)
-		return nil
+		return output.ErrNetwork(fmt.Sprintf("voice upload failed: %v\n", err))
 	}
 	if name == "" {
 		name = atom.AssetFriendlyName(objectKey)
@@ -83,8 +80,7 @@ func cmdVoiceList(raw []string, cfg *config) error {
 	verbose := parsed.Has("verbose")
 	items, err := cloud.AssetList("voice", cfg.CardKey)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	views := make([]voiceView, 0, len(items))
 	for _, item := range items {

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
 
@@ -30,14 +31,12 @@ func cmdTask(args []string) error {
 func cmdTaskStatus(taskID string) error {
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 
 	status, err := cloud.PollTask(taskID, cfg.CardKey)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
 	data, _ := json.MarshalIndent(status, "", "  ")

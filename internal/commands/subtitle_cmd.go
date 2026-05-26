@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,8 +24,7 @@ func cmdSubtitle(args []string) error {
 	// Load config
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	defaults := loadClientDefaults(cfg)
 
@@ -52,20 +52,17 @@ func cmdSubtitle(args []string) error {
 		if opts.transcriptPath != "" {
 			data, err := os.ReadFile(opts.transcriptPath)
 			if err != nil {
-				fmt.Printf("Error: read transcript failed: %v\n", err)
-				return nil
+				return output.ErrSystem(fmt.Sprintf("read transcript failed: %v\n", err))
 			}
 			rawText = strings.TrimSpace(string(data))
 			fmt.Printf("Step 1/6: Using transcript: %s\n", opts.transcriptPath)
 			if rawText == "" {
-				fmt.Println("Error: transcript is empty")
-				return nil
+				return output.ErrValidation("transcript is empty")
 			}
 		} else {
 			rawText, err = runASR(opts.input, cfg.CardKey, projDirs)
 			if err != nil {
-				fmt.Printf("Error: %v\n", err)
-				return nil
+				return output.ErrSystem(fmt.Sprintf("%v\n", err))
 			}
 		}
 	}
@@ -82,8 +79,7 @@ func cmdSubtitle(args []string) error {
 	// Step 3: Align
 	segments, err = runAlignment(segments, opts.isTextMode, opts.input, cfg.CardKey, projDirs)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
 	// Step 4: Highlight
@@ -111,8 +107,7 @@ func cmdSubtitle(args []string) error {
 	if opts.segmentsOutput != "" {
 		segmentsPath, err := absoluteOutputPath(opts.segmentsOutput)
 		if err != nil {
-			fmt.Printf("Error: bad segments output path: %v\n", err)
-			return nil
+			return output.ErrValidation(fmt.Sprintf("bad segments output path: %v\n", err))
 		}
 		if err := writeJSONFile(segmentsPath, map[string]any{"segments": segments, "sentence_groups": sentenceGroups}); err != nil {
 			fmt.Printf("Error writing segments: %v\n", err)

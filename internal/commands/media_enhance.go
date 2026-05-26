@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,20 +21,17 @@ func cmdEnhance(args []string) error {
 
 	videoPath := parsed.Pos(0)
 	if _, err := os.Stat(videoPath); err != nil {
-		fmt.Printf("Error: file not found: %s\n", videoPath)
-		return nil
+		return output.ErrValidation(fmt.Sprintf("file not found: %s\n", videoPath))
 	}
 
 	scale, err := parsed.Int("scale", 2)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 
 	proj := resolveProjectByName("")
@@ -48,8 +46,7 @@ func cmdEnhance(args []string) error {
 	}
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
-		fmt.Printf("Error: invalid output path: %v\n", err)
-		return nil
+		return output.ErrValidation(fmt.Sprintf("invalid output path: %v\n", err))
 	}
 
 	fmt.Println("Uploading video...")
@@ -62,8 +59,7 @@ func cmdEnhance(args []string) error {
 		OutputPath: outputPath,
 	})
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	fmt.Printf("  Uploaded: %s\n", result.ObjectKey)
 	fmt.Printf("  Task ID: %s\n", result.TaskID)

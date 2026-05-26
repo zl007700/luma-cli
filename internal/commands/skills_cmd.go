@@ -82,8 +82,7 @@ func cmdSkillsSync(args []string) error {
 	}
 
 	if err := skillsync.RunSkillsAdd(opts); err != nil {
-		fmt.Printf("Error: failed to sync skills: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("failed to sync skills: %v\n", err))
 	}
 	if err := skillsync.WriteStamp(version, opts.Source); err != nil {
 		fmt.Printf("Warning: synced skills, but failed to write stamp: %v\n", err)
@@ -100,8 +99,7 @@ func cmdSkillsStatus() error {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Code: "skills_status_error", Error: err.Error()})
 			return nil
 		}
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
 	data := map[string]any{

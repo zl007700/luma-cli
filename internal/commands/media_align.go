@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,13 +35,11 @@ func cmdAlign(args []string) error {
 	}
 
 	if _, err := os.Stat(audioPath); err != nil {
-		fmt.Printf("Error: audio file not found: %s\n", audioPath)
-		return nil
+		return output.ErrValidation(fmt.Sprintf("audio file not found: %s\n", audioPath))
 	}
 	data, err := os.ReadFile(segmentsPath)
 	if err != nil {
-		fmt.Printf("Error: read segments file failed: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("read segments file failed: %v\n", err))
 	}
 
 	// Parse full segment structure preserving SegID, StartSegID, EndSegID, etc.
@@ -57,16 +56,14 @@ func cmdAlign(args []string) error {
 			} `json:"result"`
 		}
 		if err2 := json.Unmarshal(data, &wrapped); err2 != nil {
-			fmt.Printf("Error: parse segments JSON failed: %v\n", err)
-			return nil
+			return output.ErrSystem(fmt.Sprintf("parse segments JSON failed: %v\n", err))
 		}
 		fullPayload = wrapped.Result
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 
 	// Build text list from segments (direct 1:1 alignment)
@@ -81,8 +78,7 @@ func cmdAlign(args []string) error {
 		}
 	}
 	if len(texts) == 0 {
-		fmt.Println("Error: no segments or sentence_groups found in input")
-		return nil
+		return output.ErrValidation("no segments or sentence_groups found in input")
 	}
 
 	fmt.Printf("Aligning %d text items to audio...\n", len(texts))
@@ -94,8 +90,7 @@ func cmdAlign(args []string) error {
 		TimeoutSec: 300,
 	})
 	if err != nil {
-		fmt.Printf("Error: alignment failed: %v\n", err)
-		return nil
+		return output.ErrNetwork(fmt.Sprintf("alignment failed: %v\n", err))
 	}
 	fmt.Printf("  Aligned: %d segments\n", len(result))
 
@@ -108,8 +103,7 @@ func cmdAlign(args []string) error {
 			}
 		}
 		if hasUntimedSegments(fullPayload.Segments) {
-			fmt.Println("Error: cloud alignment left some subtitle segments without timing")
-			return nil
+			return output.ErrNetwork("cloud alignment left some subtitle segments without timing")
 		}
 	}
 
@@ -124,8 +118,7 @@ func cmdAlign(args []string) error {
 		"count":           len(fullPayload.Segments),
 	}, "", "  ")
 	if err := os.WriteFile(outputPath, outData, 0644); err != nil {
-		fmt.Printf("Error: write output failed: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
 	}
 	fmt.Printf("Saved to: %s (%d segments, %d sentence groups)\n", outputPath, len(fullPayload.Segments), len(fullPayload.SentenceGroups))
 

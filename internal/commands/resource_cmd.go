@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
 
@@ -50,13 +51,11 @@ func cmdResourceList(args []string) error {
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	items, err := cloud.ListClientResources(resourceType, tag, cfg.CardKey)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(map[string]any{"items": items}, "", "  ")
@@ -81,13 +80,11 @@ func cmdResourceCache(args []string) error {
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	cached, err := clientruntime.CacheResource(cfg.CardKey, args[0])
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(cached, "", "  ")
@@ -106,8 +103,7 @@ func cmdResourcePath(args []string) error {
 	}
 	cached, err := clientruntime.CurrentResource(args[0])
 	if err != nil {
-		fmt.Printf("Error: resource not cached: %s\n", args[0])
-		return nil
+		return output.ErrSystem(fmt.Sprintf("resource not cached: %s\n", args[0]))
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(cached, "", "  ")

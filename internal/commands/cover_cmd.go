@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,18 +43,15 @@ func cmdCoverFrame(raw []string) error {
 	seek := parsed.String("time", "1.0")
 	absOut, err := ensureOutputDir(outputPath)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	ffmpeg, err := installedFFmpegPath()
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	cmd := exec.Command(ffmpeg, "-y", "-ss", seek, "-i", videoPath, "-frames:v", "1", absOut)
 	if data, err := cmd.CombinedOutput(); err != nil {
-		fmt.Printf("Error: ffmpeg frame extract failed: %v\n%s\n", err, string(data))
-		return nil
+		return output.ErrSystem(fmt.Sprintf("ffmpeg frame extract failed: %v\n%s\n", err, string(data)))
 	}
 	// Rename output to include content hash for traceability.
 	if hashed, err := hashSuffixFile(absOut); err == nil {
@@ -84,19 +82,16 @@ func cmdCoverGenerate(raw []string) error {
 		return nil
 	}
 	if _, err := os.Stat(sourcePath); err != nil {
-		fmt.Printf("Error: source file not found: %s\n", sourcePath)
-		return nil
+		return output.ErrValidation(fmt.Sprintf("source file not found: %s\n", sourcePath))
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	defaults := loadClientDefaults(cfg)
 	count, err := parsed.Int("count", 6)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	if count <= 0 {
 		count = 6
@@ -106,26 +101,22 @@ func cmdCoverGenerate(raw []string) error {
 	}
 	frameSecond, err := parsed.Float("frame-second", 1.0)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	timeoutSec, err := parsed.Int("timeout", 600)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	outputDir := parsed.String("output-dir", "covers")
 	absOutputDir, err := ensureOutputDir(outputDir)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
 	fmt.Println("Uploading cover source...")
 	sourceKey, err := cloud.UploadFile(sourcePath, cfg.CardKey, "cover_input")
 	if err != nil {
-		fmt.Printf("Error: upload source failed: %v\n", err)
-		return nil
+		return output.ErrNetwork(fmt.Sprintf("upload source failed: %v\n", err))
 	}
 	sourceKey = atom.NormalizeResourceKey(sourceKey, cfg.CardKey)
 
@@ -200,34 +191,28 @@ func cmdCoverGenerate(raw []string) error {
 	}
 	taskResult, err := cloud.SubmitTask("cover", "cover_output", input, cfg.CardKey)
 	if err != nil {
-		fmt.Printf("Error: submit cover task failed: %v\n", err)
-		return nil
+		return output.ErrNetwork(fmt.Sprintf("submit cover task failed: %v\n", err))
 	}
 	taskID, _ := taskResult["task_id"].(string)
 	if taskID == "" {
-		fmt.Println("Error: no task_id returned")
-		return nil
+		return output.ErrNetwork("no task_id returned")
 	}
 	fmt.Printf("  Task ID: %s\n", taskID)
 
 	status, stillRunning := cloud.WaitTaskComplete(taskID, cfg.CardKey, timeoutSec)
 	if stillRunning {
-		fmt.Println("Error: cover task timed out")
-		return nil
+		return output.ErrNetwork("cover task timed out")
 	}
 	if msg := atom.TaskFailure(status); msg != "" {
-		fmt.Printf("Error: cover task failed: %s\n", msg)
-		return nil
+		return output.ErrNetwork(fmt.Sprintf("cover task failed: %s\n", msg))
 	}
 	if statusText := strings.ToLower(fmt.Sprint(status["status"])); statusText != "" && statusText != "completed" {
-		fmt.Printf("Error: cover task failed: %v\n", status)
-		return nil
+		return output.ErrNetwork(fmt.Sprintf("cover task failed: %v\n", status))
 	}
 
 	manifestPath, downloaded, err := downloadCoverOutputs(status, absOutputDir)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	recordProjectArtifact("cover", absOutputDir, "cover.generate")
 	writeSimpleResult(map[string]any{

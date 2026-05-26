@@ -14,8 +14,7 @@ import (
 func cmdProjectManifest(args []string) error {
 	p, err := resolveProject(args)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	data, _ := json.MarshalIndent(p, "", "  ")
 	fmt.Println(string(data))
@@ -60,13 +59,11 @@ func cmdProjectArtifactAdd(args []string) error {
 	}
 	p, err := resolveProject(args[1:])
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		fmt.Printf("Error: bad artifact path: %v\n", err)
-		return nil
+		return output.ErrValidation(fmt.Sprintf("bad artifact path: %v\n", err))
 	}
 	if err := p.AddArtifact(project.Artifact{
 		ID:   parsed["id"],
@@ -74,8 +71,7 @@ func cmdProjectArtifactAdd(args []string) error {
 		Path: abs,
 		Step: parsed["step"],
 	}); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	fmt.Printf("Artifact added: %s\n", abs)
 	return nil
@@ -86,8 +82,7 @@ func cmdProjectArtifactList(args []string) error {
 	filterType := parsed["type"]
 	p, err := resolveProject(args)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	artifacts := make([]project.Artifact, 0, len(p.Artifacts))
 	for _, artifact := range p.Artifacts {

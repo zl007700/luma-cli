@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,14 +43,12 @@ func cmdRuntimeInstall(args []string) error {
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	fmt.Printf("Installing runtime: %s\n", name)
 	installed, err := clientruntime.InstallRuntime(cfg.CardKey, name, version)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return nil
+		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(installed, "", "  ")
@@ -71,8 +70,7 @@ func cmdRuntimePath(args []string) error {
 	}
 	installed, err := clientruntime.CurrentRuntime(args[0])
 	if err != nil {
-		fmt.Printf("Error: runtime not installed: %s\n", args[0])
-		return nil
+		return output.ErrSystem(fmt.Sprintf("runtime not installed: %s\n", args[0]))
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(installed, "", "  ")

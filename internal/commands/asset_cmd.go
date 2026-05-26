@@ -28,8 +28,7 @@ func cmdAsset(args []string) error {
 
 	cfg := loadConfig()
 	if cfg == nil {
-		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 
 	switch args[0] {
@@ -44,8 +43,7 @@ func cmdAsset(args []string) error {
 		group := parsed.String("group", "default")
 		objectKey, err := cloud.UploadFile(filePath, cfg.CardKey, group)
 		if err != nil {
-			fmt.Printf("Error: upload failed: %v\n", err)
-			return nil
+			return output.ErrNetwork(fmt.Sprintf("upload failed: %v\n", err))
 		}
 		view := assetView{
 			Name:      atom.AssetFriendlyName(objectKey),
@@ -74,8 +72,7 @@ func cmdAsset(args []string) error {
 		}
 		items, err := cloud.AssetList(group, cfg.CardKey)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return nil
+			return output.ErrSystem(fmt.Sprintf("%v\n", err))
 		}
 		if len(items) == 0 {
 			fmt.Println("No assets found.")
@@ -131,24 +128,20 @@ func cmdAsset(args []string) error {
 		}
 		result, err := cloud.UnderstandResource(group, objectName, cfg.CardKey)
 		if err != nil {
-			fmt.Printf("Error: understand failed: %v\n", err)
-			return nil
+			return output.ErrNetwork(fmt.Sprintf("understand failed: %v\n", err))
 		}
 		outputPath := parsed.String("output", "")
 		if outputPath != "" {
 			abs, err := absoluteOutputPath(outputPath)
 			if err != nil {
-				fmt.Printf("Error: bad output path: %v\n", err)
-				return nil
+				return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
 			}
 			if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
-				fmt.Printf("Error: create output dir failed: %v\n", err)
-				return nil
+				return output.ErrSystem(fmt.Sprintf("create output dir failed: %v\n", err))
 			}
 			data, _ := json.MarshalIndent(result, "", "  ")
 			if err := os.WriteFile(abs, data, 0644); err != nil {
-				fmt.Printf("Error: write output failed: %v\n", err)
-				return nil
+				return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
 			}
 			result["output_path"] = abs
 		}
