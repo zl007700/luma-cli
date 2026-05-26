@@ -53,6 +53,16 @@ func absoluteOutputPath(outputPath string) (string, error) {
 
 // ensureOutputDir resolves an output path to absolute and creates its
 // parent directory. Returns the absolute path on success.
+
+// resolveProjectOutput routes a relative output path into the project output
+// directory when a project is active. Absolute paths are returned unchanged.
+func resolveProjectOutput(proj *project.Project, outputPath string) string {
+	if proj == nil || outputPath == "" || filepath.IsAbs(outputPath) {
+		return outputPath
+	}
+	return filepath.Join(proj.SubDir(project.DirOutput), outputPath)
+}
+
 func ensureOutputDir(outputPath string) (string, error) {
 	abs, err := absoluteOutputPath(outputPath)
 	if err != nil {

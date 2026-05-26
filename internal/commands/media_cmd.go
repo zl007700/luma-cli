@@ -79,6 +79,7 @@ func cmdTTS(args []string) error {
 	} else if outputPath == "" {
 		outputPath = "step2_tts.wav"
 	}
+	outputPath = resolveProjectOutput(proj, outputPath)
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
 		return output.ErrValidation("invalid output path: %v\n", err)
@@ -223,6 +224,7 @@ func cmdLipSync(args []string) error {
 	} else if outputPath == "" {
 		outputPath = "step3_lipsync.mp4"
 	}
+	outputPath = resolveProjectOutput(proj, outputPath)
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
 		return output.ErrValidation("invalid output path: %v\n", err)
