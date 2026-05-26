@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"strings"
 
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
@@ -37,11 +37,11 @@ func cmdMaterialLibraryImport(raw []string) error {
 	name := strings.TrimSpace(args.String("name", ""))
 	replace, err := args.Bool("replace", false)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	imported, err := importMaterialGroup(sourcePath, name, replace)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("import material group failed: %v\n", err))
+		return output.ErrSystem("import material group failed: %v\n", err)
 	}
 	writeSimpleResult(map[string]any{"group_path": imported})
 	return nil

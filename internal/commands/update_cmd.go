@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"os"
 	"strings"
 
@@ -31,7 +31,7 @@ func cmdUpdate(args []string) error {
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
 	}); err != nil {
-		return output.ErrSystem(fmt.Sprintf("failed to update luma-cli: %v\n", err))
+		return output.ErrSystem("failed to update luma-cli: %v\n", err)
 	}
 
 	if opts.SkipSkills {

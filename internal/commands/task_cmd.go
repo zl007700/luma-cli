@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 
 	"github.com/luma-cli/lumer-cli/cloud"
 )
@@ -36,7 +36,7 @@ func cmdTaskStatus(taskID string) error {
 
 	status, err := cloud.PollTask(taskID, cfg.CardKey)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	data, _ := json.MarshalIndent(status, "", "  ")

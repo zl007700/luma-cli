@@ -64,18 +64,18 @@ func cmdPIPScene(raw []string) error {
 	}
 	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	sceneUnits, err := cloudSceneUnits(segments, cfg.CardKey)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("scene plan failed: %v\n", err))
+		return output.ErrSystem("scene plan failed: %v\n", err)
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := writeJSONFile(absOut, map[string]any{"scene_units": sceneUnits, "segments": segments}); err != nil {
-		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+		return output.ErrSystem("write output failed: %v\n", err)
 	}
 	recordProjectArtifact("scene_units", absOut, "pip.scene")
 	writeSimpleResult(map[string]any{"output_path": absOut, "scene_count": len(sceneUnits)})
@@ -97,24 +97,24 @@ func cmdPIPMatch(raw []string) error {
 	mode := strings.ToLower(strings.TrimSpace(args.String("mode", "auto")))
 	maxInserts, err := args.Int("max-inserts", 8)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	sceneUnits, err := loadSceneUnitsForPIP(scenesPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read scenes failed: %v\n", err))
+		return output.ErrSystem("read scenes failed: %v\n", err)
 	}
 	materials, err := loadMaterialMapsForPIP(materialsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read materials failed: %v\n", err))
+		return output.ErrSystem("read materials failed: %v\n", err)
 	}
 	inserts, modeUsed, err := matchPIPMaterials(sceneUnits, materials, mode, maxInserts)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("material match failed: %v\n", err))
+		return output.ErrSystem("material match failed: %v\n", err)
 	}
 	assignments := buildPIPAssignments(inserts)
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := writeJSONFile(absOut, map[string]any{
 		"scene_units": sceneUnits,
@@ -123,7 +123,7 @@ func cmdPIPMatch(raw []string) error {
 		"inserts":     inserts,
 		"mode":        modeUsed,
 	}); err != nil {
-		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+		return output.ErrSystem("write output failed: %v\n", err)
 	}
 	recordProjectArtifact("material_matches", absOut, "pip.match")
 	writeSimpleResult(map[string]any{"output_path": absOut, "matched_count": len(inserts), "mode": modeUsed})
@@ -143,14 +143,14 @@ func cmdPIPScan(raw []string) error {
 	outputPath := args.String("output", "materials.json")
 	materials, err := describeMaterials(inputPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("pip scan failed: %v\n", err))
+		return output.ErrSystem("pip scan failed: %v\n", err)
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := writeJSONFile(absOut, map[string]any{"materials": materials}); err != nil {
-		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+		return output.ErrSystem("write output failed: %v\n", err)
 	}
 	recordProjectArtifact("materials", absOut, "pip.scan")
 	writeSimpleResult(map[string]any{"output_path": absOut, "count": len(materials)})
@@ -168,12 +168,12 @@ func cmdPIPPlan(raw []string) error {
 	outputPath := args.String("output", "step5_picture_in_picture_plan.json")
 	landscapeRatio, err := args.Float("landscape-height-ratio", 0.32)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	matchMode := strings.ToLower(strings.TrimSpace(args.String("match-mode", "auto")))
 	maxInserts, err := args.Int("max-inserts", 8)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	cfg, err := requireConfig()
 	if err != nil {
@@ -181,23 +181,23 @@ func cmdPIPPlan(raw []string) error {
 	}
 	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read segments failed: %v\n", err))
+		return output.ErrSystem("read segments failed: %v\n", err)
 	}
 	materials, err := loadMaterialsForPIP(materialsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read materials failed: %v\n", err))
+		return output.ErrSystem("read materials failed: %v\n", err)
 	}
 	if len(segments) == 0 || len(materials) == 0 {
 		return output.ErrValidation("segments and materials cannot be empty")
 	}
 	sceneUnits, err := cloudSceneUnits(segments, cfg.CardKey)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("scene plan failed: %v\n", err))
+		return output.ErrSystem("scene plan failed: %v\n", err)
 	}
 	materialMaps := listMapFromAny(materials)
 	inserts, modeUsed, err := matchPIPMaterials(listMapFromAny(sceneUnits), materialMaps, matchMode, maxInserts)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("material match failed: %v\n", err))
+		return output.ErrSystem("material match failed: %v\n", err)
 	}
 	assignments := buildPIPAssignments(inserts)
 	plan := map[string]any{
@@ -223,10 +223,10 @@ func cmdPIPPlan(raw []string) error {
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := writeJSONFile(absOut, plan); err != nil {
-		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+		return output.ErrSystem("write output failed: %v\n", err)
 	}
 	recordProjectArtifact("pip_plan", absOut, "pip.plan")
 	if runtimeOpts.JSON {
@@ -253,14 +253,14 @@ func cmdPIPRender(raw []string) error {
 		landscapeRatio, err = parsed.Float("landscape-height-ratio", 0.32)
 	}
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := renderPIPVideo(videoPath, planPath, absOut, landscapeRatio); err != nil {
-		return output.ErrSystem(fmt.Sprintf("pip render failed: %v\n", err))
+		return output.ErrSystem("pip render failed: %v\n", err)
 	}
 	recordProjectArtifact("pip", absOut, "pip.render")
 	writeSimpleResult(map[string]any{"output_path": absOut, "plan_path": planPath})

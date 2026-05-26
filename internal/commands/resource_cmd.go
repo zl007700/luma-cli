@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 
 	"github.com/luma-cli/lumer-cli/cloud"
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
@@ -55,7 +55,7 @@ func cmdResourceList(args []string) error {
 	}
 	items, err := cloud.ListClientResources(resourceType, tag, cfg.CardKey)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(map[string]any{"items": items}, "", "  ")
@@ -84,7 +84,7 @@ func cmdResourceCache(args []string) error {
 	}
 	cached, err := clientruntime.CacheResource(cfg.CardKey, args[0])
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(cached, "", "  ")
@@ -103,7 +103,7 @@ func cmdResourcePath(args []string) error {
 	}
 	cached, err := clientruntime.CurrentResource(args[0])
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("resource not cached: %s\n", args[0]))
+		return output.ErrSystem("resource not cached: %s\n", args[0])
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(cached, "", "  ")

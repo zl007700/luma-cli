@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"os"
 	"path/filepath"
 	"time"
@@ -86,14 +86,14 @@ func cmdProjectCreate(args []string) error {
 	if basePath != "" {
 		absPath, err := filepath.Abs(basePath)
 		if err != nil {
-			return output.ErrValidation(fmt.Sprintf("invalid dir path: %v\n", err))
+			return output.ErrValidation("invalid dir path: %v\n", err)
 		}
 		basePath = absPath
 	}
 
 	p, err := project.Create(name, basePath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	fmt.Printf("Project created: %s\n", p.Path)
@@ -110,7 +110,7 @@ func cmdProjectCreate(args []string) error {
 func cmdProjectList(args []string) error {
 	projects, err := project.ListProjects()
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	if len(projects) == 0 {
@@ -149,12 +149,12 @@ func cmdProjectUse(args []string) error {
 
 	name := args[0]
 	if err := project.SetActiveProject(name); err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	p, err := project.FindByName(name)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	fmt.Printf("Switched to project: %s\n", name)
@@ -165,7 +165,7 @@ func cmdProjectUse(args []string) error {
 func cmdProjectInfo(args []string) error {
 	p, err := resolveProject(args)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	fmt.Printf("Project: %s\n", p.Name)
@@ -203,11 +203,11 @@ func cmdProjectInfo(args []string) error {
 func cmdProjectClean(args []string) error {
 	p, err := resolveProject(args)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	if err := p.CleanTmp(); err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	fmt.Printf("Cleaned tmp directory: %s\n", p.SubDir(project.DirTmp))

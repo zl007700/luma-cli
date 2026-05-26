@@ -94,16 +94,16 @@ func cmdMaterialDescribe(raw []string) error {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Code: "describe_failed", Error: err.Error()})
 			return nil
 		}
-		return output.ErrSystem(fmt.Sprintf("material describe failed: %v\n", err))
+		return output.ErrSystem("material describe failed: %v\n", err)
 	}
 	savedPath := ""
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
-			return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+			return output.ErrValidation("bad output path: %v\n", err)
 		}
 		if err := writeJSONFile(abs, map[string]any{"materials": materials}); err != nil {
-			return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+			return output.ErrSystem("write output failed: %v\n", err)
 		}
 		savedPath = abs
 		recordProjectArtifact("materials", savedPath, "material.describe")
@@ -136,12 +136,12 @@ func cmdMaterialUnderstand(raw []string) error {
 	group := strings.TrimSpace(args.String("group", "pip_materials"))
 	objectKey, err := cloud.UploadFile(inputPath, cfg.CardKey, group)
 	if err != nil {
-		return output.ErrNetwork(fmt.Sprintf("upload failed: %v\n", err))
+		return output.ErrNetwork("upload failed: %v\n", err)
 	}
 	objectName := filepath.Base(objectKey)
 	meta, err := cloud.UnderstandResource(group, objectName, cfg.CardKey)
 	if err != nil {
-		return output.ErrNetwork(fmt.Sprintf("understand failed: %v\n", err))
+		return output.ErrNetwork("understand failed: %v\n", err)
 	}
 	meta["group"] = group
 	meta["object_key"] = objectKey
@@ -151,10 +151,10 @@ func cmdMaterialUnderstand(raw []string) error {
 	if metaOutput != "" {
 		abs, err := absoluteOutputPath(metaOutput)
 		if err != nil {
-			return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+			return output.ErrValidation("bad output path: %v\n", err)
 		}
 		if err := writeJSONFile(abs, meta); err != nil {
-			return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+			return output.ErrSystem("write output failed: %v\n", err)
 		}
 		meta["output_path"] = abs
 		recordProjectArtifact("material_meta", abs, "material.understand")
@@ -164,15 +164,15 @@ func cmdMaterialUnderstand(raw []string) error {
 	if descriptorOutput != "" {
 		materials, err := describeMaterials(inputPath)
 		if err != nil {
-			return output.ErrSystem(fmt.Sprintf("describe local material failed: %v\n", err))
+			return output.ErrSystem("describe local material failed: %v\n", err)
 		}
 		materials = mergeMetaIntoMaterials(materials, []map[string]any{meta})
 		abs, err := absoluteOutputPath(descriptorOutput)
 		if err != nil {
-			return output.ErrValidation(fmt.Sprintf("bad descriptor output path: %v\n", err))
+			return output.ErrValidation("bad descriptor output path: %v\n", err)
 		}
 		if err := writeJSONFile(abs, map[string]any{"materials": materials}); err != nil {
-			return output.ErrSystem(fmt.Sprintf("write descriptor failed: %v\n", err))
+			return output.ErrSystem("write descriptor failed: %v\n", err)
 		}
 		meta["descriptor_output_path"] = abs
 		recordProjectArtifact("materials", abs, "material.understand")
@@ -198,23 +198,23 @@ func cmdMaterialMerge(raw []string) error {
 	outputPath := strings.TrimSpace(args.String("output", "materials_enriched.json"))
 	materialsPayload, err := readJSONObject(materialsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read materials failed: %v\n", err))
+		return output.ErrSystem("read materials failed: %v\n", err)
 	}
 	materials, err := materialDescriptorsFromPayload(materialsPayload)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("parse materials failed: %v\n", err))
+		return output.ErrSystem("parse materials failed: %v\n", err)
 	}
 	metas, err := readMaterialMetas(metaPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read meta failed: %v\n", err))
+		return output.ErrSystem("read meta failed: %v\n", err)
 	}
 	materials = mergeMetaIntoMaterials(materials, metas)
 	abs, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := writeJSONFile(abs, map[string]any{"materials": materials}); err != nil {
-		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+		return output.ErrSystem("write output failed: %v\n", err)
 	}
 	recordProjectArtifact("materials", abs, "material.merge")
 	writeSimpleResult(map[string]any{"output_path": abs, "count": len(materials)})
@@ -231,18 +231,18 @@ func cmdMaterialSearch(raw []string) error {
 	}
 	limit, err := args.Int("limit", 10)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	if limit <= 0 {
 		limit = 10
 	}
 	payload, err := readJSONObject(materialsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read materials failed: %v\n", err))
+		return output.ErrSystem("read materials failed: %v\n", err)
 	}
 	materials, err := materialDescriptorsFromPayload(payload)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("parse materials failed: %v\n", err))
+		return output.ErrSystem("parse materials failed: %v\n", err)
 	}
 	matches := searchMaterials(materials, query, limit)
 	outputPath := strings.TrimSpace(args.String("output", ""))
@@ -250,10 +250,10 @@ func cmdMaterialSearch(raw []string) error {
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
-			return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+			return output.ErrValidation("bad output path: %v\n", err)
 		}
 		if err := writeJSONFile(abs, map[string]any{"query": query, "matches": matches}); err != nil {
-			return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+			return output.ErrSystem("write output failed: %v\n", err)
 		}
 		savedPath = abs
 		recordProjectArtifact("material_matches", savedPath, "material.search")

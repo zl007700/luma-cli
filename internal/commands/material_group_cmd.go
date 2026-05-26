@@ -36,7 +36,7 @@ func cmdMaterialGroupList(raw []string) error {
 	}
 	groups, err := listMaterialGroups(rootPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("list material groups failed: %v\n", err))
+		return output.ErrSystem("list material groups failed: %v\n", err)
 	}
 	outputPath := strings.TrimSpace(args.String("output", ""))
 	savedPath := ""
@@ -46,7 +46,7 @@ func cmdMaterialGroupList(raw []string) error {
 			return nil
 		}
 		if err := writeJSONFile(abs, map[string]any{"groups": groups}); err != nil {
-			return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+			return output.ErrSystem("write output failed: %v\n", err)
 		}
 		savedPath = abs
 		recordProjectArtifact("material_groups", savedPath, "material.group.list")
@@ -83,7 +83,7 @@ func cmdMaterialGroupDescribe(raw []string) error {
 	groupPath = resolveMaterialGroupPath(groupPath)
 	group, err := describeMaterialGroup(groupPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("describe material group failed: %v\n", err))
+		return output.ErrSystem("describe material group failed: %v\n", err)
 	}
 	outputPath := strings.TrimSpace(args.String("output", "materials.json"))
 	savedPath := ""
@@ -95,7 +95,7 @@ func cmdMaterialGroupDescribe(raw []string) error {
 		groupView := group
 		groupView.Materials = nil
 		if err := writeJSONFile(abs, map[string]any{"group": groupView, "materials": group.Materials}); err != nil {
-			return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+			return output.ErrSystem("write output failed: %v\n", err)
 		}
 		savedPath = abs
 		recordProjectArtifact("materials", savedPath, "material.group.describe")

@@ -60,7 +60,7 @@ func cmdToolsDescribe(id string) error {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Code: "tool_not_found", Error: "tool not found"})
 			return nil
 		}
-		return output.ErrValidation(fmt.Sprintf("tool not found: %s\n", id))
+		return output.ErrValidation("tool not found: %s\n", id)
 	}
 
 	if runtimeOpts.JSON {

@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"os"
 	"path/filepath"
 
@@ -21,7 +21,7 @@ func cmdASR(args []string) error {
 
 	filePath := parsed.Pos(0)
 	if _, err := os.Stat(filePath); err != nil {
-		return output.ErrValidation(fmt.Sprintf("file not found: %s\n", filePath))
+		return output.ErrValidation("file not found: %s\n", filePath)
 	}
 
 	cfg, err := requireConfig()
@@ -40,7 +40,7 @@ func cmdASR(args []string) error {
 		CardKey:  cfg.CardKey,
 	})
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	fmt.Printf("  Uploaded: %s\n", result.ObjectKey)
 	fmt.Printf("  Task ID: %s\n", result.TaskID)

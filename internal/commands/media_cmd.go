@@ -23,11 +23,11 @@ func cmdTTS(args []string) error {
 	if filePath != "" {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			return output.ErrSystem(fmt.Sprintf("read file %s: %v\n", filePath, err))
+			return output.ErrSystem("read file %s: %v\n", filePath, err)
 		}
 		text = strings.TrimSpace(string(data))
 		if text == "" {
-			return output.ErrValidation(fmt.Sprintf("file %s is empty\n", filePath))
+			return output.ErrValidation("file %s is empty\n", filePath)
 		}
 	} else {
 		text = parsed.Pos(0)
@@ -55,11 +55,11 @@ func cmdTTS(args []string) error {
 	voiceName := parsed.String("voice", defaultVoiceName)
 	speechRate, err := parsed.Float("speech-rate", 1.1)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	trimLongSilence, err := parsed.Bool("trim-long-silence", false)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	cfg, err := requireConfig()
@@ -69,7 +69,7 @@ func cmdTTS(args []string) error {
 
 	voiceKey, err := atom.ResolveAssetKey("voice", voiceName, cfg.CardKey)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	proj := resolveProjectByName("")
@@ -81,7 +81,7 @@ func cmdTTS(args []string) error {
 	}
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("invalid output path: %v\n", err))
+		return output.ErrValidation("invalid output path: %v\n", err)
 	}
 
 	if !runtimeOpts.JSON {
@@ -164,7 +164,7 @@ func cmdLipSync(args []string) error {
 	outputPath := parsed.String("output", "")
 	randomStart, err := parsed.Bool("random-start", true)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	if avatar == "" {
@@ -195,7 +195,7 @@ func cmdLipSync(args []string) error {
 	// Resolve AvatarKey from friendly name or object key.
 	avatarKey, err := atom.ResolveAssetKey("video", avatar, cfg.CardKey)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	// Establish AudioKey: explicit flag, then project LatestTTSKey, then upload.
@@ -205,11 +205,11 @@ func cmdLipSync(args []string) error {
 			audioKey = proj.LatestTTSKey
 		} else if audioPath != "" {
 			if _, err := os.Stat(audioPath); err != nil {
-				return output.ErrValidation(fmt.Sprintf("audio file not found: %s\n", audioPath))
+				return output.ErrValidation("audio file not found: %s\n", audioPath)
 			}
 			uploadResult, err := cloud.UploadFile(audioPath, cfg.CardKey, "tts_output")
 			if err != nil {
-				return output.ErrNetwork(fmt.Sprintf("upload audio failed: %v\n", err))
+				return output.ErrNetwork("upload audio failed: %v\n", err)
 			}
 			audioKey = uploadResult
 		} else {
@@ -225,28 +225,28 @@ func cmdLipSync(args []string) error {
 	}
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("invalid output path: %v\n", err))
+		return output.ErrValidation("invalid output path: %v\n", err)
 	}
 
 	guidanceScale, err := parsed.Float("guidance-scale", 1.0)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	numInferenceSteps, err := parsed.Int("num-inference-steps", 15)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	noSuperRes, err := parsed.Bool("no-superres", false)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	superresScale, err := parsed.Int("superres-scale", 2)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	timeoutSec, err := parsed.Int("timeout", 600)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	multiShotJSONPath := parsed.String("multi-shot-json", "")
 
@@ -265,7 +265,7 @@ func cmdLipSync(args []string) error {
 	if multiShotJSONPath != "" {
 		multiShotPayload, err := loadJSONMap(multiShotJSONPath)
 		if err != nil {
-			return output.ErrSystem(fmt.Sprintf("read multi-shot json failed: %v\n", err))
+			return output.ErrSystem("read multi-shot json failed: %v\n", err)
 		}
 		opts.MultiShot = multiShotPayload
 	}
@@ -276,7 +276,7 @@ func cmdLipSync(args []string) error {
 	fmt.Printf("  Output: %s\n", outputPath)
 	result, err := atom.RunLipSync(opts)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 

@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,12 +21,12 @@ func cmdEnhance(args []string) error {
 
 	videoPath := parsed.Pos(0)
 	if _, err := os.Stat(videoPath); err != nil {
-		return output.ErrValidation(fmt.Sprintf("file not found: %s\n", videoPath))
+		return output.ErrValidation("file not found: %s\n", videoPath)
 	}
 
 	scale, err := parsed.Int("scale", 2)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 
 	cfg, err := requireConfig()
@@ -46,7 +46,7 @@ func cmdEnhance(args []string) error {
 	}
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("invalid output path: %v\n", err))
+		return output.ErrValidation("invalid output path: %v\n", err)
 	}
 
 	fmt.Println("Uploading video...")
@@ -59,7 +59,7 @@ func cmdEnhance(args []string) error {
 		OutputPath: outputPath,
 	})
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	fmt.Printf("  Uploaded: %s\n", result.ObjectKey)
 	fmt.Printf("  Task ID: %s\n", result.TaskID)

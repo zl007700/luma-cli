@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"os"
 
 	"github.com/luma-cli/lumer-cli/internal/atom"
@@ -35,11 +35,11 @@ func cmdAlign(args []string) error {
 	}
 
 	if _, err := os.Stat(audioPath); err != nil {
-		return output.ErrValidation(fmt.Sprintf("audio file not found: %s\n", audioPath))
+		return output.ErrValidation("audio file not found: %s\n", audioPath)
 	}
 	data, err := os.ReadFile(segmentsPath)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("read segments file failed: %v\n", err))
+		return output.ErrSystem("read segments file failed: %v\n", err)
 	}
 
 	// Parse full segment structure preserving SegID, StartSegID, EndSegID, etc.
@@ -56,7 +56,7 @@ func cmdAlign(args []string) error {
 			} `json:"result"`
 		}
 		if err2 := json.Unmarshal(data, &wrapped); err2 != nil {
-			return output.ErrSystem(fmt.Sprintf("parse segments JSON failed: %v\n", err))
+			return output.ErrSystem("parse segments JSON failed: %v\n", err)
 		}
 		fullPayload = wrapped.Result
 	}
@@ -90,7 +90,7 @@ func cmdAlign(args []string) error {
 		TimeoutSec: 300,
 	})
 	if err != nil {
-		return output.ErrNetwork(fmt.Sprintf("alignment failed: %v\n", err))
+		return output.ErrNetwork("alignment failed: %v\n", err)
 	}
 	fmt.Printf("  Aligned: %d segments\n", len(result))
 
@@ -118,7 +118,7 @@ func cmdAlign(args []string) error {
 		"count":           len(fullPayload.Segments),
 	}, "", "  ")
 	if err := os.WriteFile(outputPath, outData, 0644); err != nil {
-		return output.ErrSystem(fmt.Sprintf("write output failed: %v\n", err))
+		return output.ErrSystem("write output failed: %v\n", err)
 	}
 	fmt.Printf("Saved to: %s (%d segments, %d sentence groups)\n", outputPath, len(fullPayload.Segments), len(fullPayload.SentenceGroups))
 

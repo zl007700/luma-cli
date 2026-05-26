@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"github.com/luma-cli/lumer-cli/internal/output"
 	"encoding/json"
 	"fmt"
+	"github.com/luma-cli/lumer-cli/internal/output"
 	"image"
 	"image/color"
 	imagedraw "image/draw"
@@ -70,42 +70,42 @@ func cmdCoverRender(raw []string) error {
 	if resolved, err := resolveLocalCachedOrCloudResource(imagePath, cfg); err == nil {
 		imagePath = resolved
 	} else if parsed.String("image", "") != "" || parsed.Pos(0) != "" {
-		return output.ErrNetwork(fmt.Sprintf("resolve cover image failed: %v\n", err))
+		return output.ErrNetwork("resolve cover image failed: %v\n", err)
 	} else {
-		return output.ErrNetwork(fmt.Sprintf("resolve default cover template failed: %v\n", err))
+		return output.ErrNetwork("resolve default cover template failed: %v\n", err)
 	}
 	if resolved, err := resolveLocalCachedOrCloudResource(titleFont, cfg); err == nil {
 		titleFont = resolved
 	} else if parsed.String("font", "") != "" || parsed.String("title-font", "") != "" {
-		return output.ErrNetwork(fmt.Sprintf("resolve title font failed: %v\n", err))
+		return output.ErrNetwork("resolve title font failed: %v\n", err)
 	}
 	if resolved, err := resolveLocalCachedOrCloudResource(subtitleFont, cfg); err == nil {
 		subtitleFont = resolved
 	} else if parsed.String("font", "") != "" || parsed.String("subtitle-font", "") != "" {
-		return output.ErrNetwork(fmt.Sprintf("resolve subtitle font failed: %v\n", err))
+		return output.ErrNetwork("resolve subtitle font failed: %v\n", err)
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
-		return output.ErrValidation(fmt.Sprintf("bad output path: %v\n", err))
+		return output.ErrValidation("bad output path: %v\n", err)
 	}
 	if err := os.MkdirAll(filepath.Dir(absOut), 0755); err != nil {
-		return output.ErrSystem(fmt.Sprintf("create output dir failed: %v\n", err))
+		return output.ErrSystem("create output dir failed: %v\n", err)
 	}
 	titleSize, err := parsed.Float("title-size", float64(defaults.Cover.TitleSize))
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	subtitleSize, err := parsed.Float("subtitle-size", float64(defaults.Cover.SubtitleSize))
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	topMargin, err := parsed.Float("top-margin", -1)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	verticalOffset, err := parsed.Float("vertical-offset", 0)
 	if err != nil {
-		return output.ErrSystem(fmt.Sprintf("%v\n", err))
+		return output.ErrSystem("%v\n", err)
 	}
 	opts := coverRenderOptions{
 		Title:          title,
@@ -121,7 +121,7 @@ func cmdCoverRender(raw []string) error {
 		VerticalOffset: verticalOffset,
 	}
 	if err := renderCoverImageWithOptions(imagePath, absOut, opts); err != nil {
-		return output.ErrSystem(fmt.Sprintf("cover render failed: %v\n", err))
+		return output.ErrSystem("cover render failed: %v\n", err)
 	}
 	// Rename output to include content hash for traceability.
 	if hashed, err := hashSuffixFile(absOut); err == nil {

@@ -29,7 +29,7 @@ func cmdAuth(args []string) error {
 		if len(args) >= 2 {
 			// Direct key/token save
 			if err := appconfig.SaveCardKey(args[1]); err != nil {
-				return output.ErrSystem(fmt.Sprintf("write config: %v\n", err))
+				return output.ErrSystem("write config: %v\n", err)
 			}
 			fmt.Println("Login saved.")
 			return nil
