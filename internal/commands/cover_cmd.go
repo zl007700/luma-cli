@@ -13,10 +13,10 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 )
 
-func cmdCover(args []string) {
+func cmdCover(args []string) error {
 	if len(args) < 1 {
 		printCoverUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "frame":
@@ -28,31 +28,32 @@ func cmdCover(args []string) {
 	default:
 		printCoverUsage()
 	}
+	return nil
 }
 
-func cmdCoverFrame(raw []string) {
+func cmdCoverFrame(raw []string) error {
 	parsed := cmdutil.Parse(raw)
 	videoPath := parsed.Pos(0)
 	if videoPath == "" {
 		fmt.Println("usage: luma-cli cover frame <video> [--time 1.0] [--output cover_frame.png]")
-		return
+		return nil
 	}
 	outputPath := parsed.String("output", "step6_cover_frame.png")
 	seek := parsed.String("time", "1.0")
 	absOut, err := ensureOutputDir(outputPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	ffmpeg, err := installedFFmpegPath()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	cmd := exec.Command(ffmpeg, "-y", "-ss", seek, "-i", videoPath, "-frames:v", "1", absOut)
 	if data, err := cmd.CombinedOutput(); err != nil {
 		fmt.Printf("Error: ffmpeg frame extract failed: %v\n%s\n", err, string(data))
-		return
+		return nil
 	}
 	// Rename output to include content hash for traceability.
 	if hashed, err := hashSuffixFile(absOut); err == nil {
@@ -61,9 +62,10 @@ func cmdCoverFrame(raw []string) {
 
 	recordProjectArtifact("cover_frame", absOut, "cover.frame")
 	writeSimpleResult(map[string]any{"output_path": absOut})
+	return nil
 }
 
-func cmdCoverGenerate(raw []string) {
+func cmdCoverGenerate(raw []string) error {
 	parsed := cmdutil.Parse(raw)
 	sourcePath := parsed.String("video", "")
 	if sourcePath == "" {
@@ -79,22 +81,22 @@ func cmdCoverGenerate(raw []string) {
 	subtitle := strings.TrimSpace(parsed.String("subtitle", ""))
 	if sourcePath == "" || title == "" {
 		fmt.Println("usage: luma-cli cover generate <video_or_image> --title <text> [--subtitle <text>] [--count 6] [--output-dir covers]")
-		return
+		return nil
 	}
 	if _, err := os.Stat(sourcePath); err != nil {
 		fmt.Printf("Error: source file not found: %s\n", sourcePath)
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	defaults := loadClientDefaults(cfg)
 	count, err := parsed.Int("count", 6)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	if count <= 0 {
 		count = 6
@@ -105,25 +107,25 @@ func cmdCoverGenerate(raw []string) {
 	frameSecond, err := parsed.Float("frame-second", 1.0)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	timeoutSec, err := parsed.Int("timeout", 600)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	outputDir := parsed.String("output-dir", "covers")
 	absOutputDir, err := ensureOutputDir(outputDir)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Println("Uploading cover source...")
 	sourceKey, err := cloud.UploadFile(sourcePath, cfg.CardKey, "cover_input")
 	if err != nil {
 		fmt.Printf("Error: upload source failed: %v\n", err)
-		return
+		return nil
 	}
 	sourceKey = atom.NormalizeResourceKey(sourceKey, cfg.CardKey)
 
@@ -199,33 +201,33 @@ func cmdCoverGenerate(raw []string) {
 	taskResult, err := cloud.SubmitTask("cover", "cover_output", input, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: submit cover task failed: %v\n", err)
-		return
+		return nil
 	}
 	taskID, _ := taskResult["task_id"].(string)
 	if taskID == "" {
 		fmt.Println("Error: no task_id returned")
-		return
+		return nil
 	}
 	fmt.Printf("  Task ID: %s\n", taskID)
 
 	status, stillRunning := cloud.WaitTaskComplete(taskID, cfg.CardKey, timeoutSec)
 	if stillRunning {
 		fmt.Println("Error: cover task timed out")
-		return
+		return nil
 	}
 	if msg := atom.TaskFailure(status); msg != "" {
 		fmt.Printf("Error: cover task failed: %s\n", msg)
-		return
+		return nil
 	}
 	if statusText := strings.ToLower(fmt.Sprint(status["status"])); statusText != "" && statusText != "completed" {
 		fmt.Printf("Error: cover task failed: %v\n", status)
-		return
+		return nil
 	}
 
 	manifestPath, downloaded, err := downloadCoverOutputs(status, absOutputDir)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("cover", absOutputDir, "cover.generate")
 	writeSimpleResult(map[string]any{
@@ -235,7 +237,7 @@ func cmdCoverGenerate(raw []string) {
 		"downloaded":    downloaded,
 	})
 	if runtimeOpts.JSON {
-		return
+		return nil
 	}
 	fmt.Println("Done!")
 	if _, err := os.Stat(manifestPath); err == nil {
@@ -247,6 +249,7 @@ func cmdCoverGenerate(raw []string) {
 	if len(downloaded) == 0 {
 		fmt.Println("  Cover images were generated in cloud, but this backend response did not include signed image_url fields.")
 	}
+	return nil
 }
 
 func defaultCoverTemplateResourceIDs(cfg *config, defaults *cloud.ClientDefaults, count int) []string {

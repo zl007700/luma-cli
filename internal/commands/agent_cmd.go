@@ -25,10 +25,10 @@ var agentAbilityPaths = map[string]string{
 	"pip.plan":           "/v1/agent/pip/plan",
 }
 
-func cmdAgent(args []string) {
+func cmdAgent(args []string) error {
 	if len(args) < 1 {
 		printAgentUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "run":
@@ -37,34 +37,35 @@ func cmdAgent(args []string) {
 		fmt.Printf("unknown agent subcommand: %s\n\n", args[0])
 		printAgentUsage()
 	}
+	return nil
 }
 
-func cmdAgentRun(raw []string) {
+func cmdAgentRun(raw []string) error {
 	args := cmdutil.Parse(raw)
 	ability := strings.TrimSpace(args.Pos(0))
 	if ability == "" {
 		printAgentError("ability_required", "usage: luma-cli agent run <ability> --input payload.json [--output result.json]\n")
-		return
+		return nil
 	}
 	path := agentAbilityPaths[ability]
 	if path == "" {
 		printAgentError("unknown_ability", fmt.Sprintf("Error: unknown agent ability: %s\n", ability))
-		return
+		return nil
 	}
 	inputPath := strings.TrimSpace(args.String("input", ""))
 	if inputPath == "" {
 		printAgentError("input_required", "Error: --input payload.json is required\n")
-		return
+		return nil
 	}
 	payload, err := readAgentPayload(inputPath)
 	if err != nil {
 		printAgentError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		printAgentError("not_logged_in", "Error: not logged in. Run: luma-cli auth login <card_key>\n")
-		return
+		return nil
 	}
 	input, _ := payload["input"].(map[string]any)
 	if input == nil {
@@ -74,35 +75,36 @@ func cmdAgentRun(raw []string) {
 	resp, err := cloud.RunAgentAbility(path, input, options, cfg.CardKey)
 	if err != nil {
 		printAgentError("agent_failed", fmt.Sprintf("Error: agent ability failed: %v\n", err))
-		return
+		return nil
 	}
 	outputPath := strings.TrimSpace(args.String("output", ""))
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
 			printAgentError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
-			return
+			return nil
 		}
 		if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
 			printAgentError("create_output_dir_failed", fmt.Sprintf("Error: create output dir failed: %v\n", err))
-			return
+			return nil
 		}
 		data, _ := json.MarshalIndent(resp, "", "  ")
 		if err := os.WriteFile(abs, data, 0644); err != nil {
 			printAgentError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-			return
+			return nil
 		}
 		outputPath = abs
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"response": resp, "output_path": outputPath}})
-		return
+		return nil
 	}
 	fmt.Printf("Done! Ability: %s\n", ability)
 	fmt.Printf("Request ID: %s\n", resp.RequestID)
 	if outputPath != "" {
 		fmt.Printf("Saved to: %s\n", outputPath)
 	}
+	return nil
 }
 
 func readAgentPayload(path string) (map[string]any, error) {

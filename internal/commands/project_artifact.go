@@ -11,20 +11,21 @@ import (
 	"github.com/luma-cli/lumer-cli/project"
 )
 
-func cmdProjectManifest(args []string) {
+func cmdProjectManifest(args []string) error {
 	p, err := resolveProject(args)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	data, _ := json.MarshalIndent(p, "", "  ")
 	fmt.Println(string(data))
+	return nil
 }
 
-func cmdProjectArtifact(args []string) {
+func cmdProjectArtifact(args []string) error {
 	if len(args) < 1 {
 		printProjectArtifactUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "add":
@@ -36,6 +37,7 @@ func cmdProjectArtifact(args []string) {
 	default:
 		printProjectArtifactUsage()
 	}
+	return nil
 }
 
 func printProjectArtifactUsage() {
@@ -45,7 +47,7 @@ func printProjectArtifactUsage() {
 	fmt.Println("  schema")
 }
 
-func cmdProjectArtifactAdd(args []string) {
+func cmdProjectArtifactAdd(args []string) error {
 	parsed := parseProjectKV(args)
 	path := parsed["path"]
 	if path == "" {
@@ -54,17 +56,17 @@ func cmdProjectArtifactAdd(args []string) {
 	artifactType := parsed["type"]
 	if path == "" || artifactType == "" {
 		fmt.Println("usage: luma-cli project artifact add <path> --type <type> [--id <id>] [--step <step>]")
-		return
+		return nil
 	}
 	p, err := resolveProject(args[1:])
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		fmt.Printf("Error: bad artifact path: %v\n", err)
-		return
+		return nil
 	}
 	if err := p.AddArtifact(project.Artifact{
 		ID:   parsed["id"],
@@ -73,18 +75,19 @@ func cmdProjectArtifactAdd(args []string) {
 		Step: parsed["step"],
 	}); err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Printf("Artifact added: %s\n", abs)
+	return nil
 }
 
-func cmdProjectArtifactList(args []string) {
+func cmdProjectArtifactList(args []string) error {
 	parsed := parseProjectKV(args)
 	filterType := parsed["type"]
 	p, err := resolveProject(args)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	artifacts := make([]project.Artifact, 0, len(p.Artifacts))
 	for _, artifact := range p.Artifacts {
@@ -95,11 +98,11 @@ func cmdProjectArtifactList(args []string) {
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"project": p.Name, "artifacts": artifacts}})
-		return
+		return nil
 	}
 	if len(artifacts) == 0 {
 		fmt.Println("No artifacts found.")
-		return
+		return nil
 	}
 	fmt.Printf("Artifacts for project: %s\n", p.Name)
 	fmt.Println("TYPE                 STEP                         STATUS       PATH")
@@ -115,9 +118,10 @@ func cmdProjectArtifactList(args []string) {
 		}
 		fmt.Printf("%-20s %-28s %-12s %s\n", artifact.Type, step, status, artifact.Path)
 	}
+	return nil
 }
 
-func cmdProjectArtifactSchema() {
+func cmdProjectArtifactSchema() error {
 	schema := map[string]any{
 		"id":         "stable artifact id; generated when omitted",
 		"type":       "artifact category, for example script, audio, video, segments, materials, pip_plan, cover",
@@ -133,10 +137,11 @@ func cmdProjectArtifactSchema() {
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: schema})
-		return
+		return nil
 	}
 	data, _ := json.MarshalIndent(schema, "", "  ")
 	fmt.Println(string(data))
+	return nil
 }
 
 func parseProjectKV(args []string) map[string]string {

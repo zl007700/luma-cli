@@ -7,17 +7,17 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 )
 
-func cmdBGM(args []string) {
+func cmdBGM(args []string) error {
 	if len(args) < 1 || args[0] != "mix" {
 		fmt.Println("usage: luma-cli bgm mix <video> [--bgm <file_or_resource_id>] [--output <mp4>] [--voice-volume 1.0] [--bgm-volume 0.25]")
-		return
+		return nil
 	}
 	parsed := cmdutil.Parse(args[1:])
 	videoPath := parsed.Pos(0)
 	bgmValue := parsed.String("bgm", "")
 	if videoPath == "" {
 		fmt.Println("usage: luma-cli bgm mix <video> [--bgm <file_or_resource_id>] [--output <mp4>]")
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	defaults := loadClientDefaults(cfg)
@@ -26,7 +26,7 @@ func cmdBGM(args []string) {
 	}
 	if bgmValue == "" {
 		fmt.Println("Error: no BGM specified and no default BGM configured")
-		return
+		return nil
 	}
 	outputPath := parsed.String("output", "step6_bgm.mp4")
 	voiceVolume := parsed.String("voice-volume", formatVolume(defaults.BGM.VoiceVolume, "1.0"))
@@ -34,23 +34,23 @@ func cmdBGM(args []string) {
 	bgmPath, err := resolveLocalCachedOrCloudResource(bgmValue, cfg)
 	if err != nil {
 		fmt.Printf("Error: resolve bgm failed: %v\n", err)
-		return
+		return nil
 	}
 	absOut, err := ensureOutputDir(outputPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	ffmpeg, err := installedFFmpegPath()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	filter := fmt.Sprintf("[0:a]volume=%s[a0];[1:a]volume=%s,aloop=loop=-1:size=2e+09[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]", voiceVolume, bgmVolume)
 	cmd := exec.Command(ffmpeg, "-y", "-i", videoPath, "-i", bgmPath, "-filter_complex", filter, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-shortest", absOut)
 	if data, err := cmd.CombinedOutput(); err != nil {
 		fmt.Printf("Error: ffmpeg bgm mix failed: %v\n%s\n", err, string(data))
-		return
+		return nil
 	}
 	// Rename output to include content hash for traceability.
 	if hashed, err := hashSuffixFile(absOut); err == nil {
@@ -59,4 +59,5 @@ func cmdBGM(args []string) {
 
 	recordProjectArtifact("bgm", absOut, "bgm.mix")
 	writeSimpleResult(map[string]any{"output_path": absOut, "bgm_path": bgmPath})
+	return nil
 }

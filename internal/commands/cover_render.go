@@ -33,7 +33,7 @@ type coverRenderOptions struct {
 	VerticalOffset float64
 }
 
-func cmdCoverRender(raw []string) {
+func cmdCoverRender(raw []string) error {
 	parsed := cmdutil.Parse(raw)
 	cfg := loadConfig()
 	defaults := loadClientDefaults(cfg)
@@ -64,57 +64,57 @@ func cmdCoverRender(raw []string) {
 	}
 	if imagePath == "" {
 		fmt.Println("usage: luma-cli cover render <image> --title <text> [--subtitle <text>] [--output title_cover.jpg]")
-		return
+		return nil
 	}
 	if resolved, err := resolveLocalCachedOrCloudResource(imagePath, cfg); err == nil {
 		imagePath = resolved
 	} else if parsed.String("image", "") != "" || parsed.Pos(0) != "" {
 		fmt.Printf("Error: resolve cover image failed: %v\n", err)
-		return
+		return nil
 	} else {
 		fmt.Printf("Error: resolve default cover template failed: %v\n", err)
-		return
+		return nil
 	}
 	if resolved, err := resolveLocalCachedOrCloudResource(titleFont, cfg); err == nil {
 		titleFont = resolved
 	} else if parsed.String("font", "") != "" || parsed.String("title-font", "") != "" {
 		fmt.Printf("Error: resolve title font failed: %v\n", err)
-		return
+		return nil
 	}
 	if resolved, err := resolveLocalCachedOrCloudResource(subtitleFont, cfg); err == nil {
 		subtitleFont = resolved
 	} else if parsed.String("font", "") != "" || parsed.String("subtitle-font", "") != "" {
 		fmt.Printf("Error: resolve subtitle font failed: %v\n", err)
-		return
+		return nil
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(absOut), 0755); err != nil {
 		fmt.Printf("Error: create output dir failed: %v\n", err)
-		return
+		return nil
 	}
 	titleSize, err := parsed.Float("title-size", float64(defaults.Cover.TitleSize))
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	subtitleSize, err := parsed.Float("subtitle-size", float64(defaults.Cover.SubtitleSize))
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	topMargin, err := parsed.Float("top-margin", -1)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	verticalOffset, err := parsed.Float("vertical-offset", 0)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	opts := coverRenderOptions{
 		Title:          title,
@@ -131,7 +131,7 @@ func cmdCoverRender(raw []string) {
 	}
 	if err := renderCoverImageWithOptions(imagePath, absOut, opts); err != nil {
 		fmt.Printf("Error: cover render failed: %v\n", err)
-		return
+		return nil
 	}
 	// Rename output to include content hash for traceability.
 	if hashed, err := hashSuffixFile(absOut); err == nil {
@@ -145,6 +145,7 @@ func cmdCoverRender(raw []string) {
 	}
 	recordProjectArtifact("cover", absOut, "cover.render")
 	writeSimpleResult(map[string]any{"output_path": absOut, "meta_path": metaPath})
+	return nil
 }
 
 func renderCoverImage(imagePath, outputPath, title, subtitle, fontPath string) error {

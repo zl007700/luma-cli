@@ -7,38 +7,40 @@ import (
 	"github.com/luma-cli/lumer-cli/cloud"
 )
 
-func cmdTask(args []string) {
+func cmdTask(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli task status <task_id>")
 		fmt.Println("       luma-cli task list")
-		return
+		return nil
 	}
 
 	switch args[0] {
 	case "status":
 		if len(args) < 2 {
 			fmt.Println("usage: luma-cli task status <task_id>")
-			return
+			return nil
 		}
 		cmdTaskStatus(args[1])
 	default:
 		fmt.Printf("unknown task subcommand: %s\n", args[0])
 	}
+	return nil
 }
 
-func cmdTaskStatus(taskID string) {
+func cmdTaskStatus(taskID string) error {
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 
 	status, err := cloud.PollTask(taskID, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	data, _ := json.MarshalIndent(status, "", "  ")
 	fmt.Println(string(data))
+	return nil
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/skillsync"
 )
 
-func cmdSkills(args []string) {
+func cmdSkills(args []string) error {
 	if len(args) < 1 {
 		printSkillsUsage()
-		return
+		return nil
 	}
 
 	switch args[0] {
@@ -26,6 +26,7 @@ func cmdSkills(args []string) {
 		fmt.Printf("unknown skills subcommand: %s\n", args[0])
 		printSkillsUsage()
 	}
+	return nil
 }
 
 func printSkillsUsage() {
@@ -43,7 +44,7 @@ func printSkillsUsage() {
 	fmt.Println("  luma-cli skills sync -s luma-workflow-viral-remix")
 }
 
-func cmdSkillsList() {
+func cmdSkillsList() error {
 	items := []map[string]string{
 		{"name": "luma-shared", "layer": "shared", "description": "Common Luma agent rules"},
 		{"name": "luma-content-research", "layer": "capability", "description": "Research, keyword tables, and topic planning"},
@@ -56,16 +57,17 @@ func cmdSkillsList() {
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"skills": items}})
-		return
+		return nil
 	}
 
 	fmt.Printf("%-30s %-12s %s\n", "NAME", "LAYER", "DESCRIPTION")
 	for _, item := range items {
 		fmt.Printf("%-30s %-12s %s\n", item["name"], item["layer"], item["description"])
 	}
+	return nil
 }
 
-func cmdSkillsSync(args []string) {
+func cmdSkillsSync(args []string) error {
 	opts := parseSkillsSyncOptions(args)
 	if opts.Source == "" {
 		opts.Source = skillsync.SourceFromEnv()
@@ -81,24 +83,25 @@ func cmdSkillsSync(args []string) {
 
 	if err := skillsync.RunSkillsAdd(opts); err != nil {
 		fmt.Printf("Error: failed to sync skills: %v\n", err)
-		return
+		return nil
 	}
 	if err := skillsync.WriteStamp(version, opts.Source); err != nil {
 		fmt.Printf("Warning: synced skills, but failed to write stamp: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Println("Done. Luma skills are synced.")
+	return nil
 }
 
-func cmdSkillsStatus() {
+func cmdSkillsStatus() error {
 	stamp, err := skillsync.ReadStamp()
 	if err != nil {
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Code: "skills_status_error", Error: err.Error()})
-			return
+			return nil
 		}
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	data := map[string]any{
@@ -109,14 +112,14 @@ func cmdSkillsStatus() {
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data})
-		return
+		return nil
 	}
 
 	if stamp == nil {
 		fmt.Println("Skills status: no local sync stamp found")
 		fmt.Printf("CLI version: %s\n", version)
 		fmt.Println("Run: luma-cli skills sync")
-		return
+		return nil
 	}
 	fmt.Printf("Skills status: %s\n", statusLabel(!skillsync.IsVersionDrift(version, stamp)))
 	fmt.Printf("CLI version: %s\n", version)
@@ -126,6 +129,7 @@ func cmdSkillsStatus() {
 	if skillsync.IsVersionDrift(version, stamp) {
 		fmt.Println("Run: luma-cli update")
 	}
+	return nil
 }
 
 func parseSkillsSyncOptions(args []string) skillsync.SyncOptions {

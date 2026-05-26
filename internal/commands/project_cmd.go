@@ -9,10 +9,10 @@ import (
 	"github.com/luma-cli/lumer-cli/project"
 )
 
-func cmdProject(args []string) {
+func cmdProject(args []string) error {
 	if len(args) < 1 {
 		printProjectUsage()
-		return
+		return nil
 	}
 
 	switch args[0] {
@@ -34,6 +34,7 @@ func cmdProject(args []string) {
 		fmt.Printf("unknown project subcommand: %s\n\n", args[0])
 		printProjectUsage()
 	}
+	return nil
 }
 
 func printProjectUsage() {
@@ -57,7 +58,7 @@ func printProjectUsage() {
 	fmt.Println("  luma-cli project use my-video")
 }
 
-func cmdProjectCreate(args []string) {
+func cmdProjectCreate(args []string) error {
 	if len(args) < 1 || args[0] == "--help" {
 		fmt.Println("usage: luma-cli project create <name> [--dir <path>]")
 		fmt.Println("")
@@ -68,7 +69,7 @@ func cmdProjectCreate(args []string) {
 		fmt.Println("  effects/   - effect overlay files")
 		fmt.Println("  output/    - final outputs")
 		fmt.Println("  tmp/       - temporary files")
-		return
+		return nil
 	}
 
 	name := args[0]
@@ -85,7 +86,7 @@ func cmdProjectCreate(args []string) {
 		absPath, err := filepath.Abs(basePath)
 		if err != nil {
 			fmt.Printf("Error: invalid dir path: %v\n", err)
-			return
+			return nil
 		}
 		basePath = absPath
 	}
@@ -93,7 +94,7 @@ func cmdProjectCreate(args []string) {
 	p, err := project.Create(name, basePath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Printf("Project created: %s\n", p.Path)
@@ -104,18 +105,19 @@ func cmdProjectCreate(args []string) {
 	}
 	fmt.Println("")
 	fmt.Printf("Use 'luma-cli project use %s' to activate.\n", name)
+	return nil
 }
 
-func cmdProjectList(args []string) {
+func cmdProjectList(args []string) error {
 	projects, err := project.ListProjects()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	if len(projects) == 0 {
 		fmt.Println("No projects found. Create one with: luma-cli project create <name>")
-		return
+		return nil
 	}
 
 	activeName, _ := project.ActiveProjectName()
@@ -138,35 +140,37 @@ func cmdProjectList(args []string) {
 	if activeName != "" {
 		fmt.Printf("Active project: %s\n", activeName)
 	}
+	return nil
 }
 
-func cmdProjectUse(args []string) {
+func cmdProjectUse(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli project use <name>")
-		return
+		return nil
 	}
 
 	name := args[0]
 	if err := project.SetActiveProject(name); err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	p, err := project.FindByName(name)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Printf("Switched to project: %s\n", name)
 	fmt.Printf("  Path: %s\n", p.Path)
+	return nil
 }
 
-func cmdProjectInfo(args []string) {
+func cmdProjectInfo(args []string) error {
 	p, err := resolveProject(args)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Printf("Project: %s\n", p.Name)
@@ -198,21 +202,23 @@ func cmdProjectInfo(args []string) {
 			fmt.Println()
 		}
 	}
+	return nil
 }
 
-func cmdProjectClean(args []string) {
+func cmdProjectClean(args []string) error {
 	p, err := resolveProject(args)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	if err := p.CleanTmp(); err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Printf("Cleaned tmp directory: %s\n", p.SubDir(project.DirTmp))
+	return nil
 }
 
 func resolveProject(args []string) (*project.Project, error) {

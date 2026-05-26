@@ -8,10 +8,10 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
 )
 
-func cmdRuntime(args []string) {
+func cmdRuntime(args []string) error {
 	if len(args) < 1 {
 		printRuntimeUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "install":
@@ -24,12 +24,13 @@ func cmdRuntime(args []string) {
 		fmt.Printf("unknown runtime subcommand: %s\n\n", args[0])
 		printRuntimeUsage()
 	}
+	return nil
 }
 
-func cmdRuntimeInstall(args []string) {
+func cmdRuntimeInstall(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli runtime install ffmpeg [--version <version>]")
-		return
+		return nil
 	}
 	name := args[0]
 	version := "auto"
@@ -42,45 +43,47 @@ func cmdRuntimeInstall(args []string) {
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	fmt.Printf("Installing runtime: %s\n", name)
 	installed, err := clientruntime.InstallRuntime(cfg.CardKey, name, version)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(installed, "", "  ")
 		fmt.Println(string(data))
-		return
+		return nil
 	}
 	fmt.Printf("Installed %s %s\n", installed.Name, installed.Version)
 	fmt.Printf("Executable: %s\n", installed.ExecutablePath)
 	if installed.FFProbePath != "" {
 		fmt.Printf("FFprobe: %s\n", installed.FFProbePath)
 	}
+	return nil
 }
 
-func cmdRuntimePath(args []string) {
+func cmdRuntimePath(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli runtime path ffmpeg")
-		return
+		return nil
 	}
 	installed, err := clientruntime.CurrentRuntime(args[0])
 	if err != nil {
 		fmt.Printf("Error: runtime not installed: %s\n", args[0])
-		return
+		return nil
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(installed, "", "  ")
 		fmt.Println(string(data))
-		return
+		return nil
 	}
 	fmt.Println(installed.ExecutablePath)
+	return nil
 }
 
-func cmdRuntimeDoctor() {
+func cmdRuntimeDoctor() error {
 	for _, name := range []string{"ffmpeg"} {
 		installed, err := clientruntime.CurrentRuntime(name)
 		if err != nil {
@@ -99,6 +102,7 @@ func cmdRuntimeDoctor() {
 		}
 		fmt.Printf("%s: ok (%s)\n", name, installed.ExecutablePath)
 	}
+	return nil
 }
 
 func printRuntimeUsage() {

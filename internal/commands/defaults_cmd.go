@@ -15,23 +15,24 @@ import (
 
 const fallbackCoverFontResourceID = "font_22b2e39414"
 
-func cmdDefaults(args []string) {
+func cmdDefaults(args []string) error {
 	if len(args) < 1 || args[0] != "show" {
 		fmt.Println("usage: luma-cli defaults show")
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	defaults := loadClientDefaults(cfg)
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: defaults})
-		return
+		return nil
 	}
 	data, _ := json.MarshalIndent(defaults, "", "  ")
 	fmt.Println(string(data))
+	return nil
 }
 
 func loadClientDefaults(cfg *config) *cloud.ClientDefaults {

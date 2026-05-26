@@ -9,22 +9,22 @@ import (
 	"github.com/luma-cli/lumer-cli/subtitle"
 )
 
-func cmdSubtitle(args []string) {
+func cmdSubtitle(args []string) error {
 	if len(args) < 1 {
 		printSubtitleUsage()
-		return
+		return nil
 	}
 
 	opts := parseSubtitleArgs(args)
 	if opts == nil {
-		return
+		return nil
 	}
 
 	// Load config
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	defaults := loadClientDefaults(cfg)
 
@@ -53,19 +53,19 @@ func cmdSubtitle(args []string) {
 			data, err := os.ReadFile(opts.transcriptPath)
 			if err != nil {
 				fmt.Printf("Error: read transcript failed: %v\n", err)
-				return
+				return nil
 			}
 			rawText = strings.TrimSpace(string(data))
 			fmt.Printf("Step 1/6: Using transcript: %s\n", opts.transcriptPath)
 			if rawText == "" {
 				fmt.Println("Error: transcript is empty")
-				return
+				return nil
 			}
 		} else {
 			rawText, err = runASR(opts.input, cfg.CardKey, projDirs)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
-				return
+				return nil
 			}
 		}
 	}
@@ -83,7 +83,7 @@ func cmdSubtitle(args []string) {
 	segments, err = runAlignment(segments, opts.isTextMode, opts.input, cfg.CardKey, projDirs)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	// Step 4: Highlight
@@ -112,11 +112,11 @@ func cmdSubtitle(args []string) {
 		segmentsPath, err := absoluteOutputPath(opts.segmentsOutput)
 		if err != nil {
 			fmt.Printf("Error: bad segments output path: %v\n", err)
-			return
+			return nil
 		}
 		if err := writeJSONFile(segmentsPath, map[string]any{"segments": segments, "sentence_groups": sentenceGroups}); err != nil {
 			fmt.Printf("Error writing segments: %v\n", err)
-			return
+			return nil
 		}
 		recordProjectArtifact("segments", segmentsPath, "subtitle.segments")
 		fmt.Printf("  Segments written: %s\n", segmentsPath)
@@ -158,7 +158,7 @@ func cmdSubtitle(args []string) {
 	}
 	if err := subtitle.WriteASS(segments, assPath, opts2); err != nil {
 		fmt.Printf("Error writing ASS: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Printf("  ASS written: %s\n", assPath)
 
@@ -166,14 +166,14 @@ func cmdSubtitle(args []string) {
 		fmt.Println("  Text-only mode: ASS generated, no video to burn into")
 		fmt.Printf("Output ASS: %s\n", assPath)
 		recordStep(proj, "subtitle (text-only)", "", assPath)
-		return
+		return nil
 	}
 
 	// Burn subtitles
 	if err := subtitle.BurnSubtitles(opts.input, assPath, outputPath, fontDir, ""); err != nil {
 		fmt.Printf("Error burning subtitles: %v\n", err)
 		os.Remove(assPath)
-		return
+		return nil
 	}
 
 	// Apply effect overlays
@@ -208,6 +208,7 @@ func cmdSubtitle(args []string) {
 	if proj != nil {
 		fmt.Printf("Project: %s\n", proj.Name)
 	}
+	return nil
 }
 
 func printSubtitleUsage() {

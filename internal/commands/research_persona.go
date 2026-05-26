@@ -24,21 +24,21 @@ type personaStore struct {
 	Personas []researchPersona `json:"personas"`
 }
 
-func cmdResearchPersona(raw []string) {
+func cmdResearchPersona(raw []string) error {
 	if len(raw) < 1 {
 		printResearchUsage()
-		return
+		return nil
 	}
 	switch raw[0] {
 	case "list":
 		store := loadPersonaStore()
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: store})
-			return
+			return nil
 		}
 		if len(store.Personas) == 0 {
 			fmt.Println("No personas saved.")
-			return
+			return nil
 		}
 		fmt.Printf("%-24s %-18s %s\n", "ID", "NAME", "SUMMARY")
 		for _, item := range store.Personas {
@@ -51,16 +51,16 @@ func cmdResearchPersona(raw []string) {
 		}
 		if name == "" {
 			fmt.Println("usage: luma-cli research persona get <name_or_id>")
-			return
+			return nil
 		}
 		persona, ok := loadPersonaByName(name)
 		if !ok {
 			printResearchError("persona_not_found", fmt.Sprintf("Error: persona not found: %s\n", name))
-			return
+			return nil
 		}
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: persona})
-			return
+			return nil
 		}
 		data, _ := json.MarshalIndent(persona, "", "  ")
 		fmt.Println(string(data))
@@ -75,24 +75,25 @@ func cmdResearchPersona(raw []string) {
 			data, err := os.ReadFile(input)
 			if err != nil {
 				printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
-				return
+				return nil
 			}
 			role = strings.TrimSpace(string(data))
 		}
 		if name == "" || role == "" {
 			fmt.Println("usage: luma-cli research persona save <name> --role <description>")
-			return
+			return nil
 		}
 		summary := strings.TrimSpace(args.String("summary", ""))
 		persona := savePersona(name, role, summary)
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: persona})
-			return
+			return nil
 		}
 		fmt.Printf("Saved persona: %s\n", persona.Name)
 	default:
 		printResearchUsage()
 	}
+	return nil
 }
 
 func personaStorePath() string {

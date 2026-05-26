@@ -11,23 +11,23 @@ import (
 	"github.com/luma-cli/lumer-cli/project"
 )
 
-func cmdASR(args []string) {
+func cmdASR(args []string) error {
 	parsed := cmdutil.Parse(args)
 	if len(parsed.Positionals) < 1 {
 		fmt.Println("usage: luma-cli asr <video_or_audio> [--language zh|en]")
-		return
+		return nil
 	}
 
 	filePath := parsed.Pos(0)
 	if _, err := os.Stat(filePath); err != nil {
 		fmt.Printf("Error: file not found: %s\n", filePath)
-		return
+		return nil
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 
 	proj := resolveProjectByName("")
@@ -42,7 +42,7 @@ func cmdASR(args []string) {
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Printf("  Uploaded: %s\n", result.ObjectKey)
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
@@ -60,4 +60,5 @@ func cmdASR(args []string) {
 		fmt.Printf("  Saved to: %s\n", asrPath)
 		recordStep(proj, "asr", filePath, asrPath)
 	}
+	return nil
 }

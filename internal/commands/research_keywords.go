@@ -11,7 +11,7 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/output"
 )
 
-func cmdResearchKeywords(raw []string) {
+func cmdResearchKeywords(raw []string) error {
 	args := cmdutil.Parse(raw)
 	inputPath := strings.TrimSpace(args.String("input", ""))
 	if inputPath == "" {
@@ -19,14 +19,14 @@ func cmdResearchKeywords(raw []string) {
 	}
 	if inputPath == "" {
 		fmt.Println("usage: luma-cli research keywords --input step0_content_research.json [--output step0_keywords.json] [--csv step0_keywords.csv]")
-		return
+		return nil
 	}
 	outputPath := strings.TrimSpace(args.String("output", "step0_keywords.json"))
 	csvPath := strings.TrimSpace(args.String("csv", ""))
 	payload, err := readJSONObject(inputPath)
 	if err != nil {
 		printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
-		return
+		return nil
 	}
 	rows, summary := extractResearchKeywords(researchResults(payload))
 	savedPath := ""
@@ -34,11 +34,11 @@ func cmdResearchKeywords(raw []string) {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
 			printResearchError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
-			return
+			return nil
 		}
 		if err := writeJSONFile(abs, map[string]any{"keywords": rows, "summary": summary}); err != nil {
 			printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-			return
+			return nil
 		}
 		savedPath = abs
 		recordProjectArtifact("research_keywords", abs, "research.keywords")
@@ -48,18 +48,18 @@ func cmdResearchKeywords(raw []string) {
 		abs, err := absoluteOutputPath(csvPath)
 		if err != nil {
 			printResearchError("bad_output_path", fmt.Sprintf("Error: bad csv path: %v\n", err))
-			return
+			return nil
 		}
 		if err := writeResearchKeywordsCSV(abs, rows); err != nil {
 			printResearchError("write_output_failed", fmt.Sprintf("Error: write csv failed: %v\n", err))
-			return
+			return nil
 		}
 		csvSavedPath = abs
 		recordProjectArtifact("research_keywords_table", abs, "research.keywords")
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"keywords": rows, "summary": summary, "output_path": savedPath, "csv_path": csvSavedPath}})
-		return
+		return nil
 	}
 	fmt.Printf("Keywords: %d\n", len(rows))
 	if savedPath != "" {
@@ -68,6 +68,7 @@ func cmdResearchKeywords(raw []string) {
 	if csvSavedPath != "" {
 		fmt.Printf("CSV saved to: %s\n", csvSavedPath)
 	}
+	return nil
 }
 
 func extractResearchKeywords(results []map[string]any) ([]map[string]any, map[string]any) {

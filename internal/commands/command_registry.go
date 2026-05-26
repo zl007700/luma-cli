@@ -2,7 +2,7 @@ package commands
 
 import "sort"
 
-type commandHandler func(args []string)
+type commandHandler func(args []string) error
 
 type commandSpec struct {
 	Name        string

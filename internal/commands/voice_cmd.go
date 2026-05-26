@@ -17,15 +17,15 @@ type voiceView struct {
 	Remark    string `json:"remark,omitempty"`
 }
 
-func cmdVoice(args []string) {
+func cmdVoice(args []string) error {
 	if len(args) < 1 {
 		printVoiceUsage()
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	switch args[0] {
 	case "clone":
@@ -35,9 +35,10 @@ func cmdVoice(args []string) {
 	default:
 		printVoiceUsage()
 	}
+	return nil
 }
 
-func cmdVoiceClone(raw []string, cfg *config) {
+func cmdVoiceClone(raw []string, cfg *config) error {
 	parsed := cmdutil.Parse(raw)
 	audioPath := strings.TrimSpace(parsed.Pos(0))
 	if audioPath == "" {
@@ -45,17 +46,17 @@ func cmdVoiceClone(raw []string, cfg *config) {
 	}
 	if audioPath == "" {
 		fmt.Println("usage: luma-cli voice clone <sample_audio> [--name <voice_name>] [--verbose]")
-		return
+		return nil
 	}
 	if _, err := os.Stat(audioPath); err != nil {
 		fmt.Printf("Error: audio file not found: %s\n", audioPath)
-		return
+		return nil
 	}
 	name := strings.TrimSpace(parsed.String("name", ""))
 	objectKey, err := cloud.UploadFileWithName(audioPath, cfg.CardKey, "voice", name)
 	if err != nil {
 		fmt.Printf("Error: voice upload failed: %v\n", err)
-		return
+		return nil
 	}
 	if name == "" {
 		name = atom.AssetFriendlyName(objectKey)
@@ -67,22 +68,23 @@ func cmdVoiceClone(raw []string, cfg *config) {
 			view.ObjectKey = ""
 		}
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: view})
-		return
+		return nil
 	}
 	fmt.Printf("Voice cloned: %s\n", view.Name)
 	fmt.Printf("Use with: luma-cli tts \"text\" --voice %s\n", view.Name)
 	if parsed.Has("verbose") {
 		fmt.Printf("Object key: %s\n", view.ObjectKey)
 	}
+	return nil
 }
 
-func cmdVoiceList(raw []string, cfg *config) {
+func cmdVoiceList(raw []string, cfg *config) error {
 	parsed := cmdutil.Parse(raw)
 	verbose := parsed.Has("verbose")
 	items, err := cloud.AssetList("voice", cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	views := make([]voiceView, 0, len(items))
 	for _, item := range items {
@@ -106,23 +108,24 @@ func cmdVoiceList(raw []string, cfg *config) {
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"items": views}})
-		return
+		return nil
 	}
 	if len(views) == 0 {
 		fmt.Println("No voices found.")
-		return
+		return nil
 	}
 	if verbose {
 		fmt.Printf("%-24s %s\n", "NAME", "OBJECT_KEY")
 		for _, item := range views {
 			fmt.Printf("%-24s %s\n", item.Name, item.ObjectKey)
 		}
-		return
+		return nil
 	}
 	fmt.Println("NAME")
 	for _, item := range views {
 		fmt.Println(item.Name)
 	}
+	return nil
 }
 
 func printVoiceUsage() {

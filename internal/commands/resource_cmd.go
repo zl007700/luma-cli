@@ -8,10 +8,10 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/clientruntime"
 )
 
-func cmdResource(args []string) {
+func cmdResource(args []string) error {
 	if len(args) < 1 {
 		printResourceUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "list":
@@ -24,9 +24,10 @@ func cmdResource(args []string) {
 		fmt.Printf("unknown resource subcommand: %s\n\n", args[0])
 		printResourceUsage()
 	}
+	return nil
 }
 
-func cmdResourceList(args []string) {
+func cmdResourceList(args []string) error {
 	resourceType := ""
 	tag := ""
 	for i := 0; i < len(args); i++ {
@@ -50,68 +51,71 @@ func cmdResourceList(args []string) {
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	items, err := cloud.ListClientResources(resourceType, tag, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(map[string]any{"items": items}, "", "  ")
 		fmt.Println(string(data))
-		return
+		return nil
 	}
 	if len(items) == 0 {
 		fmt.Println("No client resources found.")
-		return
+		return nil
 	}
 	fmt.Printf("%-24s %-10s %-12s %s\n", "ID", "TYPE", "VERSION", "NAME")
 	for _, item := range items {
 		fmt.Printf("%-24s %-10s %-12s %s\n", item.ID, item.Type, item.Version, item.Name)
 	}
+	return nil
 }
 
-func cmdResourceCache(args []string) {
+func cmdResourceCache(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli resource cache <resource_id>")
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	cached, err := clientruntime.CacheResource(cfg.CardKey, args[0])
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(cached, "", "  ")
 		fmt.Println(string(data))
-		return
+		return nil
 	}
 	fmt.Printf("Cached %s\n", cached.ID)
 	fmt.Printf("Path: %s\n", cached.Path)
+	return nil
 }
 
-func cmdResourcePath(args []string) {
+func cmdResourcePath(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli resource path <resource_id>")
-		return
+		return nil
 	}
 	cached, err := clientruntime.CurrentResource(args[0])
 	if err != nil {
 		fmt.Printf("Error: resource not cached: %s\n", args[0])
-		return
+		return nil
 	}
 	if runtimeOpts.JSON {
 		data, _ := json.MarshalIndent(cached, "", "  ")
 		fmt.Println(string(data))
-		return
+		return nil
 	}
 	fmt.Println(cached.Path)
+	return nil
 }
 
 func printResourceUsage() {

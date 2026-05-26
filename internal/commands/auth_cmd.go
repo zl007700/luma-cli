@@ -16,12 +16,12 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/output"
 )
 
-func cmdAuth(args []string) {
+func cmdAuth(args []string) error {
 	if len(args) < 1 {
 		fmt.Println("usage: luma-cli auth login       (browser-based login)")
 		fmt.Println("       luma-cli auth login <key> (paste card key or token directly)")
 		fmt.Println("       luma-cli auth status      (show login status)")
-		return
+		return nil
 	}
 
 	switch args[0] {
@@ -30,14 +30,14 @@ func cmdAuth(args []string) {
 			// Direct key/token save
 			if err := appconfig.SaveCardKey(args[1]); err != nil {
 				fmt.Printf("Error: write config: %v\n", err)
-				return
+				return nil
 			}
 			fmt.Println("Login saved.")
-			return
+			return nil
 		}
 		// Device flow login
 		deviceFlowLogin()
-		return
+		return nil
 
 	case "status":
 		cfg := loadConfig()
@@ -49,19 +49,20 @@ func cmdAuth(args []string) {
 			if err := output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data}); err != nil {
 				fmt.Printf("Error: %v\n", err)
 			}
-			return
+			return nil
 		}
 		if cfg == nil {
 			fmt.Println("Not logged in. Run: luma-cli auth login")
 		} else {
 			fmt.Printf("Logged in. Key: %s\n", appconfig.MaskKey(cfg.CardKey))
 		}
-		return
+		return nil
 
 	default:
 		fmt.Println("usage: luma-cli auth login [key]")
 		fmt.Println("       luma-cli auth status")
 	}
+	return nil
 }
 
 func deviceFlowLogin() {

@@ -91,7 +91,9 @@ func Run(args []string) int {
 		printUsage()
 	default:
 		if spec, ok := commandRegistry()[commandArgs[0]]; ok {
-			spec.Handler(commandArgs[1:])
+			if err := spec.Handler(commandArgs[1:]); err != nil {
+				return output.WriteError(err)
+			}
 			return 0
 		}
 		fmt.Printf("unknown command: %s\n\n", commandArgs[0])

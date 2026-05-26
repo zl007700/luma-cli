@@ -41,10 +41,10 @@ type materialSearchMatch struct {
 	MatchedFields []string           `json:"matched_fields"`
 }
 
-func cmdMaterial(args []string) {
+func cmdMaterial(args []string) error {
 	if len(args) < 1 {
 		printMaterialUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "describe":
@@ -62,6 +62,7 @@ func cmdMaterial(args []string) {
 	default:
 		printMaterialUsage()
 	}
+	return nil
 }
 
 func printMaterialUsage() {
@@ -76,7 +77,7 @@ func printMaterialUsage() {
 	fmt.Println("  search --materials materials.json --query <text> [--limit 10] [--output material_matches.json]")
 }
 
-func cmdMaterialDescribe(raw []string) {
+func cmdMaterialDescribe(raw []string) error {
 	args := cmdutil.Parse(raw)
 	inputPath := strings.TrimSpace(args.Pos(0))
 	if inputPath == "" {
@@ -84,43 +85,44 @@ func cmdMaterialDescribe(raw []string) {
 	}
 	if inputPath == "" {
 		fmt.Println("usage: luma-cli material describe <file_or_dir> [--output materials.json]")
-		return
+		return nil
 	}
 	outputPath := strings.TrimSpace(args.String("output", "materials.json"))
 	materials, err := describeMaterials(inputPath)
 	if err != nil {
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Code: "describe_failed", Error: err.Error()})
-			return
+			return nil
 		}
 		fmt.Printf("Error: material describe failed: %v\n", err)
-		return
+		return nil
 	}
 	savedPath := ""
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
 			fmt.Printf("Error: bad output path: %v\n", err)
-			return
+			return nil
 		}
 		if err := writeJSONFile(abs, map[string]any{"materials": materials}); err != nil {
 			fmt.Printf("Error: write output failed: %v\n", err)
-			return
+			return nil
 		}
 		savedPath = abs
 		recordProjectArtifact("materials", savedPath, "material.describe")
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"materials": materials, "output_path": savedPath}})
-		return
+		return nil
 	}
 	fmt.Printf("Materials: %d\n", len(materials))
 	if savedPath != "" {
 		fmt.Printf("Saved to: %s\n", savedPath)
 	}
+	return nil
 }
 
-func cmdMaterialUnderstand(raw []string) {
+func cmdMaterialUnderstand(raw []string) error {
 	args := cmdutil.Parse(raw)
 	inputPath := strings.TrimSpace(args.Pos(0))
 	if inputPath == "" {
@@ -128,24 +130,24 @@ func cmdMaterialUnderstand(raw []string) {
 	}
 	if inputPath == "" {
 		fmt.Println("usage: luma-cli material understand <file> [--group pip_materials] [--output material_meta.json] [--descriptor-output material.json]")
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	group := strings.TrimSpace(args.String("group", "pip_materials"))
 	objectKey, err := cloud.UploadFile(inputPath, cfg.CardKey, group)
 	if err != nil {
 		fmt.Printf("Error: upload failed: %v\n", err)
-		return
+		return nil
 	}
 	objectName := filepath.Base(objectKey)
 	meta, err := cloud.UnderstandResource(group, objectName, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: understand failed: %v\n", err)
-		return
+		return nil
 	}
 	meta["group"] = group
 	meta["object_key"] = objectKey
@@ -156,11 +158,11 @@ func cmdMaterialUnderstand(raw []string) {
 		abs, err := absoluteOutputPath(metaOutput)
 		if err != nil {
 			fmt.Printf("Error: bad output path: %v\n", err)
-			return
+			return nil
 		}
 		if err := writeJSONFile(abs, meta); err != nil {
 			fmt.Printf("Error: write output failed: %v\n", err)
-			return
+			return nil
 		}
 		meta["output_path"] = abs
 		recordProjectArtifact("material_meta", abs, "material.understand")
@@ -171,17 +173,17 @@ func cmdMaterialUnderstand(raw []string) {
 		materials, err := describeMaterials(inputPath)
 		if err != nil {
 			fmt.Printf("Error: describe local material failed: %v\n", err)
-			return
+			return nil
 		}
 		materials = mergeMetaIntoMaterials(materials, []map[string]any{meta})
 		abs, err := absoluteOutputPath(descriptorOutput)
 		if err != nil {
 			fmt.Printf("Error: bad descriptor output path: %v\n", err)
-			return
+			return nil
 		}
 		if err := writeJSONFile(abs, map[string]any{"materials": materials}); err != nil {
 			fmt.Printf("Error: write descriptor failed: %v\n", err)
-			return
+			return nil
 		}
 		meta["descriptor_output_path"] = abs
 		recordProjectArtifact("materials", abs, "material.understand")
@@ -193,58 +195,60 @@ func cmdMaterialUnderstand(raw []string) {
 		"output_path":            meta["output_path"],
 		"descriptor_output_path": meta["descriptor_output_path"],
 	})
+	return nil
 }
 
-func cmdMaterialMerge(raw []string) {
+func cmdMaterialMerge(raw []string) error {
 	args := cmdutil.Parse(raw)
 	materialsPath := strings.TrimSpace(args.String("materials", ""))
 	metaPath := strings.TrimSpace(args.String("meta", ""))
 	if materialsPath == "" || metaPath == "" {
 		fmt.Println("usage: luma-cli material merge --materials materials.json --meta material_meta.json_or_dir [--output materials_enriched.json]")
-		return
+		return nil
 	}
 	outputPath := strings.TrimSpace(args.String("output", "materials_enriched.json"))
 	materialsPayload, err := readJSONObject(materialsPath)
 	if err != nil {
 		fmt.Printf("Error: read materials failed: %v\n", err)
-		return
+		return nil
 	}
 	materials, err := materialDescriptorsFromPayload(materialsPayload)
 	if err != nil {
 		fmt.Printf("Error: parse materials failed: %v\n", err)
-		return
+		return nil
 	}
 	metas, err := readMaterialMetas(metaPath)
 	if err != nil {
 		fmt.Printf("Error: read meta failed: %v\n", err)
-		return
+		return nil
 	}
 	materials = mergeMetaIntoMaterials(materials, metas)
 	abs, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := writeJSONFile(abs, map[string]any{"materials": materials}); err != nil {
 		fmt.Printf("Error: write output failed: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("materials", abs, "material.merge")
 	writeSimpleResult(map[string]any{"output_path": abs, "count": len(materials)})
+	return nil
 }
 
-func cmdMaterialSearch(raw []string) {
+func cmdMaterialSearch(raw []string) error {
 	args := cmdutil.Parse(raw)
 	materialsPath := strings.TrimSpace(args.String("materials", ""))
 	query := strings.TrimSpace(args.String("query", ""))
 	if materialsPath == "" || query == "" {
 		fmt.Println("usage: luma-cli material search --materials materials.json --query <text> [--limit 10] [--output material_matches.json]")
-		return
+		return nil
 	}
 	limit, err := args.Int("limit", 10)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	if limit <= 0 {
 		limit = 10
@@ -252,12 +256,12 @@ func cmdMaterialSearch(raw []string) {
 	payload, err := readJSONObject(materialsPath)
 	if err != nil {
 		fmt.Printf("Error: read materials failed: %v\n", err)
-		return
+		return nil
 	}
 	materials, err := materialDescriptorsFromPayload(payload)
 	if err != nil {
 		fmt.Printf("Error: parse materials failed: %v\n", err)
-		return
+		return nil
 	}
 	matches := searchMaterials(materials, query, limit)
 	outputPath := strings.TrimSpace(args.String("output", ""))
@@ -266,18 +270,18 @@ func cmdMaterialSearch(raw []string) {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
 			fmt.Printf("Error: bad output path: %v\n", err)
-			return
+			return nil
 		}
 		if err := writeJSONFile(abs, map[string]any{"query": query, "matches": matches}); err != nil {
 			fmt.Printf("Error: write output failed: %v\n", err)
-			return
+			return nil
 		}
 		savedPath = abs
 		recordProjectArtifact("material_matches", savedPath, "material.search")
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"query": query, "matches": matches, "output_path": savedPath}})
-		return
+		return nil
 	}
 	fmt.Printf("Matches: %d\n", len(matches))
 	for _, match := range matches {
@@ -286,5 +290,5 @@ func cmdMaterialSearch(raw []string) {
 	if savedPath != "" {
 		fmt.Printf("Saved to: %s\n", savedPath)
 	}
+	return nil
 }
-

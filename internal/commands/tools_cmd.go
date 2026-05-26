@@ -9,10 +9,10 @@ import (
 	"github.com/luma-cli/lumer-cli/shortcuts/registry"
 )
 
-func cmdTools(args []string) {
+func cmdTools(args []string) error {
 	if len(args) < 1 {
 		printToolsUsage()
-		return
+		return nil
 	}
 
 	switch args[0] {
@@ -21,13 +21,14 @@ func cmdTools(args []string) {
 	case "describe", "show":
 		if len(args) < 2 {
 			fmt.Println("usage: luma-cli tools describe <tool_id>")
-			return
+			return nil
 		}
 		cmdToolsDescribe(args[1])
 	default:
 		fmt.Printf("unknown tools subcommand: %s\n", args[0])
 		printToolsUsage()
 	}
+	return nil
 }
 
 func printToolsUsage() {
@@ -38,35 +39,37 @@ func printToolsUsage() {
 	fmt.Println("  describe <tool_id>   Show one atomic tool contract")
 }
 
-func cmdToolsList() {
+func cmdToolsList() error {
 	items := registry.List()
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"tools": items}})
-		return
+		return nil
 	}
 
 	fmt.Printf("%-22s %-10s %-8s %s\n", "ID", "SERVICE", "RISK", "DESCRIPTION")
 	for _, item := range items {
 		fmt.Printf("%-22s %-10s %-8s %s\n", item.ID, item.Service, item.Risk, item.Description)
 	}
+	return nil
 }
 
-func cmdToolsDescribe(id string) {
+func cmdToolsDescribe(id string) error {
 	item, ok := registry.Find(id)
 	if !ok {
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: false, Code: "tool_not_found", Error: "tool not found"})
-			return
+			return nil
 		}
 		fmt.Printf("Error: tool not found: %s\n", id)
-		return
+		return nil
 	}
 
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: item})
-		return
+		return nil
 	}
 
 	data, _ := json.MarshalIndent(item, "", "  ")
 	fmt.Println(string(data))
+	return nil
 }

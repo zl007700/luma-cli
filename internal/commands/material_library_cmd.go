@@ -7,10 +7,10 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 )
 
-func cmdMaterialLibrary(raw []string) {
+func cmdMaterialLibrary(raw []string) error {
 	if len(raw) < 1 {
 		printMaterialLibraryUsage()
-		return
+		return nil
 	}
 	switch raw[0] {
 	case "path":
@@ -20,9 +20,10 @@ func cmdMaterialLibrary(raw []string) {
 	default:
 		printMaterialLibraryUsage()
 	}
+	return nil
 }
 
-func cmdMaterialLibraryImport(raw []string) {
+func cmdMaterialLibraryImport(raw []string) error {
 	args := cmdutil.Parse(raw)
 	sourcePath := strings.TrimSpace(args.Pos(0))
 	if sourcePath == "" {
@@ -30,20 +31,21 @@ func cmdMaterialLibraryImport(raw []string) {
 	}
 	if sourcePath == "" {
 		fmt.Println("usage: luma-cli material library import <group_dir> [--name <group_name>] [--replace]")
-		return
+		return nil
 	}
 	name := strings.TrimSpace(args.String("name", ""))
 	replace, err := args.Bool("replace", false)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	imported, err := importMaterialGroup(sourcePath, name, replace)
 	if err != nil {
 		fmt.Printf("Error: import material group failed: %v\n", err)
-		return
+		return nil
 	}
 	writeSimpleResult(map[string]any{"group_path": imported})
+	return nil
 }
 
 func printMaterialLibraryUsage() {

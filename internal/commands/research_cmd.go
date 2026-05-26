@@ -12,10 +12,10 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/output"
 )
 
-func cmdResearch(args []string) {
+func cmdResearch(args []string) error {
 	if len(args) < 1 {
 		printResearchUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "run":
@@ -29,9 +29,10 @@ func cmdResearch(args []string) {
 	default:
 		printResearchUsage()
 	}
+	return nil
 }
 
-func cmdResearchRun(raw []string) {
+func cmdResearchRun(raw []string) error {
 	args := cmdutil.Parse(raw)
 	role := strings.TrimSpace(args.String("role", ""))
 	personaName := strings.TrimSpace(args.String("persona", ""))
@@ -44,7 +45,7 @@ func cmdResearchRun(raw []string) {
 		data, err := os.ReadFile(input)
 		if err != nil {
 			printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
-			return
+			return nil
 		}
 		role = strings.TrimSpace(string(data))
 	}
@@ -53,7 +54,7 @@ func cmdResearchRun(raw []string) {
 	}
 	if role == "" {
 		printResearchError("role_required", "usage: luma-cli research run --role <description> [--mode precise|expanded] [--date-range 24h|7d] [--output research.json]\n")
-		return
+		return nil
 	}
 	mode := strings.TrimSpace(args.String("mode", "precise"))
 	dateRange := strings.TrimSpace(args.String("date-range", "7d"))
@@ -61,30 +62,30 @@ func cmdResearchRun(raw []string) {
 	cfg := loadConfig()
 	if cfg == nil {
 		printResearchError("not_logged_in", "Error: not logged in. Run: luma-cli auth login <card_key>\n")
-		return
+		return nil
 	}
 	resp, err := cloud.RunResearch(role, mode, dateRange, cfg.CardKey)
 	if err != nil {
 		printResearchError("research_failed", fmt.Sprintf("Error: research failed: %v\n", err))
-		return
+		return nil
 	}
 	savedPath := ""
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
 			printResearchError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
-			return
+			return nil
 		}
 		if err := writeJSONFile(abs, resp); err != nil {
 			printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-			return
+			return nil
 		}
 		savedPath = abs
 		recordProjectArtifact("research", savedPath, "research.run")
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"response": resp, "output_path": savedPath}})
-		return
+		return nil
 	}
 	fmt.Println("Research completed.")
 	if savedPath != "" {
@@ -93,9 +94,10 @@ func cmdResearchRun(raw []string) {
 	if count, ok := resp.Result["result_count"]; ok {
 		fmt.Printf("Result count: %v\n", count)
 	}
+	return nil
 }
 
-func cmdResearchExport(raw []string) {
+func cmdResearchExport(raw []string) error {
 	args := cmdutil.Parse(raw)
 	inputPath := strings.TrimSpace(args.String("input", ""))
 	if inputPath == "" {
@@ -103,33 +105,33 @@ func cmdResearchExport(raw []string) {
 	}
 	if inputPath == "" {
 		fmt.Println("usage: luma-cli research export --input step0_content_research.json [--output step0_content_research.csv]")
-		return
+		return nil
 	}
 	outputPath := strings.TrimSpace(args.String("output", "step0_content_research.csv"))
 	payload, err := readJSONObject(inputPath)
 	if err != nil {
 		printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
-		return
+		return nil
 	}
 	results := researchResults(payload)
 	abs, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		printResearchError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
-		return
+		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
 		printResearchError("create_output_dir_failed", fmt.Sprintf("Error: create output dir failed: %v\n", err))
-		return
+		return nil
 	}
 	file, err := os.Create(abs)
 	if err != nil {
 		printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-		return
+		return nil
 	}
 	defer file.Close()
 	if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
 		printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-		return
+		return nil
 	}
 	writer := csv.NewWriter(file)
 	headers := []string{"keyword", "title", "author", "likes", "followers", "duration_seconds", "publish_time", "link", "video_id", "content_type", "note"}
@@ -144,10 +146,11 @@ func cmdResearchExport(raw []string) {
 	writer.Flush()
 	if err := writer.Error(); err != nil {
 		printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-		return
+		return nil
 	}
 	recordProjectArtifact("research_table", abs, "research.export")
 	writeSimpleResult(map[string]any{"output_path": abs, "count": len(results)})
+	return nil
 }
 
 func printResearchError(code, message string) {

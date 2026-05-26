@@ -25,10 +25,10 @@ type pipRenderSpec struct {
 	Replace          bool
 }
 
-func cmdPIP(args []string) {
+func cmdPIP(args []string) error {
 	if len(args) < 1 {
 		printPIPUsage()
-		return
+		return nil
 	}
 	switch args[0] {
 	case "scan":
@@ -44,9 +44,10 @@ func cmdPIP(args []string) {
 	default:
 		printPIPUsage()
 	}
+	return nil
 }
 
-func cmdPIPScene(raw []string) {
+func cmdPIPScene(raw []string) error {
 	args := cmdutil.Parse(raw)
 	segmentsPath := strings.TrimSpace(args.String("segments", ""))
 	if segmentsPath == "" {
@@ -54,38 +55,39 @@ func cmdPIPScene(raw []string) {
 	}
 	if segmentsPath == "" {
 		fmt.Println("usage: luma-cli pip scene --segments segments.json [--output step4_scene_units.json]")
-		return
+		return nil
 	}
 	outputPath := args.String("output", "step4_scene_units.json")
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	sceneUnits, err := cloudSceneUnits(segments, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: scene plan failed: %v\n", err)
-		return
+		return nil
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := writeJSONFile(absOut, map[string]any{"scene_units": sceneUnits, "segments": segments}); err != nil {
 		fmt.Printf("Error: write output failed: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("scene_units", absOut, "pip.scene")
 	writeSimpleResult(map[string]any{"output_path": absOut, "scene_count": len(sceneUnits)})
+	return nil
 }
 
-func cmdPIPMatch(raw []string) {
+func cmdPIPMatch(raw []string) error {
 	args := cmdutil.Parse(raw)
 	scenesPath := strings.TrimSpace(args.String("scenes", ""))
 	if scenesPath == "" {
@@ -94,35 +96,35 @@ func cmdPIPMatch(raw []string) {
 	materialsPath := strings.TrimSpace(args.String("materials", ""))
 	if scenesPath == "" || materialsPath == "" {
 		fmt.Println("usage: luma-cli pip match --scenes step4_scene_units.json --materials materials.json [--mode auto|cloud|local] [--output step4_material_matches.json]")
-		return
+		return nil
 	}
 	outputPath := args.String("output", "step4_material_matches.json")
 	mode := strings.ToLower(strings.TrimSpace(args.String("mode", "auto")))
 	maxInserts, err := args.Int("max-inserts", 8)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	sceneUnits, err := loadSceneUnitsForPIP(scenesPath)
 	if err != nil {
 		fmt.Printf("Error: read scenes failed: %v\n", err)
-		return
+		return nil
 	}
 	materials, err := loadMaterialMapsForPIP(materialsPath)
 	if err != nil {
 		fmt.Printf("Error: read materials failed: %v\n", err)
-		return
+		return nil
 	}
 	inserts, modeUsed, err := matchPIPMaterials(sceneUnits, materials, mode, maxInserts)
 	if err != nil {
 		fmt.Printf("Error: material match failed: %v\n", err)
-		return
+		return nil
 	}
 	assignments := buildPIPAssignments(inserts)
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := writeJSONFile(absOut, map[string]any{
 		"scene_units": sceneUnits,
@@ -132,13 +134,14 @@ func cmdPIPMatch(raw []string) {
 		"mode":        modeUsed,
 	}); err != nil {
 		fmt.Printf("Error: write output failed: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("material_matches", absOut, "pip.match")
 	writeSimpleResult(map[string]any{"output_path": absOut, "matched_count": len(inserts), "mode": modeUsed})
+	return nil
 }
 
-func cmdPIPScan(raw []string) {
+func cmdPIPScan(raw []string) error {
 	args := cmdutil.Parse(raw)
 	inputPath := args.Pos(0)
 	if inputPath == "" {
@@ -146,76 +149,77 @@ func cmdPIPScan(raw []string) {
 	}
 	if inputPath == "" {
 		fmt.Println("usage: luma-cli pip scan <material_dir> [--output materials.json]")
-		return
+		return nil
 	}
 	outputPath := args.String("output", "materials.json")
 	materials, err := describeMaterials(inputPath)
 	if err != nil {
 		fmt.Printf("Error: pip scan failed: %v\n", err)
-		return
+		return nil
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := writeJSONFile(absOut, map[string]any{"materials": materials}); err != nil {
 		fmt.Printf("Error: write output failed: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("materials", absOut, "pip.scan")
 	writeSimpleResult(map[string]any{"output_path": absOut, "count": len(materials)})
+	return nil
 }
 
-func cmdPIPPlan(raw []string) {
+func cmdPIPPlan(raw []string) error {
 	args := cmdutil.Parse(raw)
 	segmentsPath := strings.TrimSpace(args.String("segments", ""))
 	materialsPath := strings.TrimSpace(args.String("materials", ""))
 	if segmentsPath == "" || materialsPath == "" {
 		fmt.Println("usage: luma-cli pip plan --segments segments.json --materials materials.json [--output step5_picture_in_picture_plan.json]")
-		return
+		return nil
 	}
 	outputPath := args.String("output", "step5_picture_in_picture_plan.json")
 	landscapeRatio, err := args.Float("landscape-height-ratio", 0.32)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	matchMode := strings.ToLower(strings.TrimSpace(args.String("match-mode", "auto")))
 	maxInserts, err := args.Int("max-inserts", 8)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {
 		fmt.Printf("Error: read segments failed: %v\n", err)
-		return
+		return nil
 	}
 	materials, err := loadMaterialsForPIP(materialsPath)
 	if err != nil {
 		fmt.Printf("Error: read materials failed: %v\n", err)
-		return
+		return nil
 	}
 	if len(segments) == 0 || len(materials) == 0 {
 		fmt.Println("Error: segments and materials cannot be empty")
-		return
+		return nil
 	}
 	sceneUnits, err := cloudSceneUnits(segments, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: scene plan failed: %v\n", err)
-		return
+		return nil
 	}
 	materialMaps := listMapFromAny(materials)
 	inserts, modeUsed, err := matchPIPMaterials(listMapFromAny(sceneUnits), materialMaps, matchMode, maxInserts)
 	if err != nil {
 		fmt.Printf("Error: material match failed: %v\n", err)
-		return
+		return nil
 	}
 	assignments := buildPIPAssignments(inserts)
 	plan := map[string]any{
@@ -242,28 +246,29 @@ func cmdPIPPlan(raw []string) {
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := writeJSONFile(absOut, plan); err != nil {
 		fmt.Printf("Error: write output failed: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("pip_plan", absOut, "pip.plan")
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"output_path": absOut, "scene_count": len(sceneUnits), "matched_count": len(inserts)}})
-		return
+		return nil
 	}
 	fmt.Printf("Plan saved to: %s\n", absOut)
 	fmt.Printf("Scenes: %d, matched inserts: %d\n", len(sceneUnits), len(inserts))
+	return nil
 }
 
-func cmdPIPRender(raw []string) {
+func cmdPIPRender(raw []string) error {
 	parsed := cmdutil.Parse(raw)
 	videoPath := parsed.Pos(0)
 	planPath := parsed.String("plan", "")
 	if videoPath == "" || planPath == "" {
 		fmt.Println("usage: luma-cli pip render <video> --plan step5_picture_in_picture_plan.json [--output step5_picture_in_picture.mp4]")
-		return
+		return nil
 	}
 	outputPath := parsed.String("output", "step5_picture_in_picture.mp4")
 	landscapeRatio := 0.0
@@ -273,19 +278,20 @@ func cmdPIPRender(raw []string) {
 	}
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	absOut, err := absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: bad output path: %v\n", err)
-		return
+		return nil
 	}
 	if err := renderPIPVideo(videoPath, planPath, absOut, landscapeRatio); err != nil {
 		fmt.Printf("Error: pip render failed: %v\n", err)
-		return
+		return nil
 	}
 	recordProjectArtifact("pip", absOut, "pip.render")
 	writeSimpleResult(map[string]any{"output_path": absOut, "plan_path": planPath})
+	return nil
 }
 
 func printPIPUsage() {

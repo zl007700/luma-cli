@@ -20,16 +20,16 @@ type assetView struct {
 	ObjectKey string `json:"object_key,omitempty"`
 }
 
-func cmdAsset(args []string) {
+func cmdAsset(args []string) error {
 	if len(args) < 1 {
 		printAssetUsage()
-		return
+		return nil
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 
 	switch args[0] {
@@ -39,13 +39,13 @@ func cmdAsset(args []string) {
 		filePath := parsed.Pos(0)
 		if filePath == "" {
 			fmt.Println("usage: luma-cli asset upload <file> [--group <name>]")
-			return
+			return nil
 		}
 		group := parsed.String("group", "default")
 		objectKey, err := cloud.UploadFile(filePath, cfg.CardKey, group)
 		if err != nil {
 			fmt.Printf("Error: upload failed: %v\n", err)
-			return
+			return nil
 		}
 		view := assetView{
 			Name:      atom.AssetFriendlyName(objectKey),
@@ -57,7 +57,7 @@ func cmdAsset(args []string) {
 				view.ObjectKey = ""
 			}
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: view})
-			return
+			return nil
 		}
 		fmt.Printf("Uploaded: %s\n", view.Name)
 		fmt.Printf("Group: %s\n", group)
@@ -75,11 +75,11 @@ func cmdAsset(args []string) {
 		items, err := cloud.AssetList(group, cfg.CardKey)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
-			return
+			return nil
 		}
 		if len(items) == 0 {
 			fmt.Println("No assets found.")
-			return
+			return nil
 		}
 		views := make([]assetView, 0, len(items))
 		for _, item := range items {
@@ -102,7 +102,7 @@ func cmdAsset(args []string) {
 		}
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"items": views}})
-			return
+			return nil
 		}
 		if verbose {
 			fmt.Printf("%-8s %-20s %s\n", "TYPE", "NAME", "OBJECT_KEY")
@@ -110,7 +110,7 @@ func cmdAsset(args []string) {
 			for _, item := range views {
 				fmt.Printf("%-8s %-20s %s\n", item.Type, item.Name, item.ObjectKey)
 			}
-			return
+			return nil
 		}
 		fmt.Printf("%-8s %s\n", "TYPE", "NAME")
 		fmt.Println(strings.Repeat("-", 32))
@@ -127,34 +127,34 @@ func cmdAsset(args []string) {
 		}
 		if objectName == "" {
 			fmt.Println("usage: luma-cli asset understand <object_name> [--group <name>] [--output meta.json]")
-			return
+			return nil
 		}
 		result, err := cloud.UnderstandResource(group, objectName, cfg.CardKey)
 		if err != nil {
 			fmt.Printf("Error: understand failed: %v\n", err)
-			return
+			return nil
 		}
 		outputPath := parsed.String("output", "")
 		if outputPath != "" {
 			abs, err := absoluteOutputPath(outputPath)
 			if err != nil {
 				fmt.Printf("Error: bad output path: %v\n", err)
-				return
+				return nil
 			}
 			if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
 				fmt.Printf("Error: create output dir failed: %v\n", err)
-				return
+				return nil
 			}
 			data, _ := json.MarshalIndent(result, "", "  ")
 			if err := os.WriteFile(abs, data, 0644); err != nil {
 				fmt.Printf("Error: write output failed: %v\n", err)
-				return
+				return nil
 			}
 			result["output_path"] = abs
 		}
 		if runtimeOpts.JSON {
 			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: result})
-			return
+			return nil
 		}
 		fmt.Println("Analyzed resource.")
 		if outputPath != "" {
@@ -164,6 +164,7 @@ func cmdAsset(args []string) {
 	default:
 		fmt.Printf("unknown asset subcommand: %s\n", args[0])
 	}
+	return nil
 }
 
 func printAssetUsage() {

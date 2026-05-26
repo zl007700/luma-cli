@@ -16,7 +16,7 @@ import (
 
 const defaultVoiceName = "男声3"
 
-func cmdTTS(args []string) {
+func cmdTTS(args []string) error {
 	parsed := cmdutil.Parse(args)
 	filePath := parsed.String("file", "")
 	var text string
@@ -24,12 +24,12 @@ func cmdTTS(args []string) {
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			fmt.Printf("Error: read file %s: %v\n", filePath, err)
-			return
+			return nil
 		}
 		text = strings.TrimSpace(string(data))
 		if text == "" {
 			fmt.Printf("Error: file %s is empty\n", filePath)
-			return
+			return nil
 		}
 	} else {
 		text = parsed.Pos(0)
@@ -51,31 +51,31 @@ func cmdTTS(args []string) {
 		fmt.Println("")
 		fmt.Println("  JSON mode (luma-cli --json tts ...) outputs:")
 		fmt.Println("    task_id, audio_object_key, result_object_key, output_url, output_path")
-		return
+		return nil
 	}
 
 	voiceName := parsed.String("voice", defaultVoiceName)
 	speechRate, err := parsed.Float("speech-rate", 1.1)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	trimLongSilence, err := parsed.Bool("trim-long-silence", false)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 
 	voiceKey, err := atom.ResolveAssetKey("voice", voiceName, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	proj := resolveProjectByName("")
@@ -88,7 +88,7 @@ func cmdTTS(args []string) {
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: invalid output path: %v\n", err)
-		return
+		return nil
 	}
 
 	if !runtimeOpts.JSON {
@@ -111,7 +111,7 @@ func cmdTTS(args []string) {
 		} else {
 			fmt.Printf("Error: %v\n", err)
 		}
-		return
+		return nil
 	}
 
 	if proj != nil && result.AudioObjectKey != "" {
@@ -143,7 +143,7 @@ func cmdTTS(args []string) {
 			OK:   true,
 			Data: map[string]any{"task_id": result.TaskID, "audio_object_key": result.AudioObjectKey, "result_object_key": result.ResultObjectKey, "output_url": result.OutputURL, "output_path": outputPath},
 		})
-		return
+		return nil
 	}
 
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
@@ -160,9 +160,10 @@ func cmdTTS(args []string) {
 	} else {
 		fmt.Printf("\nDone! Audio object key: %s\n", result.AudioObjectKey)
 	}
+	return nil
 }
 
-func cmdLipSync(args []string) {
+func cmdLipSync(args []string) error {
 	parsed := cmdutil.Parse(args)
 	avatar := parsed.String("avatar", "")
 	audioPath := parsed.String("audio", "")
@@ -171,7 +172,7 @@ func cmdLipSync(args []string) {
 	randomStart, err := parsed.Bool("random-start", true)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	if avatar == "" {
@@ -191,20 +192,20 @@ func cmdLipSync(args []string) {
 		fmt.Println("    --timeout <seconds>         Wait timeout for cloud task (default: 600)")
 		fmt.Println("")
 		fmt.Println("  List avatars: luma-cli asset list roles")
-		return
+		return nil
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 
 	// Resolve AvatarKey from friendly name or object key.
 	avatarKey, err := atom.ResolveAssetKey("video", avatar, cfg.CardKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	// Establish AudioKey: explicit flag, then project LatestTTSKey, then upload.
@@ -215,17 +216,17 @@ func cmdLipSync(args []string) {
 		} else if audioPath != "" {
 			if _, err := os.Stat(audioPath); err != nil {
 				fmt.Printf("Error: audio file not found: %s\n", audioPath)
-				return
+				return nil
 			}
 			uploadResult, err := cloud.UploadFile(audioPath, cfg.CardKey, "tts_output")
 			if err != nil {
 				fmt.Printf("Error: upload audio failed: %v\n", err)
-				return
+				return nil
 			}
 			audioKey = uploadResult
 		} else {
 			fmt.Println("Error: --audio is required when no prior TTS was made in this project")
-			return
+			return nil
 		}
 	}
 
@@ -238,33 +239,33 @@ func cmdLipSync(args []string) {
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: invalid output path: %v\n", err)
-		return
+		return nil
 	}
 
 	guidanceScale, err := parsed.Float("guidance-scale", 1.0)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	numInferenceSteps, err := parsed.Int("num-inference-steps", 15)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	noSuperRes, err := parsed.Bool("no-superres", false)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	superresScale, err := parsed.Int("superres-scale", 2)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	timeoutSec, err := parsed.Int("timeout", 600)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	multiShotJSONPath := parsed.String("multi-shot-json", "")
 
@@ -284,7 +285,7 @@ func cmdLipSync(args []string) {
 		multiShotPayload, err := loadJSONMap(multiShotJSONPath)
 		if err != nil {
 			fmt.Printf("Error: read multi-shot json failed: %v\n", err)
-			return
+			return nil
 		}
 		opts.MultiShot = multiShotPayload
 	}
@@ -296,7 +297,7 @@ func cmdLipSync(args []string) {
 	result, err := atom.RunLipSync(opts)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 
@@ -308,6 +309,7 @@ func cmdLipSync(args []string) {
 
 	recordStep(proj, "lipsync", audioKey, outputPath)
 	fmt.Printf("\nDone! Saved to: %s\n", outputPath)
+	return nil
 }
 
 func loadJSONMap(filePath string) (map[string]any, error) {

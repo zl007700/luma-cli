@@ -8,7 +8,7 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/skillsync"
 )
 
-func cmdUpdate(args []string) {
+func cmdUpdate(args []string) error {
 	opts := parseUpdateOptions(args)
 	target := opts.Version
 	if target == "" || target == "latest" {
@@ -31,12 +31,12 @@ func cmdUpdate(args []string) {
 		Stderr:  os.Stderr,
 	}); err != nil {
 		fmt.Printf("Error: failed to update luma-cli: %v\n", err)
-		return
+		return nil
 	}
 
 	if opts.SkipSkills {
 		fmt.Println("Skipped skills sync.")
-		return
+		return nil
 	}
 
 	syncOpts := skillsync.SyncOptions{
@@ -54,7 +54,7 @@ func cmdUpdate(args []string) {
 	if err := skillsync.RunSkillsAdd(syncOpts); err != nil {
 		fmt.Printf("Error: updated CLI, but failed to sync skills: %v\n", err)
 		fmt.Println("Try: luma-cli skills sync")
-		return
+		return nil
 	}
 	stampVersion := version
 	if target != "" && target != "latest" {
@@ -65,9 +65,10 @@ func cmdUpdate(args []string) {
 	}
 	if err := skillsync.WriteStamp(stampVersion, syncOpts.Source); err != nil {
 		fmt.Printf("Warning: synced skills, but failed to write stamp: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Println("Done. luma-cli and Luma skills are updated.")
+	return nil
 }
 
 type updateOptions struct {

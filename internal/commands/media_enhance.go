@@ -11,29 +11,29 @@ import (
 	"github.com/luma-cli/lumer-cli/project"
 )
 
-func cmdEnhance(args []string) {
+func cmdEnhance(args []string) error {
 	parsed := cmdutil.Parse(args)
 	if len(parsed.Positionals) < 1 {
 		fmt.Println("usage: luma-cli enhance <video> [--scale 2|4] [--output <path>]")
-		return
+		return nil
 	}
 
 	videoPath := parsed.Pos(0)
 	if _, err := os.Stat(videoPath); err != nil {
 		fmt.Printf("Error: file not found: %s\n", videoPath)
-		return
+		return nil
 	}
 
 	scale, err := parsed.Int("scale", 2)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 
 	cfg := loadConfig()
 	if cfg == nil {
 		fmt.Println("Error: not logged in. Run: luma-cli auth login <card_key>")
-		return
+		return nil
 	}
 
 	proj := resolveProjectByName("")
@@ -49,7 +49,7 @@ func cmdEnhance(args []string) {
 	outputPath, err = absoluteOutputPath(outputPath)
 	if err != nil {
 		fmt.Printf("Error: invalid output path: %v\n", err)
-		return
+		return nil
 	}
 
 	fmt.Println("Uploading video...")
@@ -63,11 +63,12 @@ func cmdEnhance(args []string) {
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		return
+		return nil
 	}
 	fmt.Printf("  Uploaded: %s\n", result.ObjectKey)
 	fmt.Printf("  Task ID: %s\n", result.TaskID)
 
 	fmt.Printf("\nDone! Saved to: %s\n", outputPath)
 	recordStep(proj, "enhance", videoPath, outputPath)
+	return nil
 }

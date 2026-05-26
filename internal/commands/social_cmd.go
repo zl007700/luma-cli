@@ -12,29 +12,30 @@ import (
 	"github.com/luma-cli/lumer-cli/internal/output"
 )
 
-func cmdSocial(args []string) {
+func cmdSocial(args []string) error {
 	if len(args) < 1 {
 		printSocialUsage()
-		return
+		return nil
 	}
 	if args[0] == "download" {
 		cmdSocialDownload(args[1:])
-		return
+		return nil
 	}
 	cmdSocialDownload(args)
+	return nil
 }
 
-func cmdSocialDownload(args []string) {
+func cmdSocialDownload(args []string) error {
 	parsed := cmdutil.Parse(args)
 	if len(parsed.Positionals) < 1 {
 		printSocialUsage()
-		return
+		return nil
 	}
 
 	shareLink := parsed.Pos(0)
 	if !strings.Contains(shareLink, "douyin.com") && !strings.Contains(shareLink, "v.douyin.com") {
 		writeSocialError("invalid_douyin_link", fmt.Sprintf("input does not look like a Douyin share link: %s", shareLink))
-		return
+		return nil
 	}
 
 	outputPath := parsed.String("output", "")
@@ -50,7 +51,7 @@ func cmdSocialDownload(args []string) {
 	result, err := atom.DownloadSocialVideo(shareLink, outputPath, cardKey)
 	if err != nil {
 		writeSocialError("social_download_failed", err.Error())
-		return
+		return nil
 	}
 
 	data := map[string]any{
@@ -61,7 +62,7 @@ func cmdSocialDownload(args []string) {
 	}
 	if runtimeOpts.JSON {
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data})
-		return
+		return nil
 	}
 
 	fmt.Printf("Done! Saved to: %s\n", result.VideoPath)
@@ -71,6 +72,7 @@ func cmdSocialDownload(args []string) {
 	}
 
 	writeProjectDouyinDownloadResult(result.VideoPath, result.Title)
+	return nil
 }
 
 func printSocialUsage() {
