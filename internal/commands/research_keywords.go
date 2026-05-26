@@ -31,7 +31,8 @@ func cmdResearchKeywords(raw []string) error {
 	rows, summary := extractResearchKeywords(researchResults(payload))
 	savedPath := ""
 	if outputPath != "" {
-		abs, err := absoluteOutputPath(outputPath)
+		outputPath = resolveProjectOutput(resolveProjectByName(""), outputPath)
+			abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
 			return output.ErrValidation("bad output path: %v", err)
 			return nil
@@ -45,7 +46,8 @@ func cmdResearchKeywords(raw []string) error {
 	}
 	csvSavedPath := ""
 	if csvPath != "" {
-		abs, err := absoluteOutputPath(csvPath)
+		csvPath = resolveProjectOutput(resolveProjectByName(""), csvPath)
+			abs, err := absoluteOutputPath(csvPath)
 		if err != nil {
 			return output.ErrValidation("bad csv path: %v", err)
 			return nil
