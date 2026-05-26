@@ -25,7 +25,7 @@ func cmdResearchKeywords(raw []string) error {
 	csvPath := strings.TrimSpace(args.String("csv", ""))
 	payload, err := readJSONObject(inputPath)
 	if err != nil {
-		printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
+		return output.ErrSystem("read input failed: %v", err)
 		return nil
 	}
 	rows, summary := extractResearchKeywords(researchResults(payload))
@@ -33,11 +33,11 @@ func cmdResearchKeywords(raw []string) error {
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
-			printResearchError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
+			return output.ErrValidation("bad output path: %v", err)
 			return nil
 		}
 		if err := writeJSONFile(abs, map[string]any{"keywords": rows, "summary": summary}); err != nil {
-			printResearchError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
+			return output.ErrSystem("write output failed: %v", err)
 			return nil
 		}
 		savedPath = abs
@@ -47,11 +47,11 @@ func cmdResearchKeywords(raw []string) error {
 	if csvPath != "" {
 		abs, err := absoluteOutputPath(csvPath)
 		if err != nil {
-			printResearchError("bad_output_path", fmt.Sprintf("Error: bad csv path: %v\n", err))
+			return output.ErrValidation("bad csv path: %v", err)
 			return nil
 		}
 		if err := writeResearchKeywordsCSV(abs, rows); err != nil {
-			printResearchError("write_output_failed", fmt.Sprintf("Error: write csv failed: %v\n", err))
+			return output.ErrSystem("write csv failed: %v", err)
 			return nil
 		}
 		csvSavedPath = abs

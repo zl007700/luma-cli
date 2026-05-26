@@ -55,7 +55,7 @@ func cmdResearchPersona(raw []string) error {
 		}
 		persona, ok := loadPersonaByName(name)
 		if !ok {
-			printResearchError("persona_not_found", fmt.Sprintf("Error: persona not found: %s\n", name))
+			return output.ErrValidation("persona not found: %s", name)
 			return nil
 		}
 		if runtimeOpts.JSON {
@@ -74,7 +74,7 @@ func cmdResearchPersona(raw []string) error {
 		if input := strings.TrimSpace(args.String("input", "")); input != "" {
 			data, err := os.ReadFile(input)
 			if err != nil {
-				printResearchError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
+				return output.ErrSystem("read input failed: %v", err)
 				return nil
 			}
 			role = strings.TrimSpace(string(data))
