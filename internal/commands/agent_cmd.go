@@ -44,28 +44,23 @@ func cmdAgentRun(raw []string) error {
 	args := cmdutil.Parse(raw)
 	ability := strings.TrimSpace(args.Pos(0))
 	if ability == "" {
-		printAgentError("ability_required", "usage: luma-cli agent run <ability> --input payload.json [--output result.json]\n")
-		return nil
+		return output.ErrValidation("ability is required")
 	}
 	path := agentAbilityPaths[ability]
 	if path == "" {
-		printAgentError("unknown_ability", fmt.Sprintf("Error: unknown agent ability: %s\n", ability))
-		return nil
+		return output.ErrValidation("unknown agent ability: %s", ability)
 	}
 	inputPath := strings.TrimSpace(args.String("input", ""))
 	if inputPath == "" {
-		printAgentError("input_required", "Error: --input payload.json is required\n")
-		return nil
+		return output.ErrValidation("--input payload.json is required")
 	}
 	payload, err := readAgentPayload(inputPath)
 	if err != nil {
-		printAgentError("read_input_failed", fmt.Sprintf("Error: read input failed: %v\n", err))
-		return nil
+		return output.ErrSystem("read input failed: %v", err)
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		printAgentError("not_logged_in", "Error: not logged in. Run: luma-cli auth login <card_key>\n")
-		return nil
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
 	}
 	input, _ := payload["input"].(map[string]any)
 	if input == nil {
@@ -74,24 +69,20 @@ func cmdAgentRun(raw []string) error {
 	options, _ := payload["options"].(map[string]any)
 	resp, err := cloud.RunAgentAbility(path, input, options, cfg.CardKey)
 	if err != nil {
-		printAgentError("agent_failed", fmt.Sprintf("Error: agent ability failed: %v\n", err))
-		return nil
+		return output.ErrNetwork("agent ability failed: %v", err)
 	}
 	outputPath := strings.TrimSpace(args.String("output", ""))
 	if outputPath != "" {
 		abs, err := absoluteOutputPath(outputPath)
 		if err != nil {
-			printAgentError("bad_output_path", fmt.Sprintf("Error: bad output path: %v\n", err))
-			return nil
+			return output.ErrValidation("bad output path: %v", err)
 		}
 		if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
-			printAgentError("create_output_dir_failed", fmt.Sprintf("Error: create output dir failed: %v\n", err))
-			return nil
+			return output.ErrSystem("create output dir failed: %v", err)
 		}
 		data, _ := json.MarshalIndent(resp, "", "  ")
 		if err := os.WriteFile(abs, data, 0644); err != nil {
-			printAgentError("write_output_failed", fmt.Sprintf("Error: write output failed: %v\n", err))
-			return nil
+			return output.ErrSystem("write output failed: %v", err)
 		}
 		outputPath = abs
 	}
