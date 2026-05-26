@@ -178,9 +178,12 @@ func addBGM() {
 	cmd := &cobra.Command{
 		Use:   "bgm mix <video>",
 		Short: "Mix background music",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
-			return runBGM(args[0], bgmValue, outputPath, voiceVol, bgmVol)
+			if args[0] != "mix" {
+				return fmt.Errorf("expected: bgm mix <video>")
+			}
+			return runBGM(args[1], bgmValue, outputPath, voiceVol, bgmVol)
 		},
 	}
 	cmd.Flags().StringVar(&bgmValue, "bgm", "", "BGM file or cloud resource ID")
