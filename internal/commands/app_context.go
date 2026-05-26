@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -39,4 +41,17 @@ func absoluteOutputPath(outputPath string) (string, error) {
 		return filepath.Clean(outputPath), nil
 	}
 	return filepath.Abs(outputPath)
+}
+
+// ensureOutputDir resolves an output path to absolute and creates its
+// parent directory. Returns the absolute path on success.
+func ensureOutputDir(outputPath string) (string, error) {
+	abs, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("bad output path: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
+		return "", fmt.Errorf("create output dir failed: %w", err)
+	}
+	return abs, nil
 }

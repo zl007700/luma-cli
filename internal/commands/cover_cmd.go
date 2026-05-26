@@ -39,13 +39,9 @@ func cmdCoverFrame(raw []string) {
 	}
 	outputPath := parsed.String("output", "step6_cover_frame.png")
 	seek := parsed.String("time", "1.0")
-	absOut, err := absoluteOutputPath(outputPath)
+	absOut, err := ensureOutputDir(outputPath)
 	if err != nil {
-		fmt.Printf("Error: bad output path: %v\n", err)
-		return
-	}
-	if err := os.MkdirAll(filepath.Dir(absOut), 0755); err != nil {
-		fmt.Printf("Error: create output dir failed: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 	ffmpeg, err := installedFFmpegPath()
@@ -117,13 +113,9 @@ func cmdCoverGenerate(raw []string) {
 		return
 	}
 	outputDir := parsed.String("output-dir", "covers")
-	absOutputDir, err := absoluteOutputPath(outputDir)
+	absOutputDir, err := ensureOutputDir(outputDir)
 	if err != nil {
-		fmt.Printf("Error: bad output dir: %v\n", err)
-		return
-	}
-	if err := os.MkdirAll(absOutputDir, 0755); err != nil {
-		fmt.Printf("Error: create output dir failed: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 

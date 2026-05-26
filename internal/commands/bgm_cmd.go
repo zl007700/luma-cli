@@ -2,9 +2,7 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
 )
@@ -38,13 +36,9 @@ func cmdBGM(args []string) {
 		fmt.Printf("Error: resolve bgm failed: %v\n", err)
 		return
 	}
-	absOut, err := absoluteOutputPath(outputPath)
+	absOut, err := ensureOutputDir(outputPath)
 	if err != nil {
-		fmt.Printf("Error: bad output path: %v\n", err)
-		return
-	}
-	if err := os.MkdirAll(filepath.Dir(absOut), 0755); err != nil {
-		fmt.Printf("Error: create output dir failed: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 	ffmpeg, err := installedFFmpegPath()
