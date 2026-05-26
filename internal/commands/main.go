@@ -66,41 +66,8 @@ func printUsage() {
 }
 
 func Run(args []string) int {
-	if len(args) < 2 {
-		printUsage()
-		return 1
-	}
-
 	runtimeOpts = runtimeOptions{}
-	commandArgs := args[1:]
-	if commandArgs[0] == "--json" {
-		runtimeOpts.JSON = true
-		commandArgs = commandArgs[1:]
-		if len(commandArgs) == 0 {
-			printUsage()
-			return 1
-		}
-	}
-
-	setupNotices()
-
-	switch commandArgs[0] {
-	case "version":
-		fmt.Printf("luma-cli version %s\n", version)
-	case "help":
-		printUsage()
-	default:
-		if spec, ok := commandRegistry()[commandArgs[0]]; ok {
-			if err := spec.Handler(commandArgs[1:]); err != nil {
-				return output.WriteError(err)
-			}
-			return 0
-		}
-		fmt.Printf("unknown command: %s\n\n", commandArgs[0])
-		printUsage()
-		return 1
-	}
-	return 0
+	return Execute(args)
 }
 
 // setupNotices wires the skills drift check into output.PendingNotice.
