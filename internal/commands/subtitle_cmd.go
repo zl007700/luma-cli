@@ -15,12 +15,14 @@ func cmdSubtitle(args []string) error {
 		printSubtitleUsage()
 		return nil
 	}
-
 	opts := parseSubtitleArgs(args)
 	if opts == nil {
 		return nil
 	}
+	return cmdSubtitleMain(opts)
+}
 
+func cmdSubtitleMain(opts *subtitleOptions) error {
 	// Load config
 	var cfgErr error
 	cfg, cfgErr := requireConfig()

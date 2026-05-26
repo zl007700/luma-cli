@@ -15,11 +15,14 @@ func cmdBGM(args []string) error {
 	}
 	parsed := cmdutil.Parse(args[1:])
 	videoPath := parsed.Pos(0)
-	bgmValue := parsed.String("bgm", "")
 	if videoPath == "" {
 		fmt.Println("usage: luma-cli bgm mix <video> [--bgm <file_or_resource_id>] [--output <mp4>]")
 		return nil
 	}
+	return runBGM(videoPath, parsed.String("bgm", ""), parsed.String("output", "step6_bgm.mp4"), parsed.String("voice-volume", "1.0"), parsed.String("bgm-volume", "0.25"))
+}
+
+func runBGM(videoPath, bgmValue, outputPath, voiceVolume, bgmVolume string) error {
 	cfg := loadConfig()
 	defaults := loadClientDefaults(cfg)
 	if bgmValue == "" {
@@ -28,9 +31,6 @@ func cmdBGM(args []string) error {
 	if bgmValue == "" {
 		return output.ErrValidation("no BGM specified and no default BGM configured")
 	}
-	outputPath := parsed.String("output", "step6_bgm.mp4")
-	voiceVolume := parsed.String("voice-volume", formatVolume(defaults.BGM.VoiceVolume, "1.0"))
-	bgmVolume := parsed.String("bgm-volume", formatVolume(defaults.BGM.BGMVolume, "0.25"))
 	bgmPath, err := resolveLocalCachedOrCloudResource(bgmValue, cfg)
 	if err != nil {
 		return output.ErrNetwork("resolve bgm failed: %v", err)
@@ -50,11 +50,9 @@ func cmdBGM(args []string) error {
 	if data, err := cmd.CombinedOutput(); err != nil {
 		return output.ErrSystem("ffmpeg bgm mix failed: %v\n%s", err, string(data))
 	}
-	// Rename output to include content hash for traceability.
 	if hashed, err := hashSuffixFile(absOut); err == nil {
 		absOut = hashed
 	}
-
 	recordProjectArtifact("bgm", absOut, "bgm.mix")
 	writeSimpleResult(map[string]any{"output_path": absOut, "bgm_path": bgmPath})
 	return nil
