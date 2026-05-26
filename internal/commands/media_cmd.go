@@ -193,7 +193,7 @@ func cmdLipSync(args []string) error {
 	}
 
 	// Resolve AvatarKey from friendly name or object key.
-	avatarKey, err := atom.ResolveAssetKey("video", avatar, cfg.CardKey)
+	avatarKey, err := atom.ResolveAssetKey("roles", avatar, cfg.CardKey)
 	if err != nil {
 		return output.ErrSystem("%v\n", err)
 	}
