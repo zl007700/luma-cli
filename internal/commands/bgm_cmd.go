@@ -35,6 +35,8 @@ func cmdBGM(args []string) error {
 	if err != nil {
 		return output.ErrNetwork("resolve bgm failed: %v", err)
 	}
+	proj := resolveProjectByName("")
+	outputPath = resolveProjectOutput(proj, outputPath)
 	absOut, err := ensureOutputDir(outputPath)
 	if err != nil {
 		return output.ErrSystem("%v", err)
