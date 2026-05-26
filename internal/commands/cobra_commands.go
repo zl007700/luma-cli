@@ -190,29 +190,50 @@ func addBGM() {
 	rootCmd.AddCommand(cmd)
 }
 
-func addCover()    { rootCmd.AddCommand(wrapCmd("cover", "Cover frame and image rendering", cmdCover)) }
-func addPIP()      { rootCmd.AddCommand(wrapCmd("pip", "Picture-in-picture", cmdPIP)) }
-func addMaterial() { rootCmd.AddCommand(wrapCmd("material", "Material management", cmdMaterial)) }
-func addResearch() { rootCmd.AddCommand(wrapCmd("research", "Content research", cmdResearch)) }
-func addProject()  { rootCmd.AddCommand(wrapCmd("project", "Project management", cmdProject)) }
-func addAuth()     { rootCmd.AddCommand(wrapCmd("auth", "Authentication", cmdAuth)) }
-func addVoice()    { rootCmd.AddCommand(wrapCmd("voice", "Voice management", cmdVoice)) }
-func addAgent()    { rootCmd.AddCommand(wrapCmd("agent", "Run agent abilities", cmdAgent)) }
-func addTools()    { rootCmd.AddCommand(wrapCmd("tools", "Tool discovery", cmdTools)) }
-func addSkills()   { rootCmd.AddCommand(wrapCmd("skills", "Skills management", cmdSkills)) }
-func addUpdate()   { rootCmd.AddCommand(wrapCmd("update", "Update CLI", cmdUpdate)) }
-func addSocial()   { rootCmd.AddCommand(wrapCmd("social", "Social media download", cmdSocial)) }
-func addDownload() { rootCmd.AddCommand(wrapCmd("download", "Download files", cmdDownload)) }
-func addRuntime()  { rootCmd.AddCommand(wrapCmd("runtime", "Runtime management", cmdRuntime)) }
-func addResource() { rootCmd.AddCommand(wrapCmd("resource", "Resource management", cmdResource)) }
-func addDefaults() { rootCmd.AddCommand(wrapCmd("defaults", "Show defaults", cmdDefaults)) }
-func addScript()   { rootCmd.AddCommand(wrapCmd("script", "Script helpers", cmdScript)) }
-func addTask()     { rootCmd.AddCommand(wrapCmd("task", "Task status", cmdTask)) }
-func addDouyin()   { rootCmd.AddCommand(wrapCmd("douyin", "Douyin helpers", cmdDouyin)) }
-func addViral()    { rootCmd.AddCommand(wrapCmd("viral", "Viral copy helpers", cmdViral)) }
-func addAlign()    { rootCmd.AddCommand(wrapCmd("align", "Align subtitles", cmdAlign)) }
+func addCover()    { rootCmd.AddCommand(nativeCmd("cover", "Cover frame and image rendering", cmdCover)) }
+func addPIP()      { rootCmd.AddCommand(nativeCmd("pip", "Picture-in-picture", cmdPIP)) }
+func addMaterial() { rootCmd.AddCommand(nativeCmd("material", "Material management", cmdMaterial)) }
+func addResearch() { rootCmd.AddCommand(nativeCmd("research", "Content research", cmdResearch)) }
+func addProject()  { rootCmd.AddCommand(nativeCmd("project", "Project management", cmdProject)) }
+func addAuth()     { rootCmd.AddCommand(nativeCmd("auth", "Authentication", cmdAuth)) }
+func addVoice()    { rootCmd.AddCommand(nativeCmd("voice", "Voice management", cmdVoice)) }
+func addAgent()    { rootCmd.AddCommand(nativeCmd("agent", "Run agent abilities", cmdAgent)) }
+func addTools()    { rootCmd.AddCommand(nativeCmd("tools", "Tool discovery", cmdTools)) }
+func addSkills()   { rootCmd.AddCommand(nativeCmd("skills", "Skills management", cmdSkills)) }
+func addUpdate()   { rootCmd.AddCommand(nativeCmd("update", "Update CLI", cmdUpdate)) }
+func addSocial()   { rootCmd.AddCommand(nativeCmd("social", "Social media download", cmdSocial)) }
+func addDownload() {
+	rootCmd.AddCommand(&cobra.Command{
+		Use: "download <url> [output_file]", Short: "Download files",
+		RunE: func(c *cobra.Command, args []string) error {
+			url := ""
+			out := "download.mp4"
+			if len(args) > 0 {
+				url = args[0]
+			}
+			if len(args) > 1 {
+				out = args[1]
+			}
+			return runDownload(url, out)
+		},
+	})
+}
+func addRuntime()  { rootCmd.AddCommand(nativeCmd("runtime", "Runtime management", cmdRuntime)) }
+func addResource() { rootCmd.AddCommand(nativeCmd("resource", "Resource management", cmdResource)) }
+func addDefaults() {
+	rootCmd.AddCommand(&cobra.Command{
+		Use: "defaults show", Short: "Show defaults",
+		RunE: func(c *cobra.Command, args []string) error { return cmdDefaults([]string{"show"}) },
+	})
+}
+func addScript()   { rootCmd.AddCommand(nativeCmd("script", "Script helpers", cmdScript)) }
+func addTask()   { rootCmd.AddCommand(nativeCmd("task", "Task status", cmdTask)) }
+func addDouyin() { rootCmd.AddCommand(nativeCmd("douyin", "Douyin helpers", cmdDouyin)) }
+func addViral()  { rootCmd.AddCommand(nativeCmd("viral", "Viral copy helpers", cmdViral)) }
+func addAlign()  { rootCmd.AddCommand(nativeCmd("align", "Align subtitles", cmdAlign)) }
 
-func wrapCmd(use, short string, fn commandHandler) *cobra.Command {
+func nativeCmd(use, short string, fn commandHandler) *cobra.Command {
 	return &cobra.Command{Use: use, Short: short, DisableFlagParsing: true,
 		RunE: func(c *cobra.Command, args []string) error { return fn(args) }}
 }
+
