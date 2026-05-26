@@ -154,54 +154,44 @@ func cmdCoverGenerate(raw []string) {
 	}
 
 	fontRef := parsed.String("font", strings.TrimSpace(defaults.Cover.Font))
-	titleFontRef := parsed.String("title-font", fontRef)
-	subtitleFontRef := parsed.String("subtitle-font", fontRef)
-	if titleFontRef != "" {
+	if ref := parsed.String("title-font", fontRef); ref != "" {
 		if parsed.Has("font") || parsed.Has("title-font") {
-			if key, err := atom.ResolveAssetKey("font", titleFontRef, cfg.CardKey); err == nil {
-				input["title_font_object_key"] = key
-			} else if isObjectKeyRef(titleFontRef) {
-				input["title_font_object_key"] = atom.NormalizeResourceKey(titleFontRef, cfg.CardKey)
+			objKey, resID := resolveCloudResourceRef("font", ref, cfg.CardKey)
+			if objKey != "" {
+				input["title_font_object_key"] = objKey
 			} else {
-				input["title_font_resource_id"] = titleFontRef
+				input["title_font_resource_id"] = resID
 			}
 		} else {
-			input["title_font_resource_id"] = titleFontRef
+			input["title_font_resource_id"] = ref
 		}
 	}
-	if subtitleFontRef != "" {
+	if ref := parsed.String("subtitle-font", fontRef); ref != "" {
 		if parsed.Has("font") || parsed.Has("subtitle-font") {
-			if key, err := atom.ResolveAssetKey("font", subtitleFontRef, cfg.CardKey); err == nil {
-				input["subtitle_font_object_key"] = key
-			} else if isObjectKeyRef(subtitleFontRef) {
-				input["subtitle_font_object_key"] = atom.NormalizeResourceKey(subtitleFontRef, cfg.CardKey)
+			objKey, resID := resolveCloudResourceRef("font", ref, cfg.CardKey)
+			if objKey != "" {
+				input["subtitle_font_object_key"] = objKey
 			} else {
-				input["subtitle_font_resource_id"] = subtitleFontRef
+				input["subtitle_font_resource_id"] = resID
 			}
 		} else {
-			input["subtitle_font_resource_id"] = subtitleFontRef
+			input["subtitle_font_resource_id"] = ref
 		}
 	}
 	if parsed.Has("template") {
-		templateRef := parsed.String("template", "")
-		if templateRef != "" {
-			if key, err := atom.ResolveAssetKey("cover_templates", templateRef, cfg.CardKey); err == nil {
-				input["template_object_keys"] = []string{key}
-			} else if isObjectKeyRef(templateRef) {
-				input["template_object_keys"] = []string{atom.NormalizeResourceKey(templateRef, cfg.CardKey)}
+		if ref := parsed.String("template", ""); ref != "" {
+			objKey, resID := resolveCloudResourceRef("cover_templates", ref, cfg.CardKey)
+			if objKey != "" {
+				input["template_object_keys"] = []string{objKey}
 			} else {
-				input["template_resource_ids"] = []string{templateRef}
+				input["template_resource_ids"] = []string{resID}
 			}
 		}
 	} else {
-		templateIDs := defaultCoverTemplateResourceIDs(cfg, defaults, count)
-		if len(templateIDs) > 0 {
-			input["template_resource_ids"] = templateIDs
-		} else {
-			templateRef := strings.TrimSpace(defaults.Cover.Template)
-			if templateRef != "" {
-				input["template_resource_ids"] = []string{templateRef}
-			}
+		if ids := defaultCoverTemplateResourceIDs(cfg, defaults, count); len(ids) > 0 {
+			input["template_resource_ids"] = ids
+		} else if ref := strings.TrimSpace(defaults.Cover.Template); ref != "" {
+			input["template_resource_ids"] = []string{ref}
 		}
 	}
 
@@ -240,32 +230,10 @@ func cmdCoverGenerate(raw []string) {
 		return
 	}
 
-	output, _ := status["output"].(map[string]any)
-	result, _ := output["result"].(map[string]any)
-	manifestPath := filepath.Join(absOutputDir, "cover_manifest.json")
-	if len(result) > 0 {
-		data, _ := json.MarshalIndent(result, "", "  ")
-		_ = os.WriteFile(manifestPath, data, 0644)
-	} else if manifestURL := atom.ResultURL(status); manifestURL != "" {
-		if err := atom.DownloadFile(manifestURL, manifestPath); err != nil {
-			fmt.Printf("Error: download manifest failed: %v\n", err)
-			return
-		}
-	}
-	covers, _ := result["covers"].([]any)
-	downloaded := []string{}
-	for idx, item := range covers {
-		cover, _ := item.(map[string]any)
-		url, _ := cover["image_url"].(string)
-		if strings.TrimSpace(url) == "" {
-			continue
-		}
-		target := filepath.Join(absOutputDir, fmt.Sprintf("cover_%02d.jpg", idx+1))
-		if err := atom.DownloadFile(url, target); err != nil {
-			fmt.Printf("  Warning: download cover %d failed: %v\n", idx+1, err)
-			continue
-		}
-		downloaded = append(downloaded, target)
+	manifestPath, downloaded, err := downloadCoverOutputs(status, absOutputDir)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
 	}
 	recordProjectArtifact("cover", absOutputDir, "cover.generate")
 	writeSimpleResult(map[string]any{
@@ -324,6 +292,48 @@ func defaultCoverTemplateResourceIDs(cfg *config, defaults *cloud.ClientDefaults
 		}
 	}
 	return ids
+}
+
+// resolveCloudResourceRef resolves a resource reference that may be an
+// asset key, object key, or resource ID. Returns the object_key and
+// resource_id fields to set in a task input payload.
+func resolveCloudResourceRef(group, ref, cardKey string) (objKey, resourceID string) {
+	if key, err := atom.ResolveAssetKey(group, ref, cardKey); err == nil {
+		return key, ""
+	}
+	if isObjectKeyRef(ref) {
+		return atom.NormalizeResourceKey(ref, cardKey), ""
+	}
+	return "", ref
+}
+
+func downloadCoverOutputs(status map[string]any, absOutputDir string) (manifestPath string, downloaded []string, _ error) {
+	output, _ := status["output"].(map[string]any)
+	result, _ := output["result"].(map[string]any)
+	manifestPath = filepath.Join(absOutputDir, "cover_manifest.json")
+	if len(result) > 0 {
+		data, _ := json.MarshalIndent(result, "", "  ")
+		_ = os.WriteFile(manifestPath, data, 0644)
+	} else if manifestURL := atom.ResultURL(status); manifestURL != "" {
+		if err := atom.DownloadFile(manifestURL, manifestPath); err != nil {
+			return manifestPath, nil, fmt.Errorf("download manifest failed: %w", err)
+		}
+	}
+	covers, _ := result["covers"].([]any)
+	for idx, item := range covers {
+		cover, _ := item.(map[string]any)
+		url, _ := cover["image_url"].(string)
+		if strings.TrimSpace(url) == "" {
+			continue
+		}
+		target := filepath.Join(absOutputDir, fmt.Sprintf("cover_%02d.jpg", idx+1))
+		if err := atom.DownloadFile(url, target); err != nil {
+			fmt.Printf("  Warning: download cover %d failed: %v\n", idx+1, err)
+			continue
+		}
+		downloaded = append(downloaded, target)
+	}
+	return manifestPath, downloaded, nil
 }
 
 func printCoverUsage() {
