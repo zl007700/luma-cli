@@ -41,9 +41,8 @@ func cmdMaterialGroupList(raw []string) {
 	outputPath := strings.TrimSpace(args.String("output", ""))
 	savedPath := ""
 	if outputPath != "" {
-		abs, err := absoluteOutputPath(outputPath)
+		abs, err := ensureOutputDir(outputPath)
 		if err != nil {
-			fmt.Printf("Error: bad output path: %v\n", err)
 			return
 		}
 		if err := writeJSONFile(abs, map[string]any{"groups": groups}); err != nil {
@@ -90,9 +89,8 @@ func cmdMaterialGroupDescribe(raw []string) {
 	outputPath := strings.TrimSpace(args.String("output", "materials.json"))
 	savedPath := ""
 	if outputPath != "" {
-		abs, err := absoluteOutputPath(outputPath)
+		abs, err := ensureOutputDir(outputPath)
 		if err != nil {
-			fmt.Printf("Error: bad output path: %v\n", err)
 			return
 		}
 		groupView := group
