@@ -78,3 +78,13 @@ luma-cli
 luma-cli.exe
 bin/
 *.tgz
+
+# Test artifacts from viral remix workflows
+step[0-9]_*.mp4
+step[0-9]_*.wav
+step[0-9]_*.json
+step[0-9]_*.jpg
+step[0-9]_*.png
+step7_covers/
+transcript.txt
+source_script.txt
