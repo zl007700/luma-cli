@@ -20,6 +20,14 @@ func loadConfig() *config {
 	return cfg
 }
 
+func requireConfig() (*config, error) {
+	cfg := loadConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("not logged in. Run: luma-cli auth login <card_key>")
+	}
+	return cfg, nil
+}
+
 // recordStep records a processing step to the project if one is active.
 func recordStep(proj *project.Project, command, input, output string) {
 	if proj == nil {

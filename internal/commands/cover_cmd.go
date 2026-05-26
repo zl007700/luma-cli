@@ -84,9 +84,9 @@ func cmdCoverGenerate(raw []string) error {
 	if _, err := os.Stat(sourcePath); err != nil {
 		return output.ErrValidation(fmt.Sprintf("source file not found: %s\n", sourcePath))
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	defaults := loadClientDefaults(cfg)
 	count, err := parsed.Int("count", 6)

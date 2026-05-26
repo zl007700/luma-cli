@@ -129,9 +129,9 @@ func cmdMaterialUnderstand(raw []string) error {
 		fmt.Println("usage: luma-cli material understand <file> [--group pip_materials] [--output material_meta.json] [--descriptor-output material.json]")
 		return nil
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	group := strings.TrimSpace(args.String("group", "pip_materials"))
 	objectKey, err := cloud.UploadFile(inputPath, cfg.CardKey, group)

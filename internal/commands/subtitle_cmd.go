@@ -22,9 +22,10 @@ func cmdSubtitle(args []string) error {
 	}
 
 	// Load config
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	var cfgErr error
+	cfg, cfgErr := requireConfig()
+	if cfgErr != nil {
+		return cfgErr
 	}
 	defaults := loadClientDefaults(cfg)
 

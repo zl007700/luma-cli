@@ -22,9 +22,9 @@ func cmdVoice(args []string) error {
 		printVoiceUsage()
 		return nil
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	switch args[0] {
 	case "clone":

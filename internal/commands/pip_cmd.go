@@ -58,9 +58,9 @@ func cmdPIPScene(raw []string) error {
 		return nil
 	}
 	outputPath := args.String("output", "step4_scene_units.json")
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {
@@ -175,9 +175,9 @@ func cmdPIPPlan(raw []string) error {
 	if err != nil {
 		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	segments, err := loadSegmentsForPIP(segmentsPath)
 	if err != nil {

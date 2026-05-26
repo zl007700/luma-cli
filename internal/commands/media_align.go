@@ -61,9 +61,9 @@ func cmdAlign(args []string) error {
 		fullPayload = wrapped.Result
 	}
 
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 
 	// Build text list from segments (direct 1:1 alignment)

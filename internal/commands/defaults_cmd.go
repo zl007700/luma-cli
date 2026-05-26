@@ -20,9 +20,9 @@ func cmdDefaults(args []string) error {
 		fmt.Println("usage: luma-cli defaults show")
 		return nil
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	defaults := loadClientDefaults(cfg)
 	if runtimeOpts.JSON {

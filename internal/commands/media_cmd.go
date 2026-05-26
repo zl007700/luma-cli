@@ -62,9 +62,9 @@ func cmdTTS(args []string) error {
 		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 
 	voiceKey, err := atom.ResolveAssetKey("voice", voiceName, cfg.CardKey)
@@ -187,9 +187,9 @@ func cmdLipSync(args []string) error {
 		return nil
 	}
 
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 
 	// Resolve AvatarKey from friendly name or object key.

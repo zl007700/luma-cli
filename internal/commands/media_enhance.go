@@ -29,9 +29,9 @@ func cmdEnhance(args []string) error {
 		return output.ErrSystem(fmt.Sprintf("%v\n", err))
 	}
 
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 
 	proj := resolveProjectByName("")

@@ -41,9 +41,9 @@ func cmdRuntimeInstall(args []string) error {
 			i++
 		}
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	fmt.Printf("Installing runtime: %s\n", name)
 	installed, err := clientruntime.InstallRuntime(cfg.CardKey, name, version)

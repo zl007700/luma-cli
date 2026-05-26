@@ -49,9 +49,9 @@ func cmdResourceList(args []string) error {
 			}
 		}
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	items, err := cloud.ListClientResources(resourceType, tag, cfg.CardKey)
 	if err != nil {
@@ -78,9 +78,9 @@ func cmdResourceCache(args []string) error {
 		fmt.Println("usage: luma-cli resource cache <resource_id>")
 		return nil
 	}
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 	cached, err := clientruntime.CacheResource(cfg.CardKey, args[0])
 	if err != nil {

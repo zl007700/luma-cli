@@ -24,9 +24,9 @@ func cmdASR(args []string) error {
 		return output.ErrValidation(fmt.Sprintf("file not found: %s\n", filePath))
 	}
 
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 
 	proj := resolveProjectByName("")

@@ -29,9 +29,9 @@ func cmdTask(args []string) error {
 }
 
 func cmdTaskStatus(taskID string) error {
-	cfg := loadConfig()
-	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
 	}
 
 	status, err := cloud.PollTask(taskID, cfg.CardKey)
