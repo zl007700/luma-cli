@@ -39,9 +39,10 @@ func cmdAuth(args []string) error {
 
 	case "status":
 		cfg := loadConfig()
+		loggedIn := cfg != nil && cfg.CardKey != ""
 		if runtimeOpts.JSON {
-			data := map[string]any{"logged_in": cfg != nil}
-			if cfg != nil {
+			data := map[string]any{"logged_in": loggedIn, "api_url": cloud.BaseURL()}
+			if loggedIn {
 				data["key"] = appconfig.MaskKey(cfg.CardKey)
 			}
 			if err := output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data}); err != nil {
@@ -49,11 +50,12 @@ func cmdAuth(args []string) error {
 			}
 			return nil
 		}
-		if cfg == nil {
+		if !loggedIn {
 			fmt.Println("Not logged in. Run: luma-cli auth login")
 		} else {
 			fmt.Printf("Logged in. Key: %s\n", appconfig.MaskKey(cfg.CardKey))
 		}
+		fmt.Printf("Backend: %s\n", cloud.BaseURL())
 		return nil
 
 	default:

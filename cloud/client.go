@@ -7,9 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
+
+	appconfig "github.com/luma-cli/lumer-cli/internal/config"
 )
 
 // DefaultBaseURL is the default cloud API endpoint.
@@ -18,10 +19,7 @@ var DefaultBaseURL = "https://api.pikgeo.com"
 
 // BaseURL returns the active API base URL, checking env var first.
 func BaseURL() string {
-	if url := os.Getenv("LUMA_API_URL"); url != "" {
-		return url
-	}
-	return DefaultBaseURL
+	return appconfig.APIBaseURL(DefaultBaseURL)
 }
 
 const multipartThreshold = 100 * 1024 * 1024 // 100MB

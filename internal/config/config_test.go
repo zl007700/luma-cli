@@ -41,6 +41,7 @@ func TestSaveAndLoadCardKey(t *testing.T) {
 func TestEnvCardKeyTakesPrecedence(t *testing.T) {
 	t.Setenv("LUMA_CONFIG_DIR", t.TempDir())
 	t.Setenv("LUMA_CARD_KEY", "env-card-key")
+	t.Setenv("LUMA_API_URL", "")
 
 	if err := SaveCardKey("file-card-key"); err != nil {
 		t.Fatalf("SaveCardKey failed: %v", err)
@@ -52,6 +53,60 @@ func TestEnvCardKeyTakesPrecedence(t *testing.T) {
 	}
 	if cfg.CardKey != "env-card-key" {
 		t.Fatalf("expected env key, got %q", cfg.CardKey)
+	}
+}
+
+func TestSaveEnvironmentPreservesCardKey(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LUMA_CONFIG_DIR", dir)
+	t.Setenv("LUMA_CARD_KEY", "")
+	t.Setenv("LUMA_API_URL", "")
+
+	if err := SaveCardKey("test-card-key"); err != nil {
+		t.Fatalf("SaveCardKey failed: %v", err)
+	}
+	if err := SaveEnvironment("test", "https://backend.example.invalid/"); err != nil {
+		t.Fatalf("SaveEnvironment failed: %v", err)
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.CardKey != "test-card-key" {
+		t.Fatalf("expected card key to be preserved, got %q", cfg.CardKey)
+	}
+	if cfg.APIURL != "https://backend.example.invalid" {
+		t.Fatalf("expected normalized api url, got %q", cfg.APIURL)
+	}
+	if cfg.Environment != "test" {
+		t.Fatalf("expected test environment, got %q", cfg.Environment)
+	}
+}
+
+func TestAPIBaseURLUsesConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LUMA_CONFIG_DIR", dir)
+	t.Setenv("LUMA_CARD_KEY", "")
+	t.Setenv("LUMA_API_URL", "")
+
+	if err := SaveEnvironment("test", "https://backend.example.invalid"); err != nil {
+		t.Fatalf("SaveEnvironment failed: %v", err)
+	}
+	if got := APIBaseURL("https://api.pikgeo.com"); got != "https://backend.example.invalid" {
+		t.Fatalf("expected config api url, got %q", got)
+	}
+}
+
+func TestAPIBaseURLEnvTakesPrecedence(t *testing.T) {
+	t.Setenv("LUMA_CONFIG_DIR", t.TempDir())
+	t.Setenv("LUMA_API_URL", "https://override.example.com/")
+
+	if err := SaveEnvironment("test", "https://backend.example.invalid"); err != nil {
+		t.Fatalf("SaveEnvironment failed: %v", err)
+	}
+	if got := APIBaseURL("https://api.pikgeo.com"); got != "https://override.example.com" {
+		t.Fatalf("expected env api url, got %q", got)
 	}
 }
 

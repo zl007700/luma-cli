@@ -11,11 +11,14 @@ import (
 const (
 	envConfigDir = "LUMA_CONFIG_DIR"
 	envCardKey   = "LUMA_CARD_KEY"
+	envAPIURL    = "LUMA_API_URL"
 )
 
 // Config is the local CLI configuration.
 type Config struct {
-	CardKey string `json:"card_key"`
+	CardKey     string `json:"card_key"`
+	APIURL      string `json:"api_url,omitempty"`
+	Environment string `json:"environment,omitempty"`
 }
 
 // Dir returns the configuration directory.
@@ -40,12 +43,7 @@ func Path() (string, error) {
 	return filepath.Join(dir, "config.json"), nil
 }
 
-// Load reads configuration, with environment variables taking precedence.
-func Load() (*Config, error) {
-	if key := strings.TrimSpace(os.Getenv(envCardKey)); key != "" {
-		return &Config{CardKey: key}, nil
-	}
-
+func readFileConfig() (*Config, error) {
 	path, err := Path()
 	if err != nil {
 		return nil, err
@@ -64,10 +62,50 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 	cfg.CardKey = strings.TrimSpace(cfg.CardKey)
-	if cfg.CardKey == "" {
+	cfg.APIURL = strings.TrimSpace(cfg.APIURL)
+	cfg.Environment = strings.TrimSpace(cfg.Environment)
+	if cfg.CardKey == "" && cfg.APIURL == "" && cfg.Environment == "" {
 		return nil, nil
 	}
 	return &cfg, nil
+}
+
+// Load reads configuration, with environment variables taking precedence.
+func Load() (*Config, error) {
+	cfg, err := readFileConfig()
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	if key := strings.TrimSpace(os.Getenv(envCardKey)); key != "" {
+		cfg.CardKey = key
+	}
+	if apiURL := strings.TrimSpace(os.Getenv(envAPIURL)); apiURL != "" {
+		cfg.APIURL = normalizeAPIURL(apiURL)
+		cfg.Environment = EnvironmentName(cfg.APIURL, "")
+	}
+	if cfg.CardKey == "" && cfg.APIURL == "" && cfg.Environment == "" {
+		return nil, nil
+	}
+	return cfg, nil
+}
+
+func writeConfig(cfg Config) error {
+	dir, err := Dir()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+	path := filepath.Join(dir, "config.json")
+	return os.WriteFile(path, data, 0600)
 }
 
 // SaveCardKey stores the user card key in the local config file.
@@ -77,21 +115,63 @@ func SaveCardKey(cardKey string) error {
 		return fmt.Errorf("card key cannot be empty")
 	}
 
-	dir, err := Dir()
+	cfg, err := readFileConfig()
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("create config dir: %w", err)
+	if cfg == nil {
+		cfg = &Config{}
 	}
+	cfg.CardKey = cardKey
+	return writeConfig(*cfg)
+}
 
-	data, err := json.MarshalIndent(Config{CardKey: cardKey}, "", "  ")
+func SaveEnvironment(environment, apiURL string) error {
+	environment = strings.TrimSpace(environment)
+	apiURL = normalizeAPIURL(apiURL)
+	if apiURL == "" {
+		return fmt.Errorf("api url cannot be empty")
+	}
+	cfg, err := readFileConfig()
 	if err != nil {
-		return fmt.Errorf("marshal config: %w", err)
+		return err
 	}
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	cfg.APIURL = apiURL
+	cfg.Environment = EnvironmentName(apiURL, environment)
+	return writeConfig(*cfg)
+}
 
-	path := filepath.Join(dir, "config.json")
-	return os.WriteFile(path, data, 0600)
+func APIBaseURL(defaultURL string) string {
+	if apiURL := strings.TrimSpace(os.Getenv(envAPIURL)); apiURL != "" {
+		return normalizeAPIURL(apiURL)
+	}
+	cfg, err := readFileConfig()
+	if err == nil && cfg != nil && cfg.APIURL != "" {
+		return normalizeAPIURL(cfg.APIURL)
+	}
+	return normalizeAPIURL(defaultURL)
+}
+
+func EnvironmentName(apiURL, configured string) string {
+	if configured = strings.TrimSpace(configured); configured != "" {
+		return configured
+	}
+	apiURL = strings.ToLower(strings.TrimSpace(apiURL))
+	switch {
+	case strings.Contains(apiURL, "localhost") || strings.Contains(apiURL, "127.0.0.1"):
+		return "test"
+	case apiURL != "":
+		return "prod"
+	default:
+		return ""
+	}
+}
+
+func normalizeAPIURL(apiURL string) string {
+	return strings.TrimRight(strings.TrimSpace(apiURL), "/")
 }
 
 // MaskKey returns a display-safe key preview.

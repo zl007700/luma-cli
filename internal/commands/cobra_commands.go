@@ -12,7 +12,7 @@ import (
 func init() {
 	rootCmd.AddCommand(
 		&cobra.Command{Use: "version", Short: "Show version",
-			Run: func(c *cobra.Command, a []string) { fmt.Printf("luma-cli version %s\n", version) }},
+			Run: func(c *cobra.Command, a []string) { printVersion() }},
 	)
 	// Core media commands
 	addTTS()
@@ -41,6 +41,7 @@ func init() {
 	addRuntime()
 	addResource()
 	addDefaults()
+	addEnv()
 	addScript()
 	addTask()
 	addDouyin()
@@ -116,7 +117,7 @@ func addASR() {
 		Use:   "asr <video_or_audio>",
 		Short: "Speech recognition",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(c *cobra.Command, args []string) error { return runASRFile(args[0], language) },
+		RunE:  func(c *cobra.Command, args []string) error { return runASRFile(args[0], language) },
 	}
 	cmd.Flags().StringVar(&language, "language", "zh", "Language code")
 	rootCmd.AddCommand(cmd)
@@ -129,7 +130,7 @@ func addEnhance() {
 		Use:   "enhance <video>",
 		Short: "Video enhancement",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(c *cobra.Command, args []string) error { return runEnhance(args[0], scale, outputPath) },
+		RunE:  func(c *cobra.Command, args []string) error { return runEnhance(args[0], scale, outputPath) },
 	}
 	cmd.Flags().IntVar(&scale, "scale", 2, "Upscale factor")
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output path")
@@ -229,7 +230,8 @@ func addDefaults() {
 		RunE: func(c *cobra.Command, args []string) error { return cmdDefaults([]string{"show"}) },
 	})
 }
-func addScript()   { rootCmd.AddCommand(nativeCmd("script", "Script helpers", cmdScript)) }
+func addEnv()    { rootCmd.AddCommand(nativeCmd("env", "Backend environment", cmdEnv)) }
+func addScript() { rootCmd.AddCommand(nativeCmd("script", "Script helpers", cmdScript)) }
 func addTask()   { rootCmd.AddCommand(nativeCmd("task", "Task status", cmdTask)) }
 func addDouyin() { rootCmd.AddCommand(nativeCmd("douyin", "Douyin helpers", cmdDouyin)) }
 func addViral()  { rootCmd.AddCommand(nativeCmd("viral", "Viral copy helpers", cmdViral)) }
@@ -239,4 +241,3 @@ func nativeCmd(use, short string, fn commandHandler) *cobra.Command {
 	return &cobra.Command{Use: use, Short: short, DisableFlagParsing: true,
 		RunE: func(c *cobra.Command, args []string) error { return fn(args) }}
 }
-

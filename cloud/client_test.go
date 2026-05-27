@@ -5,6 +5,7 @@ import (
 )
 
 func TestBaseURL_Default(t *testing.T) {
+	t.Setenv("LUMA_CONFIG_DIR", t.TempDir())
 	t.Setenv("LUMA_API_URL", "")
 	got := BaseURL()
 	if got != DefaultBaseURL {
@@ -13,6 +14,7 @@ func TestBaseURL_Default(t *testing.T) {
 }
 
 func TestBaseURL_EnvOverride(t *testing.T) {
+	t.Setenv("LUMA_CONFIG_DIR", t.TempDir())
 	t.Setenv("LUMA_API_URL", "https://custom.example.com")
 	got := BaseURL()
 	if got != "https://custom.example.com" {

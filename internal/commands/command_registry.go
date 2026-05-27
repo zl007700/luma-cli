@@ -23,6 +23,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "download", Description: "Download a remote file", Handler: cmdDownload},
 		{Name: "douyin", Description: "Douyin helpers", Handler: cmdDouyin},
 		{Name: "enhance", Description: "Video enhancement", Handler: cmdEnhance},
+		{Name: "env", Description: "Backend environment", Handler: cmdEnv},
 		{Name: "lipsync", Description: "Digital human lip sync", Handler: cmdLipSync},
 		{Name: "material", Description: "Local material description for PIP planning", Handler: cmdMaterial},
 		{Name: "pip", Description: "Picture-in-picture rendering", Handler: cmdPIP},
