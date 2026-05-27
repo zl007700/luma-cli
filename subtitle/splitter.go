@@ -59,9 +59,7 @@ func parseSplitOutput(content, originalText string, maxChars int) ([]Segment, []
 			if line == "" {
 				continue
 			}
-			// Further split long lines
-			pieces := splitLongLine(line, maxChars)
-			lineSegs = append(lineSegs, pieces...)
+						lineSegs = append(lineSegs, line)
 		}
 		if len(lineSegs) == 0 {
 			continue
