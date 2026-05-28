@@ -6,8 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -152,14 +150,14 @@ func deviceFlowLogin(account string) error {
 		return output.ErrNetwork("activate device: %v", err)
 	}
 
-	// 2. Open browser
-	fmt.Printf("Opening browser to: %s\n", act.VerifyURL)
-	fmt.Printf("Your code: %s\n\n", act.UserCode)
+	// 2. Print authorization instructions. Do not open a local browser because
+	// this command often runs inside a cloud-hosted agent environment.
+	fmt.Printf("Authorization URL: %s\n", act.VerifyURL)
+	fmt.Printf("Code: %s\n\n", act.UserCode)
 	if strings.TrimSpace(account) != "" {
 		fmt.Printf("Account hint: %s\n", strings.TrimSpace(account))
 	}
-	fmt.Println("If the browser does not open, visit the URL above.")
-	openBrowser(act.VerifyURL)
+	fmt.Println("Open the URL in your own browser, sign in, and approve the authorization.")
 
 	// 3. Poll for token
 	fmt.Print("Waiting for authorization")
@@ -237,17 +235,4 @@ func postJSON(url string, body any, result any) error {
 		return json.Unmarshal(data, result)
 	}
 	return nil
-}
-
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url)
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	cmd.Start()
 }
