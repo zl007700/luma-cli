@@ -45,9 +45,9 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 1. **Step 0 Research 不可跳过。** 不管用户有没有明确要求，必须先跑 `research run`。如果用户说"随便写一个"，你要拒绝，告诉他需要数据支撑选题。
 
-2. **Step 1 必须基于 Research 输出。** 改写时心里要有对标视频：它的钩子是什么、结构是几段式、节奏是快是慢。source_script.txt 要能追溯到 `step0_content_research.json` 里的某个具体爆款。
+2. **Step 1 必须基于真实对标视频转写。** Research 只负责发现候选爆款，不能直接当 source script。必须从 `step0_content_research.json` 里挑选 2-3 个高潜力对标视频，下载视频并 ASR 转写，source script 必须能追溯到这些转写结果。
 
-3. **禁止 AI 自己编文案。** 不允许在没有 research 数据的情况下，凭"我知道这类视频怎么写"直接产出脚本。你看过的训练数据不是当前的抖音热榜。
+3. **禁止 AI 自己编 source script。** 不允许只看标题、点赞量、关键词就凭空写 `source_script.txt`。如果对标视频无法下载或 ASR 失败，必须换参考视频；仍无法获得转写时，暂停并向用户说明无法完成"仿写"依据。
 
 4. **Research 结果要展示给用户。** 跑完 Step 0 后，列出找到的关键词、Top 3 对标视频（标题+点赞量），让用户知道文案的选题依据是什么。
 
@@ -57,6 +57,12 @@ Do not use this workflow when the user only asks for one atomic operation such a
 - `step0_content_research.csv`
 - `step0_keywords.json`
 - `step0_keywords.csv`
+- `references/ref_01.mp4`
+- `references/ref_01_asr.json`
+- `references/ref_02.mp4`
+- `references/ref_02_asr.json`
+- `source_reference_bundle.md`
+- `source_script.txt`
 - `step1_rewrite.json`
 - `transcript.txt`
 - `step2_tts.wav`
@@ -86,38 +92,55 @@ Do not use this workflow when the user only asks for one atomic operation such a
    luma-cli research export --input step0_content_research.json --output step0_content_research.csv
    luma-cli research keywords --input step0_content_research.json --output step0_keywords.json --csv step0_keywords.csv
    ```
+   Inspect the JSON/CSV and choose 2-3 real reference videos with strong hooks, clear structure, and usable `link` fields. Prefer 口播 references when the final output is a spoken digital-human video.
 
-3. Rewrite the chosen reference or source script:
+3. Download and transcribe the chosen references:
+   ```bash
+   mkdir -p references
+   luma-cli --json social download "<reference_1_link>" --output references/ref_01.mp4
+   luma-cli asr references/ref_01.mp4 --language zh --output references/ref_01_asr.json
+   luma-cli --json social download "<reference_2_link>" --output references/ref_02.mp4
+   luma-cli asr references/ref_02.mp4 --language zh --output references/ref_02_asr.json
+   ```
+   If using a third reference, save it as `references/ref_03.mp4` and `references/ref_03_asr.json`. `asr` accepts video directly, so a separate local audio-extraction step is not required unless ASR fails on the video file.
+
+4. Build the source material for rewrite:
+   - Read each `references/ref_XX_asr.json`.
+   - Extract the original transcript, hook, argument structure, emotional turn, punchlines, and CTA.
+   - Write `source_reference_bundle.md` with the selected references, original titles/links, transcript excerpts, and the reason each reference is worth copying.
+   - Write `source_script.txt` as a grounded source brief: include the user's persona/positioning, the 2-3 reference viewpoints to fuse, reusable structures/hooks from the transcripts, and explicit constraints. Do not invent claims that are absent from the reference transcripts or user brief.
+
+5. Rewrite the grounded source script:
    ```bash
    luma-cli script rewrite --input source_script.txt --length short --output step1_rewrite.json
    ```
    Save the rewritten text as `transcript.txt` for later subtitle steps (avoids redundant ASR).
 
-4. Generate speech from the rewritten text:
+6. Generate speech from the rewritten text:
    ```bash
    luma-cli --json tts --file transcript.txt --voice 男声3 --speech-rate 1.1 --output step2_tts.wav
    ```
    The `--json` flag outputs `audio_object_key` which can be passed directly to lipsync, avoiding a redundant upload.
 
-5. Generate digital-human video (use `--audio-key` to reference the cloud audio directly):
+7. Generate digital-human video (use `--audio-key` to reference the cloud audio directly):
    ```bash
    luma-cli lipsync --avatar 数字人男 --audio-key <audio_object_key> --random-start --output step3_lipsync.mp4
    ```
    If `--audio-key` is omitted, lipsync falls back to the project's `latest_tts_key`, then to `--audio` file upload.
 
-6. Segment text and build scene units:
+8. Segment text and build scene units:
    ```bash
    luma-cli subtitle transcript.txt --text --segments-output step4_segments.json --no-effects --no-highlight
    luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
    ```
 
-7. Prepare and match local PIP materials:
+9. Prepare and match local PIP materials:
    ```bash
    luma-cli material group describe vlm_ai --output step4_materials_enriched.json
    luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
    ```
 
-8. Plan and render PIP:
+10. Plan and render PIP:
    ```bash
    luma-cli pip plan --segments step4_segments.json --materials step4_materials_enriched.json --match-mode auto --output step4_picture_in_picture_plan.json
    luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
@@ -125,17 +148,17 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
    If no insert is matched, continue with `step3_lipsync.mp4` as the subtitle input.
 
-9. Add subtitles (uses `--transcript` to skip ASR since we already have the exact script):
+11. Add subtitles (uses `--transcript` to skip ASR since we already have the exact script):
    ```bash
    luma-cli subtitle step4_picture_in_picture.mp4 --transcript transcript.txt --output step5_subtitle.mp4
    ```
 
-10. Add BGM:
+12. Add BGM:
     ```bash
     luma-cli bgm mix step5_subtitle.mp4 --output step6_bgm.mp4
     ```
 
-11. Create a cover:
+13. Create a cover:
     ```bash
     luma-cli cover generate step4_picture_in_picture.mp4 --title "<cover_title>" --subtitle "<cover_subtitle>" --count 12 --output-dir step7_covers
     ```
@@ -144,6 +167,8 @@ Do not use this workflow when the user only asks for one atomic operation such a
 ## Agent Rules
 
 - Keep every intermediate file; do not collapse the flow into one hidden step.
+- `source_script.txt` is not the final script and not AI-written from memory. It is the grounded rewrite brief produced from downloaded reference transcripts plus the user's persona/angle.
+- If `step0_content_research.json` only has titles/links and no transcript, do not proceed to rewrite until reference videos have been downloaded and ASR has produced usable text.
 - Use the rewritten script as the single source for TTS, segmentation, subtitles, and cover text extraction.
 - If the material library does not fit the script, skip PIP instead of forcing weak matches.
 - Use `project artifact list` before resuming or rerunning a partial workflow.

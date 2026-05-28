@@ -112,14 +112,17 @@ func addLipSync() {
 }
 
 func addASR() {
-	var language string
+	var language, outputPath string
 	cmd := &cobra.Command{
 		Use:   "asr <video_or_audio>",
 		Short: "Speech recognition",
 		Args:  cobra.ExactArgs(1),
-		RunE:  func(c *cobra.Command, args []string) error { return runASRFile(args[0], language) },
+		RunE: func(c *cobra.Command, args []string) error {
+			return runASRFileWithOutput(args[0], language, outputPath, resolveProjectByName(""))
+		},
 	}
 	cmd.Flags().StringVar(&language, "language", "zh", "Language code")
+	cmd.Flags().StringVar(&outputPath, "output", "", "Output ASR JSON path")
 	rootCmd.AddCommand(cmd)
 }
 

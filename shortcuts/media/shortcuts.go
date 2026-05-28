@@ -28,10 +28,11 @@ func Shortcuts() []common.Shortcut {
 			Flags: []common.Flag{
 				{Name: "file", Description: "Local video or audio file path.", Required: true},
 				{Name: "language", Description: "Recognition language.", Default: "zh"},
+				{Name: "output", Description: "Output ASR JSON path."},
 			},
-			Outputs:  []string{"task_id", "object_key", "text", "segments"},
-			Examples: []string{"luma-cli asr input.mp4 --language zh"},
-			Skills:   []string{"luma-subtitle", "luma-video-workflow"},
+			Outputs:  []string{"task_id", "object_key", "text", "segments", "output_path"},
+			Examples: []string{"luma-cli asr input.mp4 --language zh --output references/ref_01_asr.json"},
+			Skills:   []string{"luma-subtitle", "luma-video-workflow", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "voice.clone",
