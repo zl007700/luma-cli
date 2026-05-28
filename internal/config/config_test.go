@@ -84,6 +84,44 @@ func TestSaveEnvironmentPreservesCardKey(t *testing.T) {
 	}
 }
 
+func TestPendingDeviceAuthLifecycle(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LUMA_CONFIG_DIR", dir)
+	t.Setenv("LUMA_CARD_KEY", "")
+	t.Setenv("LUMA_API_URL", "")
+
+	if err := SavePendingDeviceAuth("device-123", "ABCD", "https://app.example/authorize?code=ABCD"); err != nil {
+		t.Fatalf("SavePendingDeviceAuth failed: %v", err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.PendingAuthDeviceCode != "device-123" {
+		t.Fatalf("expected pending device code, got %q", cfg.PendingAuthDeviceCode)
+	}
+	if cfg.PendingAuthUserCode != "ABCD" {
+		t.Fatalf("expected pending user code, got %q", cfg.PendingAuthUserCode)
+	}
+	if cfg.PendingAuthVerifyURL != "https://app.example/authorize?code=ABCD" {
+		t.Fatalf("expected pending verify URL, got %q", cfg.PendingAuthVerifyURL)
+	}
+
+	if err := SaveCardKey("test-card-key"); err != nil {
+		t.Fatalf("SaveCardKey failed: %v", err)
+	}
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if cfg.CardKey != "test-card-key" {
+		t.Fatalf("expected card key, got %q", cfg.CardKey)
+	}
+	if cfg.PendingAuthDeviceCode != "" || cfg.PendingAuthUserCode != "" || cfg.PendingAuthVerifyURL != "" {
+		t.Fatalf("expected pending authorization to be cleared, got %#v", cfg)
+	}
+}
+
 func TestAPIBaseURLUsesConfigFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("LUMA_CONFIG_DIR", dir)

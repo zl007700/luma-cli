@@ -21,6 +21,7 @@ func cmdAuth(args []string) error {
 		fmt.Println("       luma-cli auth login --account <account>")
 		fmt.Println("       luma-cli auth login --key <key> (paste API key or legacy card key directly)")
 		fmt.Println("       luma-cli auth login <key> (paste API key or legacy card key directly)")
+		fmt.Println("       luma-cli auth complete    (finish after the user approves)")
 		fmt.Println("       luma-cli auth status      (show login status)")
 		return nil
 	}
@@ -39,7 +40,14 @@ func cmdAuth(args []string) error {
 			fmt.Println("Login saved.")
 			return nil
 		}
-		return deviceFlowLogin(loginOpts.Account)
+		return startDeviceFlowLogin(loginOpts.Account)
+
+	case "complete", "finish":
+		deviceCode := ""
+		if len(args) >= 2 {
+			deviceCode = strings.TrimSpace(args[1])
+		}
+		return completeDeviceFlowLogin(deviceCode)
 
 	case "status":
 		cfg := loadConfig()
@@ -48,6 +56,11 @@ func cmdAuth(args []string) error {
 			data := map[string]any{"logged_in": loggedIn, "api_url": cloud.BaseURL()}
 			if loggedIn {
 				data["key"] = appconfig.MaskKey(cfg.CardKey)
+			}
+			if cfg != nil && cfg.PendingAuthDeviceCode != "" {
+				data["pending_auth"] = true
+				data["verify_url"] = cfg.PendingAuthVerifyURL
+				data["code"] = cfg.PendingAuthUserCode
 			}
 			if err := output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data}); err != nil {
 				return output.ErrSystem("%v", err)
@@ -58,6 +71,10 @@ func cmdAuth(args []string) error {
 			fmt.Println("Not logged in. Run: luma-cli auth login")
 		} else {
 			fmt.Printf("Logged in. Key: %s\n", appconfig.MaskKey(cfg.CardKey))
+		}
+		if cfg != nil && cfg.PendingAuthDeviceCode != "" {
+			fmt.Printf("Pending authorization: %s\n", cfg.PendingAuthVerifyURL)
+			fmt.Println("After approval, run: luma-cli auth complete")
 		}
 		fmt.Printf("Backend: %s\n", cloud.BaseURL())
 		return nil
@@ -79,6 +96,7 @@ func printAuthUsage() {
 	fmt.Println("       luma-cli auth login <account>")
 	fmt.Println("       luma-cli auth login --account <account>")
 	fmt.Println("       luma-cli auth login --key <key>")
+	fmt.Println("       luma-cli auth complete")
 	fmt.Println("       luma-cli auth status")
 }
 
@@ -131,7 +149,7 @@ func looksLikeAccount(value string) bool {
 	return digits >= 6
 }
 
-func deviceFlowLogin(account string) error {
+func startDeviceFlowLogin(account string) error {
 	base := cloud.BaseURL()
 
 	// 1. Activate device
@@ -149,6 +167,9 @@ func deviceFlowLogin(account string) error {
 	if err := postJSON(base+"/api/auth/device/activate", body, &act); err != nil {
 		return output.ErrNetwork("activate device: %v", err)
 	}
+	if err := appconfig.SavePendingDeviceAuth(act.DeviceCode, act.UserCode, act.VerifyURL); err != nil {
+		return output.ErrSystem("save pending authorization: %v", err)
+	}
 
 	// 2. Print authorization instructions. Do not open a local browser because
 	// this command often runs inside a cloud-hosted agent environment.
@@ -158,52 +179,63 @@ func deviceFlowLogin(account string) error {
 		fmt.Printf("Account hint: %s\n", strings.TrimSpace(account))
 	}
 	fmt.Println("Open the URL in your own browser, sign in, and approve the authorization.")
+	fmt.Println("After approval, run: luma-cli auth complete")
+	return nil
+}
 
-	// 3. Poll for token
-	fmt.Print("Waiting for authorization")
-	deadline := time.Now().Add(time.Duration(act.ExpiresIn) * time.Second)
-	for time.Now().Before(deadline) {
-		time.Sleep(2 * time.Second)
-		fmt.Print(".")
-
-		type pollResp struct {
-			Status      string `json:"status"`
-			AccessToken string `json:"access_token"`
-			APIKey      string `json:"api_key"`
-			MaskedKey   string `json:"masked_key"`
-		}
-		var pr pollResp
-		if err := postJSON(base+"/api/auth/device/poll", map[string]string{
-			"device_code": act.DeviceCode,
-		}, &pr); err != nil {
-			continue
-		}
-
-		if pr.Status == "success" {
-			fmt.Println("\nAuthorized!")
-			key := strings.TrimSpace(pr.APIKey)
-			if key == "" {
-				key = strings.TrimSpace(pr.AccessToken)
-			}
-			if key == "" {
-				return output.ErrSystem("authorization response did not include an API key")
-			}
-			if err := appconfig.SaveCardKey(key); err != nil {
-				return output.ErrSystem("save key: %v", err)
-			}
-			if pr.MaskedKey != "" {
-				fmt.Printf("API key saved: %s\n", pr.MaskedKey)
-			} else {
-				fmt.Println("Login saved.")
-			}
-			return nil
-		}
-		if pr.Status == "expired" {
-			fmt.Println("\nAuthorization expired. Run luma-cli auth login again.")
-			return nil
+func completeDeviceFlowLogin(deviceCode string) error {
+	if strings.TrimSpace(deviceCode) == "" {
+		cfg := loadConfig()
+		if cfg != nil {
+			deviceCode = cfg.PendingAuthDeviceCode
 		}
 	}
-	fmt.Println("\nAuthorization timed out. Run luma-cli auth login again.")
+	deviceCode = strings.TrimSpace(deviceCode)
+	if deviceCode == "" {
+		return output.ErrAuth("no pending authorization. Run: luma-cli auth login <account>")
+	}
+
+	type pollResp struct {
+		Status      string `json:"status"`
+		AccessToken string `json:"access_token"`
+		APIKey      string `json:"api_key"`
+		MaskedKey   string `json:"masked_key"`
+	}
+	var pr pollResp
+	if err := postJSON(cloud.BaseURL()+"/api/auth/device/poll", map[string]string{
+		"device_code": deviceCode,
+	}, &pr); err != nil {
+		return output.ErrNetwork("complete authorization: %v", err)
+	}
+
+	switch pr.Status {
+	case "success":
+		key := strings.TrimSpace(pr.APIKey)
+		if key == "" {
+			key = strings.TrimSpace(pr.AccessToken)
+		}
+		if key == "" {
+			return output.ErrSystem("authorization response did not include an API key")
+		}
+		if err := appconfig.SaveCardKey(key); err != nil {
+			return output.ErrSystem("save key: %v", err)
+		}
+		if err := appconfig.ClearPendingDeviceAuth(); err != nil {
+			return output.ErrSystem("clear pending authorization: %v", err)
+		}
+		if pr.MaskedKey != "" {
+			fmt.Printf("API key saved: %s\n", pr.MaskedKey)
+		} else {
+			fmt.Println("Login saved.")
+		}
+	case "pending":
+		fmt.Println("Authorization is not approved yet. Ask the user to open the URL and approve, then run: luma-cli auth complete")
+	case "expired":
+		_ = appconfig.ClearPendingDeviceAuth()
+		fmt.Println("Authorization expired. Run: luma-cli auth login again.")
+	default:
+		return output.ErrSystem("unexpected authorization status: %s", pr.Status)
+	}
 	return nil
 }
 

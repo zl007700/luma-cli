@@ -16,9 +16,12 @@ const (
 
 // Config is the local CLI configuration.
 type Config struct {
-	CardKey     string `json:"card_key"`
-	APIURL      string `json:"api_url,omitempty"`
-	Environment string `json:"environment,omitempty"`
+	CardKey               string `json:"card_key"`
+	APIURL                string `json:"api_url,omitempty"`
+	Environment           string `json:"environment,omitempty"`
+	PendingAuthDeviceCode string `json:"pending_auth_device_code,omitempty"`
+	PendingAuthUserCode   string `json:"pending_auth_user_code,omitempty"`
+	PendingAuthVerifyURL  string `json:"pending_auth_verify_url,omitempty"`
 }
 
 // Dir returns the configuration directory.
@@ -64,7 +67,10 @@ func readFileConfig() (*Config, error) {
 	cfg.CardKey = strings.TrimSpace(cfg.CardKey)
 	cfg.APIURL = strings.TrimSpace(cfg.APIURL)
 	cfg.Environment = strings.TrimSpace(cfg.Environment)
-	if cfg.CardKey == "" && cfg.APIURL == "" && cfg.Environment == "" {
+	cfg.PendingAuthDeviceCode = strings.TrimSpace(cfg.PendingAuthDeviceCode)
+	cfg.PendingAuthUserCode = strings.TrimSpace(cfg.PendingAuthUserCode)
+	cfg.PendingAuthVerifyURL = strings.TrimSpace(cfg.PendingAuthVerifyURL)
+	if cfg.CardKey == "" && cfg.APIURL == "" && cfg.Environment == "" && cfg.PendingAuthDeviceCode == "" && cfg.PendingAuthUserCode == "" && cfg.PendingAuthVerifyURL == "" {
 		return nil, nil
 	}
 	return &cfg, nil
@@ -86,7 +92,7 @@ func Load() (*Config, error) {
 		cfg.APIURL = normalizeAPIURL(apiURL)
 		cfg.Environment = EnvironmentName(cfg.APIURL, "")
 	}
-	if cfg.CardKey == "" && cfg.APIURL == "" && cfg.Environment == "" {
+	if cfg.CardKey == "" && cfg.APIURL == "" && cfg.Environment == "" && cfg.PendingAuthDeviceCode == "" && cfg.PendingAuthUserCode == "" && cfg.PendingAuthVerifyURL == "" {
 		return nil, nil
 	}
 	return cfg, nil
@@ -123,6 +129,41 @@ func SaveCardKey(cardKey string) error {
 		cfg = &Config{}
 	}
 	cfg.CardKey = cardKey
+	cfg.PendingAuthDeviceCode = ""
+	cfg.PendingAuthUserCode = ""
+	cfg.PendingAuthVerifyURL = ""
+	return writeConfig(*cfg)
+}
+
+func SavePendingDeviceAuth(deviceCode, userCode, verifyURL string) error {
+	deviceCode = strings.TrimSpace(deviceCode)
+	if deviceCode == "" {
+		return fmt.Errorf("device code cannot be empty")
+	}
+	cfg, err := readFileConfig()
+	if err != nil {
+		return err
+	}
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	cfg.PendingAuthDeviceCode = deviceCode
+	cfg.PendingAuthUserCode = strings.TrimSpace(userCode)
+	cfg.PendingAuthVerifyURL = strings.TrimSpace(verifyURL)
+	return writeConfig(*cfg)
+}
+
+func ClearPendingDeviceAuth() error {
+	cfg, err := readFileConfig()
+	if err != nil {
+		return err
+	}
+	if cfg == nil {
+		return nil
+	}
+	cfg.PendingAuthDeviceCode = ""
+	cfg.PendingAuthUserCode = ""
+	cfg.PendingAuthVerifyURL = ""
 	return writeConfig(*cfg)
 }
 
