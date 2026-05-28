@@ -223,6 +223,9 @@ func postJSON(url string, body any, result any) error {
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		if os.IsTimeout(err) {
+			return fmt.Errorf("request timed out after 60s; the backend may be slow or unreachable: %w", err)
+		}
 		return err
 	}
 	defer resp.Body.Close()
