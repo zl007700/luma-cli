@@ -22,7 +22,7 @@ Read `../luma-shared/SKILL.md` first for common auth, project, output, and artif
 Inspect available voices and avatars:
 
 ```bash
-luma-cli voice list
+luma-cli asset list voice
 luma-cli asset list roles
 ```
 
@@ -69,7 +69,7 @@ luma-cli asset upload avatar.mp4 --group roles
 
 - **Script must come from research, not imagination.** If the script is for a short-video production, the text source must be backed by `luma-cli research run` data or a known viral reference. Never invent a script topic without data support. See `../luma-workflow-viral-remix/SKILL.md` for the full research → rewrite flow.
 - Use `voice.clone` when a user provides a voice sample.
-- Use `voice.list` and `asset.list roles` when the user asks what is available.
+- Use `asset.list voice` and `asset.list roles` when the user asks what is available.
 - Use the latest project TTS output for lip-sync unless the user explicitly provides `--audio`.
 - Keep the script text outside media commands until it is final enough for this generation attempt.
 - Do not enhance every draft; enhance only the selected final render.

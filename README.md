@@ -66,7 +66,10 @@ luma-cli --json tools describe pip.plan
 | --- | --- |
 | 内容研究 | `research run`, `research export`, `research keywords` |
 | 爆款改写 | `script rewrite` |
-| 声音克隆 | `voice clone`, `voice list` |
+| 声音克隆 | `voice clone` |
+| 云端资产 | `asset list voice`, `asset list roles`, `asset upload` |
+| 语音识别 | `asr` |
+| 语音对齐 | `align` |
 | 语音合成 | `tts` |
 | 数字人口播 | `lipsync` |
 | 本地素材描述 | `material describe`, `material group list`, `material group describe`, `material search`, `material merge`, `material understand` |
@@ -116,9 +119,18 @@ luma-cli cover generate step4_picture_in_picture.mp4 --title "封面标题" --co
 
 ```bash
 luma-cli voice clone ./sample.wav --name my_voice
-luma-cli voice list
+luma-cli asset list voice
 luma-cli tts "这是一段测试口播" --voice my_voice --output step2_tts.wav
 ```
+
+## 查看可用音色和数字人
+
+```bash
+luma-cli asset list voice
+luma-cli asset list roles
+```
+
+`voice list` 是旧版兼容入口，新流程统一用 `asset list voice` 查看音色资产。
 
 ## 标准中间产物
 

@@ -127,5 +127,5 @@ func cmdVoiceList(raw []string, cfg *config) error {
 func printVoiceUsage() {
 	fmt.Println("luma-cli voice <subcommand>")
 	fmt.Println("  clone <sample_audio> [--name <voice_name>] [--verbose]")
-	fmt.Println("  list [--verbose]")
+	fmt.Println("  list [--verbose]  (alias for: luma-cli asset list voice)")
 }

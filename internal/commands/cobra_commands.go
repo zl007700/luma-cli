@@ -28,6 +28,7 @@ func init() {
 
 	// Resource commands
 	addMaterial()
+	addAsset()
 	addResearch()
 	addProject()
 	addAuth()
@@ -200,6 +201,7 @@ func addBGM() {
 func addCover()    { rootCmd.AddCommand(nativeCmd("cover", "Cover frame and image rendering", cmdCover)) }
 func addPIP()      { rootCmd.AddCommand(nativeCmd("pip", "Picture-in-picture", cmdPIP)) }
 func addMaterial() { rootCmd.AddCommand(nativeCmd("material", "Material management", cmdMaterial)) }
+func addAsset()    { rootCmd.AddCommand(nativeCmd("asset", "Asset upload and listing", cmdAsset)) }
 func addResearch() { rootCmd.AddCommand(nativeCmd("research", "Content research", cmdResearch)) }
 func addProject()  { rootCmd.AddCommand(nativeCmd("project", "Project management", cmdProject)) }
 func addAuth()     { rootCmd.AddCommand(nativeCmd("auth", "Authentication", cmdAuth)) }

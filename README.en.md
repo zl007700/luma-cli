@@ -48,7 +48,10 @@ luma-cli --json tools describe pip.plan
 | --- | --- |
 | Content research | `research run`, `research export`, `research keywords` |
 | Script rewrite | `script rewrite` |
-| Voice clone | `voice clone`, `voice list` |
+| Voice clone | `voice clone` |
+| Cloud assets | `asset list voice`, `asset list roles`, `asset upload` |
+| Speech recognition | `asr` |
+| Audio alignment | `align` |
 | Text to speech | `tts` |
 | Digital human | `lipsync` |
 | Materials | `material describe`, `material group list`, `material group describe`, `material search`, `material merge`, `material understand` |
@@ -96,9 +99,18 @@ luma-cli cover generate step4_picture_in_picture.mp4 --title "Cover title" --cou
 
 ```bash
 luma-cli voice clone ./sample.wav --name my_voice
-luma-cli voice list
+luma-cli asset list voice
 luma-cli tts "Test narration" --voice my_voice --output step2_tts.wav
 ```
+
+## List Voices and Avatars
+
+```bash
+luma-cli asset list voice
+luma-cli asset list roles
+```
+
+`voice list` remains as a compatibility alias. New workflows should use `asset list voice`.
 
 ## Standard Artifacts
 
