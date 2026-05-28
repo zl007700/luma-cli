@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	prodAPIURL    = "https://api.pikgeo.com"
-	envTestAPIURL = "LUMA_TEST_API_URL"
+	prodAPIURL = "https://api.pikgeo.com"
 )
 
 func printVersion() {
@@ -19,7 +18,7 @@ func printVersion() {
 	envName := activeEnvironmentName(apiURL)
 	fmt.Printf("luma-cli version %s\n", version)
 	if envName == "test" {
-		fmt.Printf("backend: TEST (%s)\n", apiURL)
+		fmt.Printf("backend: custom (%s)\n", apiURL)
 		return
 	}
 	fmt.Printf("backend: %s\n", apiURL)
@@ -33,12 +32,9 @@ func cmdEnv(args []string) error {
 	switch args[0] {
 	case "use":
 		if len(args) < 2 {
-			return output.ErrValidation("usage: luma-cli env use test|prod|<url>")
+			return output.ErrValidation("usage: luma-cli env use prod|<url>")
 		}
 		envName, apiURL := resolveEnvTarget(args[1])
-		if envName == "test" && apiURL == "" {
-			return output.ErrValidation("set %s before running `luma-cli env use test`, or run `luma-cli env use <url>`", envTestAPIURL)
-		}
 		if err := appconfig.SaveEnvironment(envName, apiURL); err != nil {
 			return output.ErrSystem("write config: %v", err)
 		}
@@ -50,11 +46,11 @@ func cmdEnv(args []string) error {
 		}
 		fmt.Printf("Luma backend -> %s (%s)\n", envName, apiURL)
 		if envName == "test" {
-			fmt.Println("Notice: test backend is active.")
+			fmt.Println("Notice: custom backend is active.")
 		}
 		return nil
 	default:
-		return output.ErrValidation("usage: luma-cli env show | luma-cli env use test|prod|<url>")
+		return output.ErrValidation("usage: luma-cli env show | luma-cli env use prod|<url>")
 	}
 }
 
@@ -69,7 +65,7 @@ func showEnv() error {
 	}
 	fmt.Printf("Backend: %s (%s)\n", envName, apiURL)
 	if envName == "test" {
-		fmt.Println("Notice: test backend is active.")
+		fmt.Println("Notice: custom backend is active.")
 	}
 	return nil
 }
@@ -78,8 +74,6 @@ func resolveEnvTarget(target string) (string, string) {
 	switch target {
 	case "prod", "production":
 		return "prod", prodAPIURL
-	case "test", "testing":
-		return "test", os.Getenv(envTestAPIURL)
 	default:
 		apiURL := target
 		return appconfig.EnvironmentName(apiURL, ""), apiURL
