@@ -56,7 +56,7 @@ luma-cli research run --persona ai_founder --output step0_content_research.json
 
 - Keep the raw research JSON even when exporting CSV.
 - Use CSV for human inspection; use JSON for agent decisions.
-- Pick 2-3 references or one topic cluster explicitly before moving to rewrite.
-- Research results are discovery data, not source scripts. For viral remix workflows, download the selected videos and run ASR before script rewriting; see `../luma-workflow-viral-remix/SKILL.md`.
+- Pick at most 3 high-potential references or one topic cluster explicitly before moving to rewrite.
+- Research results are discovery data, not source scripts. For viral remix workflows, only download and ASR references that are likely to contain reusable spoken copy; skip non-口播 or low-signal videos. See `../luma-workflow-viral-remix/SKILL.md`.
 - Do not fabricate metrics that are not present in the research result.
 - If research returns too few results, retry with `--mode expanded` or a broader role description.

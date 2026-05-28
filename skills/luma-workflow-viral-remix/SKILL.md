@@ -45,7 +45,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
 1. **Step 0 Research 不可跳过。** 不管用户有没有明确要求，必须先跑 `research run`。如果用户说"随便写一个"，你要拒绝，告诉他需要数据支撑选题。
 
-2. **Step 1 必须基于真实对标视频转写。** Research 只负责发现候选爆款，不能直接当 source script。必须从 `step0_content_research.json` 里挑选 2-3 个高潜力对标视频，下载视频并 ASR 转写，source script 必须能追溯到这些转写结果。
+2. **Step 1 必须基于精选对标视频转写。** Research 只负责发现候选爆款，不能直接当 source script。必须先筛选候选，只选择最多 3 个高讨论度、高点赞、强相关、且大概率是口播/讲述型的视频下载并 ASR。source script 必须能追溯到这些精选转写结果。
 
 3. **禁止 AI 自己编 source script。** 不允许只看标题、点赞量、关键词就凭空写 `source_script.txt`。如果对标视频无法下载或 ASR 失败，必须换参考视频；仍无法获得转写时，暂停并向用户说明无法完成"仿写"依据。
 
@@ -92,7 +92,15 @@ Do not use this workflow when the user only asks for one atomic operation such a
    luma-cli research export --input step0_content_research.json --output step0_content_research.csv
    luma-cli research keywords --input step0_content_research.json --output step0_keywords.json --csv step0_keywords.csv
    ```
-   Inspect the JSON/CSV and choose 2-3 real reference videos with strong hooks, clear structure, and usable `link` fields. Prefer 口播 references when the final output is a spoken digital-human video.
+   Inspect the JSON/CSV and build a shortlist before spending ASR credits. Do not download every result.
+
+   Selection rules:
+   - Choose **at most 3** references.
+   - Prefer videos with high likes, strong discussion potential, clear controversy/curiosity, and close fit to the user's topic/persona.
+   - Prefer `content_type=口播` or videos whose title/description suggests spoken explanation, opinion, review, teaching, story, or analysis.
+   - Skip pure music/card-point edits, scenery montages, product-only showcases, dance clips, meme clips, or any video likely to have little reusable spoken copy.
+   - If all high-like videos are non-spoken, pick a topic cluster only and rerun research with a more口播-oriented role/query; do not ASR weak references just to fill the quota.
+   - Record the shortlist and rejection reasons in `source_reference_bundle.md` before downloading.
 
 3. Download and transcribe the chosen references:
    ```bash
@@ -103,6 +111,8 @@ Do not use this workflow when the user only asks for one atomic operation such a
    luma-cli asr references/ref_02.mp4 --language zh --output references/ref_02_asr.json
    ```
    If using a third reference, save it as `references/ref_03.mp4` and `references/ref_03_asr.json`. `asr` accepts video directly, so a separate local audio-extraction step is not required unless ASR fails on the video file.
+
+   After each ASR result, check whether the transcript is actually useful. If the transcript is empty, mostly music/noise, too short to reveal structure, or unrelated to the title, discard that reference and choose another shortlisted video. Stop once 1-3 strong transcripts are available; do not keep spending ASR on weak candidates.
 
 4. Build the source material for rewrite:
    - Read each `references/ref_XX_asr.json`.
@@ -169,6 +179,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 - Keep every intermediate file; do not collapse the flow into one hidden step.
 - `source_script.txt` is not the final script and not AI-written from memory. It is the grounded rewrite brief produced from downloaded reference transcripts plus the user's persona/angle.
 - If `step0_content_research.json` only has titles/links and no transcript, do not proceed to rewrite until reference videos have been downloaded and ASR has produced usable text.
+- ASR is an expensive validation step, not a bulk-processing step. Never ASR more than 3 reference videos for one remix unless the user explicitly approves it.
 - Use the rewritten script as the single source for TTS, segmentation, subtitles, and cover text extraction.
 - If the material library does not fit the script, skip PIP instead of forcing weak matches.
 - Use `project artifact list` before resuming or rerunning a partial workflow.
