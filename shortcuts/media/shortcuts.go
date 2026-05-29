@@ -119,12 +119,11 @@ func Shortcuts() []common.Shortcut {
 			Risk:        "write",
 			Flags: []common.Flag{
 				{Name: "prompt", Description: "Image generation prompt.", Required: true},
-				{Name: "count", Description: "Number of images.", Default: "1"},
 				{Name: "aspect-ratio", Description: "Output aspect ratio.", Default: "9:16"},
 				{Name: "output-dir", Description: "Directory for downloaded images.", Default: "generated_images"},
 			},
 			Outputs:  []string{"task_id", "output_dir", "manifest_path", "downloaded"},
-			Examples: []string{"luma-cli image generate \"窗帘产品短视频封面背景\" --count 2 --aspect-ratio 9:16"},
+			Examples: []string{"luma-cli image generate \"窗帘产品短视频封面背景\" --aspect-ratio 9:16"},
 			Skills:   []string{"luma-video-workflow"},
 		},
 		{

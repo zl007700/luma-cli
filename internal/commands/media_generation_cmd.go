@@ -43,16 +43,6 @@ func cmdImageGenerate(raw []string) error {
 	if err != nil {
 		return err
 	}
-	count, err := parsed.Int("count", 1)
-	if err != nil {
-		return output.ErrValidation("%v\n", err)
-	}
-	if count <= 0 {
-		count = 1
-	}
-	if count > 4 {
-		count = 4
-	}
 	timeoutSec, err := parsed.Int("timeout", 900)
 	if err != nil {
 		return output.ErrValidation("%v\n", err)
@@ -71,7 +61,6 @@ func cmdImageGenerate(raw []string) error {
 	}
 	input := map[string]any{
 		"prompt":       prompt,
-		"count":        count,
 		"aspect_ratio": parsed.String("aspect-ratio", "9:16"),
 	}
 	status, taskID, err := submitAndWaitMediaTask("image_generation", "image_generation_output", input, cfg.CardKey, timeoutSec)
@@ -88,7 +77,6 @@ func cmdImageGenerate(raw []string) error {
 		"output_dir":    absOutputDir,
 		"manifest_path": manifestPath,
 		"downloaded":    downloaded,
-		"count":         len(downloaded),
 	})
 	return nil
 }
@@ -231,7 +219,7 @@ func downloadGeneratedArtifacts(status map[string]any, absOutputDir, prefix, ext
 }
 
 func printImageUsage() {
-	fmt.Println("luma-cli image generate <prompt> [--count 1] [--aspect-ratio 9:16] [--output-dir generated_images]")
+	fmt.Println("luma-cli image generate <prompt> [--aspect-ratio 9:16] [--output-dir generated_images]")
 }
 
 func printVideoUsage() {
