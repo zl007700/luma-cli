@@ -73,7 +73,6 @@ func cmdImageGenerate(raw []string) error {
 		"prompt":       prompt,
 		"count":        count,
 		"aspect_ratio": parsed.String("aspect-ratio", "9:16"),
-		"resolution":   parsed.String("resolution", "1K"),
 	}
 	status, taskID, err := submitAndWaitMediaTask("image_generation", "image_generation_output", input, cfg.CardKey, timeoutSec)
 	if err != nil {
@@ -150,7 +149,6 @@ func cmdVideoGenerate(raw []string) error {
 		"image_object_key": imageKey,
 		"duration_seconds": duration,
 		"aspect_ratio":     parsed.String("aspect-ratio", "9:16"),
-		"resolution":       parsed.String("resolution", "720p"),
 	}
 	status, taskID, err := submitAndWaitMediaTask("video_generation", "video_generation_output", input, cfg.CardKey, timeoutSec)
 	if err != nil {
@@ -233,9 +231,9 @@ func downloadGeneratedArtifacts(status map[string]any, absOutputDir, prefix, ext
 }
 
 func printImageUsage() {
-	fmt.Println("luma-cli image generate <prompt> [--count 1] [--aspect-ratio 9:16] [--resolution 1K] [--output-dir generated_images]")
+	fmt.Println("luma-cli image generate <prompt> [--count 1] [--aspect-ratio 9:16] [--output-dir generated_images]")
 }
 
 func printVideoUsage() {
-	fmt.Println("luma-cli video generate <prompt> --image <first_frame.png> [--duration 4] [--aspect-ratio 9:16] [--resolution 720p] [--output generated_video.mp4]")
+	fmt.Println("luma-cli video generate <prompt> --image <first_frame.png> [--duration 4] [--aspect-ratio 9:16] [--output generated_video.mp4]")
 }
