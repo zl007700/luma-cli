@@ -19,6 +19,8 @@ func init() {
 	addLipSync()
 	addASR()
 	addEnhance()
+	addImage()
+	addVideo()
 	addSubtitle()
 
 	// Workflow commands
@@ -140,6 +142,10 @@ func addEnhance() {
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "Output path")
 	rootCmd.AddCommand(cmd)
 }
+
+func addImage() { rootCmd.AddCommand(nativeCmd("image", "AI image generation", cmdImage)) }
+
+func addVideo() { rootCmd.AddCommand(nativeCmd("video", "AI video generation", cmdVideo)) }
 
 func addSubtitle() {
 	var transcriptPath, outputPath, segmentsOutput, projectName, fontResource, persona string

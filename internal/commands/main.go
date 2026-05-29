@@ -39,6 +39,8 @@ func printUsage() {
 	fmt.Println("  luma-cli material understand <file> Upload and understand one material")
 	fmt.Println("  luma-cli material merge          Merge material metadata")
 	fmt.Println("  luma-cli enhance <video>         Enhance a video")
+	fmt.Println("  luma-cli image generate <prompt> Generate images")
+	fmt.Println("  luma-cli video generate <prompt> --image <file>")
 	fmt.Println("  luma-cli task status <task_id>   Show task status")
 	fmt.Println("  luma-cli download <url> [file]   Download a file")
 	fmt.Println("  luma-cli social download <link>  Download Douyin video via share link")

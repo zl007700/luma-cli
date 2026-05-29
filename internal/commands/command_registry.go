@@ -24,6 +24,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "douyin", Description: "Douyin helpers", Handler: cmdDouyin},
 		{Name: "enhance", Description: "Video enhancement", Handler: cmdEnhance},
 		{Name: "env", Description: "Backend environment", Handler: cmdEnv},
+		{Name: "image", Description: "AI image generation", Handler: cmdImage},
 		{Name: "lipsync", Description: "Digital human lip sync", Handler: cmdLipSync},
 		{Name: "material", Description: "Local material description for PIP planning", Handler: cmdMaterial},
 		{Name: "pip", Description: "Picture-in-picture rendering", Handler: cmdPIP},
@@ -39,6 +40,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "tools", Description: "Agent tool discovery", Handler: cmdTools},
 		{Name: "tts", Description: "Text to speech", Handler: cmdTTS},
 		{Name: "update", Description: "Update CLI and sync skills", Handler: cmdUpdate},
+		{Name: "video", Description: "AI video generation", Handler: cmdVideo},
 		{Name: "viral", Description: "Viral copy helpers", Handler: cmdViral},
 		{Name: "voice", Description: "Voice clone and listing", Handler: cmdVoice},
 	}

@@ -77,6 +77,7 @@ luma-cli --json tools describe pip.plan
 | 字幕 | `subtitle` |
 | BGM | `bgm mix` |
 | 封面 | `cover frame`, `cover render` |
+| 图片/视频生成 | `image generate`, `video generate` |
 | 项目管理 | `project create/use/info`, `project artifact list/schema` |
 
 ## 爆款仿写流程
