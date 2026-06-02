@@ -124,6 +124,16 @@ func copyDir(source, target string) error {
 }
 
 func copyMaterialFile(source, target string, mode os.FileMode) error {
+	if isVideoAssetFile(source) {
+		if _, err := normalizeVideoAssetToFile(source, target, mode); err != nil {
+			return err
+		}
+		return nil
+	}
+	return copyMaterialFileRaw(source, target, mode)
+}
+
+func copyMaterialFileRaw(source, target string, mode os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		return err
 	}

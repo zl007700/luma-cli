@@ -10,23 +10,26 @@ import (
 
 // subtitleOptions holds parsed CLI options for the subtitle command.
 type subtitleOptions struct {
-	input          string // video file path or raw text
-	isTextMode     bool
-	transcriptPath string
-	outputPath     string
-	segmentsOutput string
-	projectName    string
-	maxChars       int
-	fontSize       int
-	fontResource   string
-	color          string
-	strokeColor    string
-	highlightColor string
-	sideMargin     int
-	bottomMargin   int
-	skipEffects    bool
-	skipHighlight  bool
-	persona        string
+	input           string // video file path or raw text
+	isTextMode      bool
+	transcriptPath  string
+	outputPath      string
+	segmentsOutput  string
+	projectName     string
+	maxChars        int
+	fontSize        int
+	fontResource    string
+	color           string
+	strokeColor     string
+	highlightColor  string
+	sideMargin      int
+	bottomMargin    int
+	fontSizeSet     bool
+	sideMarginSet   bool
+	bottomMarginSet bool
+	skipEffects     bool
+	skipHighlight   bool
+	persona         string
 }
 
 func parseSubtitleArgs(args []string) *subtitleOptions {
@@ -99,16 +102,19 @@ func parseSubtitleArgs(args []string) *subtitleOptions {
 		case "--font-size":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &opts.fontSize)
+				opts.fontSizeSet = true
 				i++
 			}
 		case "--side-margin":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &opts.sideMargin)
+				opts.sideMarginSet = true
 				i++
 			}
 		case "--bottom-margin":
 			if i+1 < len(args) {
 				fmt.Sscanf(args[i+1], "%d", &opts.bottomMargin)
+				opts.bottomMarginSet = true
 				i++
 			}
 		case "--font":

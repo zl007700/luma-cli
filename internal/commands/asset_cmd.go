@@ -14,10 +14,11 @@ import (
 )
 
 type assetView struct {
-	Type      string `json:"type,omitempty"`
-	Name      string `json:"name"`
-	Group     string `json:"group,omitempty"`
-	ObjectKey string `json:"object_key,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name,omitempty"`
+	Group       string `json:"group,omitempty"`
+	ObjectKey   string `json:"object_key,omitempty"`
 }
 
 func cmdAsset(args []string) error {
@@ -37,18 +38,36 @@ func cmdAsset(args []string) error {
 		verbose := parsed.Has("verbose")
 		filePath := parsed.Pos(0)
 		if filePath == "" {
-			fmt.Println("usage: luma-cli asset upload <file> [--group <name>]")
+			fmt.Println("usage: luma-cli asset upload <file> [--group <name>] [--name <display_name>]")
 			return nil
 		}
 		group := parsed.String("group", "default")
-		objectKey, err := cloud.UploadFile(filePath, cfg.CardKey, group)
+		displayName := strings.TrimSpace(parsed.String("name", ""))
+		prepared, err := prepareVideoAssetForUpload(filePath)
+		if err != nil {
+			return output.ErrSystem("prepare upload failed: %v\n", err)
+		}
+		defer prepared.Cleanup()
+		uploadName := displayName
+		if uploadName == "" && prepared.Normalized {
+			uploadName = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+		}
+		if prepared.Normalized && !runtimeOpts.JSON {
+			fmt.Printf("Normalized video: %dx%d -> %dx%d\n", prepared.Width, prepared.Height, prepared.TargetW, prepared.TargetH)
+		}
+		objectKey, err := cloud.UploadFileWithName(prepared.Path, cfg.CardKey, group, uploadName)
 		if err != nil {
 			return output.ErrNetwork("upload failed: %v\n", err)
 		}
+		name := displayName
+		if name == "" {
+			name = atom.AssetFriendlyName(objectKey)
+		}
 		view := assetView{
-			Name:      atom.AssetFriendlyName(objectKey),
-			Group:     group,
-			ObjectKey: objectKey,
+			Name:        name,
+			DisplayName: displayName,
+			Group:       group,
+			ObjectKey:   objectKey,
 		}
 		if runtimeOpts.JSON {
 			if !verbose {
@@ -86,9 +105,10 @@ func cmdAsset(args []string) error {
 			}
 			rtype, _ := m["resource_type"].(string)
 			key := atom.ResourceKeyFromMap(m, cfg.CardKey)
+			name := assetDisplayName(m, key)
 			view := assetView{
 				Type:      rtype,
-				Name:      atom.AssetFriendlyName(key),
+				Name:      name,
 				Group:     group,
 				ObjectKey: key,
 			}
@@ -154,6 +174,28 @@ func cmdAsset(args []string) error {
 			fmt.Printf("Saved to: %s\n", result["output_path"])
 		}
 
+	case "delete", "remove", "rm":
+		parsed := cmdutil.Parse(args[1:])
+		group := parsed.String("group", "")
+		stem := strings.TrimSpace(parsed.String("stem", ""))
+		if stem == "" {
+			stem = strings.TrimSpace(parsed.Pos(0))
+		}
+		if group == "" || stem == "" {
+			fmt.Println("usage: luma-cli asset delete <name_or_stem> --group <name>")
+			return nil
+		}
+		result, err := cloud.DeleteResource(group, stem, cfg.CardKey)
+		if err != nil {
+			return output.ErrNetwork("delete failed: %v\n", err)
+		}
+		if runtimeOpts.JSON {
+			_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: result})
+			return nil
+		}
+		fmt.Printf("Deleted: %s\n", stem)
+		fmt.Printf("Group: %s\n", group)
+
 	default:
 		fmt.Printf("unknown asset subcommand: %s\n", args[0])
 	}
@@ -161,7 +203,18 @@ func cmdAsset(args []string) error {
 }
 
 func printAssetUsage() {
-	fmt.Println("usage: luma-cli asset upload <file> [--group <name>] [--verbose]")
+	fmt.Println("usage: luma-cli asset upload <file> [--group <name>] [--name <display_name>] [--verbose]")
 	fmt.Println("       luma-cli asset list [group] [--verbose]")
 	fmt.Println("       luma-cli asset understand <object_name> [--group <name>] [--output meta.json]")
+	fmt.Println("       luma-cli asset delete <name_or_stem> --group <name>")
+}
+
+func assetDisplayName(item map[string]any, key string) string {
+	if name := atom.ResourceDisplayName(item); name != "" {
+		return name
+	}
+	if filename, _ := item["filename"].(string); strings.TrimSpace(filename) != "" {
+		return atom.AssetFriendlyName(filename)
+	}
+	return atom.AssetFriendlyName(key)
 }

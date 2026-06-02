@@ -75,4 +75,16 @@ func TestAssetFriendlyName(t *testing.T) {
 	if got != "name" {
 		t.Fatalf("expected friendly name, got %q", got)
 	}
+
+	got = AssetFriendlyName("roles/boss_at_home_33b86b65b421.mp4")
+	if got != "boss_at_home" {
+		t.Fatalf("expected hash suffix stripped, got %q", got)
+	}
+}
+
+func TestResourceDisplayName(t *testing.T) {
+	got := ResourceDisplayName(map[string]any{"meta": map[string]any{"display_name": "老板在家里"}})
+	if got != "老板在家里" {
+		t.Fatalf("expected display name, got %q", got)
+	}
 }

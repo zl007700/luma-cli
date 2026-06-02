@@ -122,11 +122,8 @@ func cmdSubtitleMain(opts *subtitleOptions) error {
 	// Step 6: Generate ASS and burn
 	fmt.Println("Step 6/6: Generating ASS and burning subtitles...")
 	width, height := resolveVideoSize(opts.isTextMode, opts.input)
-	fontSize, marginV := resolveFontSize(opts.fontSize, opts.bottomMargin, height)
-	sideMargin := opts.sideMargin
-	if sideMargin <= 0 {
-		sideMargin = 60
-	}
+	fontSize, marginV := resolveFontSize(opts.fontSize, opts.bottomMargin, height, opts.fontSizeSet, opts.bottomMarginSet)
+	sideMargin := resolveSideMargin(opts.sideMargin, width, opts.sideMarginSet)
 	fontPath := ""
 	if opts.fontResource != "" {
 		fontPath, err = cacheDefaultResource(opts.fontResource, cfg)
@@ -204,6 +201,8 @@ func cmdSubtitleMain(opts *subtitleOptions) error {
 		return s.EffectType != "" && s.EffectType != "none"
 	})
 	fmt.Printf("Font size: %dpx\n", fontSize)
+	fmt.Printf("Bottom margin: %dpx\n", marginV)
+	fmt.Printf("Video size: %dx%d\n", width, height)
 	fmt.Printf("Output: %s\n", outputPath)
 	if proj != nil {
 		fmt.Printf("Project: %s\n", proj.Name)

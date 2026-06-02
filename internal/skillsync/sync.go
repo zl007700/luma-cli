@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	DefaultSource = "zl007700/luma-cli"
+	DefaultSource       = "zl007700/luma-cli"
+	OfficialNpmRegistry = "https://registry.npmjs.org/"
 
 	envSource = "LUMA_SKILLS_SOURCE"
 )
@@ -38,9 +39,10 @@ type SyncOptions struct {
 }
 
 type NpmInstallOptions struct {
-	Version string
-	Stdout  io.Writer
-	Stderr  io.Writer
+	Version  string
+	Registry string
+	Stdout   io.Writer
+	Stderr   io.Writer
 }
 
 func SourceFromEnv() string {
@@ -121,11 +123,23 @@ func RunNpmInstall(opts NpmInstallOptions) error {
 	} else if strings.TrimSpace(opts.Version) == "latest" {
 		pkg += "@latest"
 	}
-	return runCommand(npmCommand(), []string{"install", "-g", pkg}, opts.Stdout, opts.Stderr)
+	args := []string{"install", "-g", pkg}
+	if registry := strings.TrimSpace(opts.Registry); registry != "" {
+		args = append(args, "--registry", registry)
+	}
+	return runCommand(npmCommand(), args, opts.Stdout, opts.Stderr)
 }
 
 func LatestNpmVersion() (string, error) {
-	out, err := exec.Command(npmCommand(), "view", "@lumageo/luma-cli", "version").Output()
+	return LatestNpmVersionFromRegistry("")
+}
+
+func LatestNpmVersionFromRegistry(registry string) (string, error) {
+	args := []string{"view", "@lumageo/luma-cli", "version"}
+	if registry = strings.TrimSpace(registry); registry != "" {
+		args = append(args, "--registry", registry)
+	}
+	out, err := exec.Command(npmCommand(), args...).Output()
 	if err != nil {
 		return "", fmt.Errorf("npm view @lumageo/luma-cli version: %w", err)
 	}
@@ -134,6 +148,45 @@ func LatestNpmVersion() (string, error) {
 		return "", fmt.Errorf("npm view @lumageo/luma-cli version returned empty version")
 	}
 	return version, nil
+}
+
+func NewerVersion(a, b string) string {
+	if CompareSemver(a, b) >= 0 {
+		return strings.TrimSpace(a)
+	}
+	return strings.TrimSpace(b)
+}
+
+func CompareSemver(a, b string) int {
+	ap := semverParts(a)
+	bp := semverParts(b)
+	for i := 0; i < len(ap); i++ {
+		if ap[i] > bp[i] {
+			return 1
+		}
+		if ap[i] < bp[i] {
+			return -1
+		}
+	}
+	return 0
+}
+
+func semverParts(version string) [3]int {
+	var out [3]int
+	version = strings.TrimSpace(strings.TrimPrefix(version, "v"))
+	if idx := strings.IndexAny(version, "-+"); idx >= 0 {
+		version = version[:idx]
+	}
+	parts := strings.Split(version, ".")
+	for i := 0; i < len(parts) && i < len(out); i++ {
+		for _, r := range parts[i] {
+			if r < '0' || r > '9' {
+				break
+			}
+			out[i] = out[i]*10 + int(r-'0')
+		}
+	}
+	return out
 }
 
 func BuildSkillsAddArgs(source, skill string, global, yes bool) []string {

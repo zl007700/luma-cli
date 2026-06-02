@@ -60,7 +60,6 @@ func cmdAuth(args []string) error {
 			if cfg != nil && cfg.PendingAuthDeviceCode != "" {
 				data["pending_auth"] = true
 				data["verify_url"] = cfg.PendingAuthVerifyURL
-				data["code"] = cfg.PendingAuthUserCode
 			}
 			if err := output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: data}); err != nil {
 				return output.ErrSystem("%v", err)
@@ -173,8 +172,10 @@ func startDeviceFlowLogin(account string) error {
 
 	// 2. Print authorization instructions. Do not open a local browser because
 	// this command often runs inside a cloud-hosted agent environment.
+	// The verification URL already contains the short user code, so avoid
+	// printing it separately; that confused users into thinking they had to
+	// copy a second code.
 	fmt.Printf("Authorization URL: %s\n", act.VerifyURL)
-	fmt.Printf("Code: %s\n\n", act.UserCode)
 	if strings.TrimSpace(account) != "" {
 		fmt.Printf("Account hint: %s\n", strings.TrimSpace(account))
 	}

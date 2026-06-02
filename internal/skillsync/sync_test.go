@@ -32,3 +32,22 @@ func TestIsVersionDrift(t *testing.T) {
 		t.Fatal("different release versions should report skills drift")
 	}
 }
+
+func TestCompareSemver(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want int
+	}{
+		{"0.0.17", "0.0.15", 1},
+		{"v0.0.17", "0.0.17", 0},
+		{"0.0.17", "0.0.17-beta.1", 0},
+		{"0.1.0", "0.0.99", 1},
+		{"0.0.1", "0.0.2", -1},
+	}
+	for _, tc := range cases {
+		got := CompareSemver(tc.a, tc.b)
+		if got != tc.want {
+			t.Fatalf("CompareSemver(%q, %q) = %d, want %d", tc.a, tc.b, got, tc.want)
+		}
+	}
+}

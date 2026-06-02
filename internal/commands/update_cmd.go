@@ -12,6 +12,8 @@ import (
 func cmdUpdate(args []string) error {
 	opts := parseUpdateOptions(args)
 	target := opts.Version
+	installVersion := opts.Version
+	registry := opts.Registry
 	if target == "" || target == "latest" {
 		resolved, err := skillsync.LatestNpmVersion()
 		if err != nil {
@@ -20,16 +22,26 @@ func cmdUpdate(args []string) error {
 		} else {
 			target = resolved
 		}
+		if opts.Registry == "" {
+			if official, err := skillsync.LatestNpmVersionFromRegistry(skillsync.OfficialNpmRegistry); err == nil && skillsync.CompareSemver(official, target) > 0 {
+				fmt.Printf("Current npm registry latest is %s, official registry latest is %s. Using official registry for this update.\n", target, official)
+				target = official
+				installVersion = official
+				registry = skillsync.OfficialNpmRegistry
+			}
+		}
 	}
 	if opts.Version != "" && opts.Version != "latest" {
 		target = opts.Version
+		installVersion = opts.Version
 	}
 
 	fmt.Printf("Updating luma-cli via npm (%s)...\n", target)
 	if err := skillsync.RunNpmInstall(skillsync.NpmInstallOptions{
-		Version: opts.Version,
-		Stdout:  os.Stdout,
-		Stderr:  os.Stderr,
+		Version:  installVersion,
+		Registry: registry,
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
 	}); err != nil {
 		return output.ErrSystem("failed to update luma-cli: %v\n", err)
 	}
@@ -74,6 +86,7 @@ func cmdUpdate(args []string) error {
 type updateOptions struct {
 	Version    string
 	Source     string
+	Registry   string
 	SkipSkills bool
 }
 
@@ -89,6 +102,11 @@ func parseUpdateOptions(args []string) updateOptions {
 		case "--source":
 			if i+1 < len(args) {
 				opts.Source = strings.TrimSpace(args[i+1])
+				i++
+			}
+		case "--registry":
+			if i+1 < len(args) {
+				opts.Registry = strings.TrimSpace(args[i+1])
 				i++
 			}
 		case "--skip-skills":

@@ -23,9 +23,10 @@ func ResolveAssetKey(group, name, cardKey string) (string, error) {
 			}
 			objKey, _ := m["object_key"].(string)
 			filename, _ := m["filename"].(string)
+			displayName := ResourceDisplayName(m)
 			friendly := AssetFriendlyName(objKey)
 			normalized := ResourceKeyFromMap(m, cardKey)
-			if friendly == name || filename == name || objKey == name || normalized == name {
+			if displayName == name || friendly == name || filename == name || objKey == name || normalized == name {
 				return normalized, nil
 			}
 		}
@@ -41,9 +42,10 @@ func ResolveAssetKey(group, name, cardKey string) (string, error) {
 			}
 			objKey, _ := m["object_key"].(string)
 			filename, _ := m["filename"].(string)
+			displayName := ResourceDisplayName(m)
 			friendly := AssetFriendlyName(objKey)
 			normalized := ResourceKeyFromMap(m, cardKey)
-			if friendly == name || filename == name || objKey == name || normalized == name {
+			if displayName == name || friendly == name || filename == name || objKey == name || normalized == name {
 				return normalized, nil
 			}
 		}
@@ -59,6 +61,18 @@ func ResourceKeyFromMap(item map[string]any, cardKey string) string {
 		normalized = "common/" + normalized
 	}
 	return normalized
+}
+
+func ResourceDisplayName(item map[string]any) string {
+	if name, _ := item["display_name"].(string); strings.TrimSpace(name) != "" {
+		return strings.TrimSpace(name)
+	}
+	if meta, ok := item["meta"].(map[string]any); ok {
+		if name, _ := meta["display_name"].(string); strings.TrimSpace(name) != "" {
+			return strings.TrimSpace(name)
+		}
+	}
+	return ""
 }
 
 // NormalizeResourceKey converts storage object keys to the relative keys accepted by task APIs.
@@ -79,5 +93,20 @@ func AssetFriendlyName(objKey string) string {
 	}
 	base = strings.TrimSuffix(base, filepath.Ext(base))
 	base = strings.TrimSuffix(base, "_original")
+	if idx := strings.LastIndex(base, "_"); idx >= 0 && isShortHex(base[idx+1:]) {
+		base = base[:idx]
+	}
 	return base
+}
+
+func isShortHex(value string) bool {
+	if len(value) != 12 {
+		return false
+	}
+	for _, r := range value {
+		if !(r >= '0' && r <= '9') && !(r >= 'a' && r <= 'f') && !(r >= 'A' && r <= 'F') {
+			return false
+		}
+	}
+	return true
 }

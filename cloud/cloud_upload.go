@@ -79,11 +79,13 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 	resourceType := guessResourceType(mimeType)
 
 	filename := filepath.Base(filePath)
+	displayName := ""
 	if strings.TrimSpace(resourceName) != "" {
 		filename = strings.TrimSpace(resourceName)
 		if filepath.Ext(filename) == "" {
 			filename += filepath.Ext(filePath)
 		}
+		displayName = strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
 	}
 
 	// Append content hash to the filename so re-uploading a different file
@@ -95,7 +97,7 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 	}
 
 	if fileSize >= multipartThreshold {
-		return uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey)
+		return uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey, uploadMeta(displayName))
 	}
 
 	asciiFilename := filename
@@ -106,10 +108,18 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 		}
 	}
 
-	return uploadSinglePart(filePath, asciiFilename, groupName, resourceType, mimeType, cardKey)
+	return uploadSinglePart(filePath, asciiFilename, groupName, resourceType, mimeType, cardKey, uploadMeta(displayName))
 }
 
-func uploadSinglePart(filePath, filename, groupName, resourceType, mimeType, cardKey string) (string, error) {
+func uploadMeta(displayName string) map[string]any {
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		return map[string]any{}
+	}
+	return map[string]any{"display_name": displayName}
+}
+
+func uploadSinglePart(filePath, filename, groupName, resourceType, mimeType, cardKey string, meta map[string]any) (string, error) {
 	signBody, _ := json.Marshal(map[string]any{
 		"group_name":    groupName,
 		"filename":      filename,
@@ -154,6 +164,7 @@ func uploadSinglePart(filePath, filename, groupName, resourceType, mimeType, car
 		"mime_type":     mimeType,
 		"object_key":    objectKey,
 		"filename":      filename,
+		"meta":          meta,
 	})
 	_, err = apiRequest("POST", "/v1/resources", saveBody, cardKey)
 	if err != nil {
@@ -163,7 +174,7 @@ func uploadSinglePart(filePath, filename, groupName, resourceType, mimeType, car
 	return objectKey, nil
 }
 
-func uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey string) (string, error) {
+func uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey string, meta map[string]any) (string, error) {
 	asciiFilename := fmt.Sprintf("upload_%d%s", time.Now().UnixNano()%100000, filepath.Ext(filePath))
 
 	initBody, _ := json.Marshal(map[string]any{
@@ -254,11 +265,15 @@ func uploadMultipart(filePath, filename, groupName, resourceType, mimeType, card
 	}
 
 	completeBody, _ := json.Marshal(map[string]any{
-		"resource_id": resourceID,
-		"group_name":  groupName,
-		"object_key":  objectKey,
-		"upload_id":   uploadID,
-		"parts":       parts,
+		"resource_id":   resourceID,
+		"group_name":    groupName,
+		"resource_type": resourceType,
+		"filename":      asciiFilename,
+		"mime_type":     mimeType,
+		"object_key":    objectKey,
+		"upload_id":     uploadID,
+		"parts":         parts,
+		"meta":          meta,
 	})
 	_, err = apiRequest("POST", "/v1/resources/multipart/complete", completeBody, cardKey)
 	if err != nil {

@@ -134,7 +134,19 @@ func cmdMaterialUnderstand(raw []string) error {
 		return err
 	}
 	group := strings.TrimSpace(args.String("group", "pip_materials"))
-	objectKey, err := cloud.UploadFile(inputPath, cfg.CardKey, group)
+	prepared, err := prepareVideoAssetForUpload(inputPath)
+	if err != nil {
+		return output.ErrSystem("prepare upload failed: %v\n", err)
+	}
+	defer prepared.Cleanup()
+	uploadName := ""
+	if prepared.Normalized {
+		uploadName = strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+		if !runtimeOpts.JSON {
+			fmt.Printf("Normalized video: %dx%d -> %dx%d\n", prepared.Width, prepared.Height, prepared.TargetW, prepared.TargetH)
+		}
+	}
+	objectKey, err := cloud.UploadFileWithName(prepared.Path, cfg.CardKey, group, uploadName)
 	if err != nil {
 		return output.ErrNetwork("upload failed: %v\n", err)
 	}

@@ -70,18 +70,48 @@ func resolveVideoSize(isTextMode bool, videoPath string) (int, int) {
 	return width, height
 }
 
-func resolveFontSize(requestedFontSize, requestedBottomMargin, height int) (int, int) {
+func resolveFontSize(requestedFontSize, requestedBottomMargin, height int, fontSizeSet, bottomMarginSet bool) (int, int) {
 	autoFontSize, _, _, marginV := subtitle.AutoSizeParams(0, height)
 	if requestedFontSize > 0 {
+		if !fontSizeSet {
+			requestedFontSize = scaleSubtitleDimension(requestedFontSize, height, 1920, 32)
+		}
 		if requestedBottomMargin > 0 {
+			if !bottomMarginSet {
+				requestedBottomMargin = scaleSubtitleDimension(requestedBottomMargin, height, 1920, 90)
+			}
 			return requestedFontSize, requestedBottomMargin
 		}
 		return requestedFontSize, marginV
 	}
 	if requestedBottomMargin > 0 {
+		if !bottomMarginSet {
+			requestedBottomMargin = scaleSubtitleDimension(requestedBottomMargin, height, 1920, 90)
+		}
 		return autoFontSize, requestedBottomMargin
 	}
 	return autoFontSize, marginV
+}
+
+func resolveSideMargin(requestedSideMargin, width int, sideMarginSet bool) int {
+	if requestedSideMargin <= 0 {
+		requestedSideMargin = 60
+	}
+	if sideMarginSet {
+		return requestedSideMargin
+	}
+	return scaleSubtitleDimension(requestedSideMargin, width, 1080, 24)
+}
+
+func scaleSubtitleDimension(value, actual, base, minValue int) int {
+	if value <= 0 || actual <= 0 || base <= 0 {
+		return value
+	}
+	scaled := int(float64(value)*float64(actual)/float64(base) + 0.5)
+	if scaled < minValue {
+		return minValue
+	}
+	return scaled
 }
 
 func resolveAssPath(outputPath string, proj *project.Project, dirs projectDirs) string {

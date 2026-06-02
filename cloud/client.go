@@ -204,6 +204,11 @@ func UnderstandResource(groupName, objectName, cardKey string) (map[string]any, 
 	}, cardKey)
 }
 
+func DeleteResource(groupName, stem, cardKey string) (map[string]any, error) {
+	path := "/v1/resources?group_name=" + url.QueryEscape(groupName) + "&stem=" + url.QueryEscape(stem)
+	return apiRequest("DELETE", path, nil, cardKey)
+}
+
 func ResolveRuntime(name, osName, arch, version, cardKey string) (*RuntimeResolve, error) {
 	payload := map[string]any{
 		"name":    name,
