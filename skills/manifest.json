@@ -28,6 +28,12 @@
       "path": "luma-material/SKILL.md"
     },
     {
+      "name": "luma-assets",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-assets/SKILL.md"
+    },
+    {
       "name": "luma-digital-human",
       "category": "capability",
       "entrypoint": true,

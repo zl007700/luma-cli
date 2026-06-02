@@ -33,6 +33,8 @@ If the user provides a reference voice sample, clone it first:
 luma-cli voice clone ./voice.wav --name my_voice
 ```
 
+If the user provides a video and says they want the sound, voice, tone, or audio from it, treat the video as a voice source and use voice clone. Do not upload that video as a `roles` avatar/source-role asset unless the user explicitly says they want the person/visual in the video to appear.
+
 If the user provides a local avatar video, upload it:
 
 ```bash
@@ -70,6 +72,8 @@ luma-cli asset upload avatar.mp4 --group roles
 
 - **Script must come from research, not imagination.** If the script is for a short-video production, the text source must be backed by `luma-cli research run` data or a known viral reference. Never invent a script topic without data support. See `../luma-workflow-viral-remix/SKILL.md` for the full research → rewrite flow.
 - Use `voice.clone` when a user provides a voice sample.
+- Uploaded videos are ambiguous. If the user did not clearly say whether the video is for voice clone, avatar/source role, PIP material, ASR/rewrite, or video processing, ask a short confirmation before choosing a workflow.
+- Do not assume a user-uploaded video is a digital-human avatar. If the user asks to use "the voice/audio/sound inside this video", extract or use audio for voice clone instead.
 - Use `asset.list voice` and `asset.list roles` when the user asks what is available.
 - Use the latest project TTS output for lip-sync unless the user explicitly provides `--audio`.
 - Keep the script text outside media commands until it is final enough for this generation attempt.

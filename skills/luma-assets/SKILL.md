@@ -7,16 +7,60 @@ metadata:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools describe asset.upload"
   category: "capability"
-  entrypoint: false
+  entrypoint: true
   relatedSkills: ["luma-shared", "luma-material", "luma-digital-human"]
   aliases: ["拾光素材", "拾光资产", "拾光工具", "Luma assets", "云端素材", "云端字体"]
 ---
 
 # Luma Assets
 
-Use this skill when an agent needs to inspect or upload reusable media assets for Luma workflows.
+Use this skill when an agent needs to inspect, upload, name, classify, or reuse media assets for Luma workflows.
 
 For local material libraries and PIP material matching, prefer `../luma-material/SKILL.md`.
+
+## Uploaded Video Intent
+
+When the user uploads a video, do not guess its purpose. A video can be a voice sample, an avatar/source-role video, a PIP material, a reference for ASR/rewrite, or a video to process with subtitles/BGM/enhancement.
+
+If the user did not clearly say the purpose, ask one short confirmation before running any destructive or paid workflow:
+
+```text
+这段视频准备用来做什么？
+1. 提取声音做音色
+2. 当视频素材使用
+3. 识别文案/仿写
+4. 给视频加字幕/处理
+```
+
+Only proceed without asking when the wording is explicit:
+
+- Voice clone: "用这个声音", "克隆这个声音", "照这个人的声音", "用视频里的音频".
+- Avatar/source role: "用这个人出镜", "这个做数字人", "用这个视频当形象".
+- PIP/material: "当素材", "插到视频里", "素材库".
+- Reference/ASR/rewrite: "识别这段", "仿写这个", "提取文案".
+- Video processing: "加字幕", "加 BGM", "增强", "处理这个视频".
+
+If the user wants voice clone from a video, treat the video as an audio source, not as a digital-human avatar. Extract or upload the audio sample for `voice.clone`; do not upload the video to `roles` unless the user explicitly asks to use the visual person as an avatar/source role.
+
+## Friendly Asset Names
+
+Never expose hash-like object keys as the primary reusable name. Keep object keys internally, but give the user a short display name.
+
+When a new video asset has a hash-like name or no useful filename:
+
+1. Run asset/material understanding when available:
+   ```bash
+   luma-cli asset understand <object_name_or_key> --group <group> --output asset_meta.json
+   ```
+2. Generate a natural Chinese display name from the visual/audio summary, 5-10 Chinese characters.
+3. Prefer concrete names that describe the person/scene/use, for example `老板在家里`, `女声装修讲解`, `门店口播素材`, `窗帘安装现场`.
+4. Tell the user the display name and keep the object key only as technical detail.
+
+If the generated name is uncertain, ask:
+
+```text
+我先把它叫「老板在家里」，可以吗？
+```
 
 ## Common Groups
 
@@ -44,6 +88,9 @@ luma-cli material search --materials materials.json --query "AI assistant" --lim
 
 - Prefer friendly names from `asset list` when available.
 - Prefer stable asset names or IDs returned by CLI commands.
+- For uploaded videos, confirm intent before choosing voice clone, avatar, material, ASR, or video-processing workflows.
+- Do not treat uploaded videos as digital-human avatar/source-role assets unless the user explicitly asks for the visual person to appear.
+- Use a short display name for reusable assets; do not ask the user to remember hash-like object keys.
 - Upload local files before referencing them in cloud-only workflows.
 - Keep asset upload separate from creative workflow planning.
 - For local material libraries, prefer `material group describe` over hand-building a materials file.

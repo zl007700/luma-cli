@@ -47,12 +47,12 @@ func printSkillsUsage() {
 func cmdSkillsList() error {
 	items := []map[string]string{
 		{"name": "luma-shared", "layer": "shared", "description": "Common Luma agent rules"},
+		{"name": "luma-maintenance", "layer": "maintenance", "description": "Update Luma CLI and sync agent skills"},
 		{"name": "luma-content-research", "layer": "capability", "description": "Research, keyword tables, and topic planning"},
 		{"name": "luma-material", "layer": "capability", "description": "Local material groups, search, and PIP matching"},
 		{"name": "luma-assets", "layer": "capability", "description": "Cloud assets and reusable resources"},
 		{"name": "luma-digital-human", "layer": "capability", "description": "Voice clone, TTS, avatar, and lip-sync"},
 		{"name": "luma-subtitle", "layer": "capability", "description": "Subtitle generation and rendering"},
-		{"name": "luma-video-workflow", "layer": "workflow", "description": "General video production workflow"},
 		{"name": "luma-workflow-viral-remix", "layer": "workflow", "description": "Research-to-video viral remix workflow"},
 	}
 	if runtimeOpts.JSON {
