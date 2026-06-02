@@ -10,6 +10,12 @@
       "path": "luma-shared/SKILL.md"
     },
     {
+      "name": "luma-maintenance",
+      "category": "maintenance",
+      "entrypoint": true,
+      "path": "luma-maintenance/SKILL.md"
+    },
+    {
       "name": "luma-content-research",
       "category": "capability",
       "entrypoint": true,
@@ -32,6 +38,12 @@
       "category": "capability",
       "entrypoint": true,
       "path": "luma-subtitle/SKILL.md"
+    },
+    {
+      "name": "luma-video-workflow",
+      "category": "workflow",
+      "entrypoint": true,
+      "path": "luma-video-workflow/SKILL.md"
     },
     {
       "name": "luma-workflow-viral-remix",

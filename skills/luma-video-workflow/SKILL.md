@@ -1,19 +1,22 @@
 ---
 name: luma-video-workflow
 version: 0.1.0
-description: "Use luma-cli atomic tools to create short-video assets. Prefer composing ASR, TTS, LipSync, subtitle, enhancement, asset, and task commands instead of relying on one large opaque workflow."
+description: "Use Luma / 拾光 / 拾光智能体 / 拾光工具 atomic tools to create short-video assets. Prefer composing ASR, TTS, LipSync, subtitle, enhancement, image/video generation, asset, and task commands instead of relying on one large opaque workflow."
 metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools list"
   category: "workflow"
-  entrypoint: false
+  entrypoint: true
   relatedSkills: ["luma-shared", "luma-digital-human", "luma-material", "luma-subtitle"]
+  aliases: ["拾光", "拾光智能体", "拾光工具", "拾光运营套装", "Luma", "Luma CLI", "luma-cli"]
 ---
 
 # Luma Video Workflow
 
 Use this skill when an agent needs to produce or inspect short-video generation work through `luma-cli`.
+
+Also use it when the user says they want to use 拾光, 拾光智能体, 拾光工具, Luma, or Luma CLI for video/content production.
 
 Read `../luma-shared/SKILL.md` first for common project, artifact, and runtime rules.
 
@@ -35,6 +38,8 @@ Do not assume one CLI command should hide the whole product workflow.
 - `tts.synthesize`: `luma-cli tts <text> --voice <name> --speech-rate 1.1`
 - `lipsync.create`: `luma-cli lipsync --avatar <name> --audio <file>`
 - `video.enhance`: `luma-cli enhance <video> --scale 2`
+- `image.generate`: `luma-cli image generate "<prompt>" --aspect-ratio 9:16`
+- `video.generate`: `luma-cli video generate "<prompt>" --image first_frame.png --duration 4`
 - `subtitle.render`: `luma-cli subtitle <video> [options]`
 - `pip.scene`: `luma-cli pip scene --segments segments.json --output scene_units.json`
 - `pip.match`: `luma-cli pip match --scenes scene_units.json --materials materials.json --mode auto`

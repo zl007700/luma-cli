@@ -1,7 +1,7 @@
 ---
 name: luma-digital-human
 version: 0.1.0
-description: "Generate digital-human short videos by composing voice clone, TTS, avatar, lip-sync, subtitle, and enhancement tools."
+description: "Generate digital-human short videos with Luma / 拾光 / 拾光智能体 / 拾光工具 by composing voice clone, TTS, avatar, lip-sync, subtitle, and enhancement tools."
 metadata:
   requires:
     bins: ["luma-cli"]
@@ -9,6 +9,7 @@ metadata:
   category: "capability"
   entrypoint: true
   relatedSkills: ["luma-shared", "luma-subtitle", "luma-workflow-viral-remix"]
+  aliases: ["拾光数字人", "拾光智能体", "拾光工具", "Luma digital human", "数字人", "口播视频"]
 ---
 
 # Luma Digital Human

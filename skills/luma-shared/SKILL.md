@@ -1,18 +1,21 @@
 ---
 name: luma-shared
 version: 0.1.0
-description: "Use before any Luma production workflow. Defines common luma-cli rules for auth, tool discovery, projects, artifacts, runtime resources, and safe agent behavior."
+description: "Use before any Luma / 拾光 / 拾光智能体 / 拾光工具 production workflow. Defines common luma-cli rules for auth, tool discovery, projects, artifacts, runtime resources, and safe agent behavior."
 metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools list"
   category: "shared"
   entrypoint: false
+  aliases: ["拾光", "拾光智能体", "拾光工具", "拾光运营套装", "Luma", "Luma CLI", "luma-cli"]
 ---
 
 # Luma Shared Rules
 
 Use this skill as the common foundation for all `luma-cli` skills.
+
+Trigger this skill when the user mentions 拾光, 拾光智能体, 拾光工具, 拾光运营套装, Luma, Luma CLI, or luma-cli.
 
 ## Before Running Tools
 

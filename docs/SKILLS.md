@@ -15,10 +15,12 @@ Current core skills:
 | Skill | Layer | Purpose |
 | --- | --- | --- |
 | `luma-shared` | shared | Common rules every Luma agent should know |
+| `luma-maintenance` | maintenance | Update Luma CLI and sync agent skills |
 | `luma-content-research` | capability | Research, keyword tables, persona-based search |
 | `luma-material` | capability | Local material groups, material search, PIP matching |
 | `luma-digital-human` | capability | Voice clone, TTS, avatar, lip-sync |
 | `luma-subtitle` | capability | Text segmentation and subtitle rendering |
+| `luma-video-workflow` | workflow | Common image/video generation workflow and atoms |
 | `luma-workflow-viral-remix` | workflow | Research-to-video viral remix workflow |
 
 ## Distribution

@@ -1,7 +1,7 @@
 ---
 name: luma-workflow-viral-remix
 version: 0.1.0
-description: "Use when the user wants a complete viral-remix short-video workflow: research, rewrite, TTS, digital human, PIP materials, subtitles, BGM, and cover."
+description: "Use when the user wants Luma / 拾光 / 拾光智能体 / 拾光工具 to create a complete viral-remix short-video workflow: research, rewrite, TTS, digital human, PIP materials, subtitles, BGM, and cover."
 metadata:
   requires:
     bins: ["luma-cli"]
@@ -9,6 +9,7 @@ metadata:
   category: "workflow"
   entrypoint: true
   relatedSkills: ["luma-shared", "luma-content-research", "luma-digital-human", "luma-material", "luma-subtitle"]
+  aliases: ["拾光", "拾光智能体", "拾光工具", "拾光运营套装", "Luma", "Luma CLI", "luma-cli", "爆款复刻", "爆款仿写"]
 ---
 
 # 爆款仿写 Workflow

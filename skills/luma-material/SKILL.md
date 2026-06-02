@@ -1,19 +1,20 @@
 ---
 name: luma-material
 version: 0.1.0
-description: "Use when an agent needs to inspect local material libraries, describe material groups, upload or understand materials, search candidates, or prepare PIP matching inputs."
+description: "Use when a Luma / 拾光 / 拾光智能体 / 拾光工具 agent needs to inspect local material libraries, describe material groups, upload or understand materials, search candidates, or prepare PIP matching inputs."
 metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools describe material.group.describe"
   category: "capability"
   entrypoint: true
+  aliases: ["拾光素材", "拾光素材库", "拾光工具", "Luma material", "素材库", "素材匹配"]
   relatedSkills: ["luma-shared", "luma-workflow-viral-remix"]
 ---
 
 # Luma Material
 
-Use this skill for local material libraries, cloud material understanding, material search, and PIP matching preparation.
+Use this skill for Luma / 拾光 local material libraries, cloud material understanding, material search, and PIP matching preparation.
 
 Read `../luma-shared/SKILL.md` first for common project and output rules.
 

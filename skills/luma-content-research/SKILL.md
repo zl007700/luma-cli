@@ -1,19 +1,20 @@
 ---
 name: luma-content-research
 version: 0.1.0
-description: "Use when an agent needs content research, topic discovery, keyword tables, persona-based search, or Excel-friendly research outputs for short-video planning."
+description: "Use when a Luma / 拾光 / 拾光智能体 / 拾光工具 agent needs content research, topic discovery, keyword tables, persona-based search, or Excel-friendly research outputs for short-video planning."
 metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli tools describe research.run"
   category: "capability"
   entrypoint: true
+  aliases: ["拾光选题", "拾光调研", "拾光工具", "Luma research", "内容调研", "选题"]
   relatedSkills: ["luma-shared", "luma-workflow-viral-remix"]
 ---
 
 # Luma Content Research
 
-Use this skill when the user wants to find short-video topics, analyze references, export search results, or prepare a keyword table for later script writing.
+Use this skill when the user wants to find short-video topics, analyze references, export search results, or prepare a keyword table for later script writing with Luma / 拾光.
 
 Read `../luma-shared/SKILL.md` first for common auth, project, and artifact rules.
 

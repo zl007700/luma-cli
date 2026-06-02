@@ -1,7 +1,7 @@
 ---
 name: luma-subtitle
 version: 0.1.0
-description: "Create short-video subtitles with luma-cli. Use ASR, segmentation, styling, and burn-in as composable steps; keep editorial decisions in the agent instructions."
+description: "Create short-video subtitles with Luma / 拾光 / 拾光工具. Use ASR, segmentation, styling, and burn-in as composable steps; keep editorial decisions in the agent instructions."
 metadata:
   requires:
     bins: ["luma-cli"]
@@ -9,6 +9,7 @@ metadata:
   category: "capability"
   entrypoint: true
   relatedSkills: ["luma-shared", "luma-workflow-viral-remix"]
+  aliases: ["拾光字幕", "拾光工具", "Luma subtitles", "字幕生成", "字幕烧录"]
 ---
 
 # Luma Subtitle

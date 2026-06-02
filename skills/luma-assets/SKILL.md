@@ -1,7 +1,7 @@
 ---
 name: luma-assets
 version: 0.1.0
-description: "Manage Luma cloud assets used by generation tools, including voices, avatars, media inputs, and named groups."
+description: "Manage Luma / 拾光 cloud assets used by generation tools, including voices, avatars, fonts, media inputs, and named groups."
 metadata:
   requires:
     bins: ["luma-cli"]
@@ -9,6 +9,7 @@ metadata:
   category: "capability"
   entrypoint: false
   relatedSkills: ["luma-shared", "luma-material", "luma-digital-human"]
+  aliases: ["拾光素材", "拾光资产", "拾光工具", "Luma assets", "云端素材", "云端字体"]
 ---
 
 # Luma Assets
