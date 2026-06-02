@@ -17,7 +17,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"video_path", "title"},
 			Examples: []string{"luma-cli social download \"https://v.douyin.com/xxx\" --output video.mp4"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 	}
 }

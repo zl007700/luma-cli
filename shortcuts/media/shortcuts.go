@@ -18,7 +18,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"aligned_segments", "count", "output_path"},
 			Examples: []string{"luma-cli align --audio tts.wav --segments step4_segments.json --output step4_aligned.json"},
-			Skills:   []string{"luma-subtitle", "luma-video-workflow"},
+			Skills:   []string{"luma-subtitle"},
 		},
 		{
 			ID:          "asr.transcribe",
@@ -32,7 +32,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"task_id", "object_key", "text", "segments", "output_path"},
 			Examples: []string{"luma-cli asr input.mp4 --language zh --output references/ref_01_asr.json"},
-			Skills:   []string{"luma-subtitle", "luma-video-workflow", "luma-workflow-viral-remix"},
+			Skills:   []string{"luma-subtitle", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "voice.clone",
@@ -47,7 +47,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"name", "object_key"},
 			Examples: []string{"luma-cli voice clone ./voice.wav --name my_voice"},
-			Skills:   []string{"luma-digital-human", "luma-video-workflow", "luma-workflow-viral-remix"},
+			Skills:   []string{"luma-digital-human", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "voice.list",
@@ -58,7 +58,7 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "verbose", Description: "Show object keys."}},
 			Outputs:     []string{"items"},
 			Examples:    []string{"luma-cli voice list"},
-			Skills:      []string{"luma-digital-human", "luma-video-workflow"},
+			Skills:      []string{"luma-digital-human"},
 		},
 		{
 			ID:          "tts.synthesize",
@@ -74,7 +74,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"task_id", "audio_object_key", "output_path", "output_url"},
 			Examples: []string{"luma-cli tts \"你好，欢迎来到直播间\" --voice 男声3"},
-			Skills:   []string{"luma-digital-human", "luma-video-workflow"},
+			Skills:   []string{"luma-digital-human"},
 		},
 		{
 			ID:          "lipsync.create",
@@ -95,7 +95,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"task_id", "output_path", "output_url"},
 			Examples: []string{"luma-cli lipsync --avatar 数字人男 --audio tts_output.wav", "luma-cli lipsync --avatar 数字人男 --audio-key prod/resource/xxx/yyy.wav"},
-			Skills:   []string{"luma-digital-human", "luma-video-workflow"},
+			Skills:   []string{"luma-digital-human"},
 		},
 		{
 			ID:          "video.enhance",
@@ -109,7 +109,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"task_id", "object_key", "output_path", "output_url"},
 			Examples: []string{"luma-cli enhance input.mp4 --scale 2"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "image.generate",
@@ -124,7 +123,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"task_id", "output_dir", "manifest_path", "downloaded"},
 			Examples: []string{"luma-cli image generate \"窗帘产品短视频封面背景\" --aspect-ratio 9:16"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "video.generate",
@@ -142,7 +140,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"task_id", "output_path", "manifest_path", "downloaded"},
 			Examples: []string{"luma-cli video generate \"镜头缓慢推进，窗帘随风摆动\" --image first_frame.png --duration 4"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "subtitle.render",
@@ -159,7 +156,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"output_path", "ass_path", "segments"},
 			Examples: []string{"luma-cli subtitle input.mp4 --project demo"},
-			Skills:   []string{"luma-subtitle", "luma-video-workflow", "luma-workflow-viral-remix"},
+			Skills:   []string{"luma-subtitle", "luma-workflow-viral-remix"},
 		},
 	}
 }

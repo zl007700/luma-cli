@@ -19,7 +19,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"response", "output_path"},
 			Examples: []string{"luma-cli research run --role \"AI工具创业者\" --mode precise --output step0_content_research.json"},
-			Skills:   []string{"luma-content-research", "luma-workflow-viral-remix", "luma-video-workflow"},
+			Skills:   []string{"luma-content-research", "luma-workflow-viral-remix"},
 		},
 		{
 			ID:          "research.export",

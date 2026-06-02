@@ -45,7 +45,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"meta", "meta_key", "output_path"},
 			Examples: []string{"luma-cli asset understand demo.mp4 --group vlm_demo --output material_meta.json"},
-			Skills:   []string{"luma-assets", "luma-video-workflow"},
+			Skills:   []string{"luma-assets"},
 		},
 		{
 			ID:          "task.status",
@@ -58,7 +58,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"status", "output"},
 			Examples: []string{"luma-cli task status task_xxx"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 	}
 }

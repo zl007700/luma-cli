@@ -40,12 +40,6 @@
       "path": "luma-subtitle/SKILL.md"
     },
     {
-      "name": "luma-video-workflow",
-      "category": "workflow",
-      "entrypoint": true,
-      "path": "luma-video-workflow/SKILL.md"
-    },
-    {
       "name": "luma-workflow-viral-remix",
       "category": "workflow",
       "entrypoint": true,

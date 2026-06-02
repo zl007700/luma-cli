@@ -173,7 +173,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
     ```bash
     luma-cli cover generate step4_picture_in_picture.mp4 --title "<cover_title>" --subtitle "<cover_subtitle>" --count 12 --output-dir step7_covers
     ```
-    Use the original visual video for cover frames: prefer `step4_picture_in_picture.mp4`; if PIP was skipped, use `step3_lipsync.mp4`. Do not extract the cover frame from `step5_subtitle.mp4`, because burned subtitles will become part of the cover background.
+    Cover source rule: use a clean visual video before burned subtitles and BGM. Prefer `step4_picture_in_picture.mp4`; if PIP was skipped, use `step3_lipsync.mp4`. Never use `step5_subtitle.mp4` or `step6_bgm.mp4` as the cover source, because burned subtitles will become part of the cover background.
 
 ## Agent Rules
 
@@ -182,6 +182,7 @@ Do not use this workflow when the user only asks for one atomic operation such a
 - If `step0_content_research.json` only has titles/links and no transcript, do not proceed to rewrite until reference videos have been downloaded and ASR has produced usable text.
 - ASR is an expensive validation step, not a bulk-processing step. Never ASR more than 3 reference videos for one remix unless the user explicitly approves it.
 - Use the rewritten script as the single source for TTS, segmentation, subtitles, and cover text extraction.
+- Covers must use clean visual frames, not videos that already contain burned subtitles.
 - If the material library does not fit the script, skip PIP instead of forcing weak matches.
 - Use `project artifact list` before resuming or rerunning a partial workflow.
 - Report exact output paths for all generated files.

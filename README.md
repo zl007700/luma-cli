@@ -155,7 +155,6 @@ luma-cli asset list roles
 | `luma-shared` | 通用认证、项目、产物和失败处理规则 |
 | `luma-content-research` | 内容研究、关键词表和选题整理 |
 | `luma-workflow-viral-remix` | 爆款仿写完整流程 |
-| `luma-video-workflow` | 视频制作通用流程 |
 | `luma-digital-human` | 数字人、TTS、声音克隆相关流程 |
 | `luma-subtitle` | 字幕生成、切分、样式和烧录 |
 | `luma-material` | 本地素材库、素材组、素材检索和 PIP 匹配 |

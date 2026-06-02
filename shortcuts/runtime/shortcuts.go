@@ -17,7 +17,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"name", "version", "platform", "executable_path"},
 			Examples: []string{"luma-cli runtime install ffmpeg"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "client-resource.list",
@@ -31,7 +30,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"items"},
 			Examples: []string{"luma-cli resource list font"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "client-resource.cache",
@@ -44,7 +42,6 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"id", "type", "version", "path"},
 			Examples: []string{"luma-cli resource cache font_default_zh"},
-			Skills:   []string{"luma-video-workflow"},
 		},
 	}
 }

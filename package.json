@@ -1,6 +1,6 @@
 {
   "name": "@lumageo/luma-cli",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Agent-native CLI for Luma media creation workflows",
   "bin": {
     "luma-cli": "scripts/run.js"

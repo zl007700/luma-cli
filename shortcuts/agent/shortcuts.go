@@ -17,7 +17,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"segments", "sentence_groups", "output_path"},
 			Examples: []string{"luma-cli agent run subtitle.split --input payload.json --output split.json"},
-			Skills:   []string{"luma-subtitle", "luma-video-workflow"},
+			Skills:   []string{"luma-subtitle"},
 		},
 		{
 			ID:          "subtitle.highlight",
@@ -28,7 +28,7 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"highlights", "output_path"},
 			Examples:    []string{"luma-cli agent run subtitle.highlight --input segments.json --output highlights.json"},
-			Skills:      []string{"luma-subtitle", "luma-video-workflow"},
+			Skills:      []string{"luma-subtitle"},
 		},
 		{
 			ID:          "subtitle.effects",
@@ -39,7 +39,7 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"effects", "output_path"},
 			Examples:    []string{"luma-cli agent run subtitle.effects --input segments.json --output effects.json"},
-			Skills:      []string{"luma-subtitle", "luma-video-workflow"},
+			Skills:      []string{"luma-subtitle"},
 		},
 		{
 			ID:          "title.generate",
@@ -50,7 +50,6 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"cover_title", "cover_subtitle", "video_title", "tags", "output_path"},
 			Examples:    []string{"luma-cli agent run title.generate --input title_payload.json --output title.json"},
-			Skills:      []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "storyboard.scene",
@@ -61,7 +60,6 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"scene_units", "output_path"},
 			Examples:    []string{"luma-cli agent run storyboard.scene --input segments.json --output scene.json"},
-			Skills:      []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "storyboard.shot",
@@ -72,7 +70,7 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"shot_units", "output_path"},
 			Examples:    []string{"luma-cli agent run storyboard.shot --input scene_payload.json --output shots.json"},
-			Skills:      []string{"luma-digital-human", "luma-video-workflow"},
+			Skills:      []string{"luma-digital-human"},
 		},
 		{
 			ID:          "material.match",
@@ -83,7 +81,6 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"inserts", "output_path"},
 			Examples:    []string{"luma-cli agent run material.match --input match_payload.json --output inserts.json"},
-			Skills:      []string{"luma-video-workflow"},
 		},
 		{
 			ID:          "agent.pip.plan",
@@ -94,7 +91,6 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Payload JSON path.", Required: true}, {Name: "output", Description: "Output JSON path."}},
 			Outputs:     []string{"pip_plan", "worker_payload", "output_path"},
 			Examples:    []string{"luma-cli agent run pip.plan --input pip_payload.json --output pip_plan.json"},
-			Skills:      []string{"luma-video-workflow"},
 		},
 	}
 }

@@ -19,7 +19,7 @@ func Shortcuts() []common.Shortcut {
 			},
 			Outputs:  []string{"request_id", "original_text", "rewritten_text", "usage", "output_path"},
 			Examples: []string{"luma-cli script rewrite --input source_script.txt --length short --output step1_rewrite.json"},
-			Skills:   []string{"luma-video-workflow", "luma-workflow-viral-remix"},
+			Skills:   []string{"luma-workflow-viral-remix"},
 		},
 	}
 }
