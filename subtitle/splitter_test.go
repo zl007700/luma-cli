@@ -65,6 +65,35 @@ func TestEnforceMaxChars(t *testing.T) {
 	}
 }
 
+func TestNormalizeSegmentsTrimsTrailingPunctuation(t *testing.T) {
+	segs := []Segment{
+		{SegID: 7, Text: "还是觉得闷？"},
+		{SegID: 8, Text: "空气不流动。"},
+		{SegID: 9, Text: "三件事：占不占地方、"},
+		{SegID: 10, Text: "、办公室"},
+		{SegID: 11, Text: "风速能不能调"},
+	}
+	result := normalizeSegments(segs)
+	expected := []string{
+		"还是觉得闷",
+		"空气不流动",
+		"三件事：占不占地方",
+		"办公室",
+		"风速能不能调",
+	}
+	if len(result) != len(expected) {
+		t.Fatalf("expected %d segments, got %d", len(expected), len(result))
+	}
+	for i, want := range expected {
+		if result[i].SegID != i {
+			t.Errorf("segment %d got SegID %d, want %d", i, result[i].SegID, i)
+		}
+		if result[i].Text != want {
+			t.Errorf("segment %d text = %q, want %q", i, result[i].Text, want)
+		}
+	}
+}
+
 func TestSplitByPunctuation(t *testing.T) {
 	segs := splitByPunctuation("第一句。第二句！第三句？", 20)
 	if len(segs) < 3 {

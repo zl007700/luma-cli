@@ -53,7 +53,11 @@ func runAlignment(segments []subtitle.Segment, isTextMode bool, videoPath, cardK
 		return nil, fmt.Errorf("create project audio dir failed: %w", err)
 	}
 
-	if err := subtitle.ExtractAudio(videoPath, audioPath, ""); err != nil {
+	ffmpegPath, err := installedFFmpegPath()
+	if err != nil {
+		return nil, err
+	}
+	if err := subtitle.ExtractAudio(videoPath, audioPath, ffmpegPath); err != nil {
 		return nil, fmt.Errorf("extract audio for alignment failed: %w", err)
 	}
 

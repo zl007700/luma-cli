@@ -35,6 +35,7 @@ func SplitByLLM(text string, maxCharsPerSeg int, llmClient *LLMClient, persona s
 	// Client-side safety net: the backend LLM may return segments longer than
 	// maxCharsPerSeg. Split any overlong segment so subtitles never overflow the screen.
 	segments = enforceMaxChars(segments, maxCharsPerSeg)
+	segments = normalizeSegments(segments)
 
 	return segments, sentenceGroups, nil
 }
@@ -137,6 +138,35 @@ func enforceMaxChars(segments []Segment, maxChars int) []Segment {
 	return out
 }
 
+func normalizeSegments(segments []Segment) []Segment {
+	out := make([]Segment, 0, len(segments))
+	segID := 0
+	for _, seg := range segments {
+		seg.Text = trimSegmentPunctuation(seg.Text)
+		if strings.TrimSpace(seg.Text) == "" {
+			continue
+		}
+		seg.SegID = segID
+		out = append(out, seg)
+		segID++
+	}
+	return out
+}
+
+func trimSegmentPunctuation(text string) string {
+	text = strings.TrimSpace(text)
+	isPunctuation := func(r rune) bool {
+		switch r {
+		case '。', '，', '、', '？', '！', '；', '：', '.', ',', '?', '!', ';', ':':
+			return true
+		default:
+			return false
+		}
+	}
+	text = strings.TrimLeftFunc(text, isPunctuation)
+	return strings.TrimRightFunc(text, isPunctuation)
+}
+
 // splitLongLine splits a line into chunks of maxChars.
 func splitLongLine(line string, maxChars int) []string {
 	if len([]rune(line)) <= maxChars {
@@ -171,6 +201,10 @@ func splitByPunctuation(text string, maxChars int) []Segment {
 		}
 		pieces := splitLongLine(part, maxChars)
 		for _, p := range pieces {
+			p = trimSegmentPunctuation(p)
+			if p == "" {
+				continue
+			}
 			segments = append(segments, Segment{SegID: segID, Text: p})
 			segID++
 		}

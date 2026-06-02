@@ -204,8 +204,10 @@ func EnvironmentName(apiURL, configured string) string {
 	switch {
 	case strings.Contains(apiURL, "localhost") || strings.Contains(apiURL, "127.0.0.1"):
 		return "test"
-	case apiURL != "":
+	case apiURL == "https://api.pikgeo.com":
 		return "prod"
+	case apiURL != "":
+		return "custom"
 	default:
 		return ""
 	}

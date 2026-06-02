@@ -166,7 +166,11 @@ func cmdSubtitleMain(opts *subtitleOptions) error {
 	}
 
 	// Burn subtitles
-	if err := subtitle.BurnSubtitles(opts.input, assPath, outputPath, fontDir, ""); err != nil {
+	ffmpegPath, err := installedFFmpegPath()
+	if err != nil {
+		return output.ErrSystem("%v", err)
+	}
+	if err := subtitle.BurnSubtitles(opts.input, assPath, outputPath, fontDir, ffmpegPath); err != nil {
 		os.Remove(assPath)
 		return output.ErrSystem("burn subtitles: %v", err)
 	}
