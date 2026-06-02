@@ -137,7 +137,7 @@ func cmdSubtitleMain(opts *subtitleOptions) error {
 
 	opts2 := subtitle.ASSOptions{
 		PlayResX: width, PlayResY: height,
-		FontName: fontNameFromPath(fontPath), FontSize: fontSize,
+		FontName: fontNameFromPath(fontPath), FontPath: fontPath, FontSize: fontSize,
 		Color: opts.color, StrokeColor: opts.strokeColor,
 		BackColor: "#000000", HighlightColor: opts.highlightColor,
 		HighlightScale: 1.25, MarginL: sideMargin, MarginR: sideMargin, MarginV: marginV,
@@ -149,6 +149,7 @@ func cmdSubtitleMain(opts *subtitleOptions) error {
 	if fontPath != "" {
 		if copiedFont, err := copyFontToDir(fontPath, fontDir); err == nil {
 			fontPath = copiedFont
+			opts2.FontPath = copiedFont
 		} else {
 			fmt.Printf("  Warning: copy subtitle font failed: %v\n", err)
 		}

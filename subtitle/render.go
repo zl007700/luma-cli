@@ -1,11 +1,17 @@
 package subtitle
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode/utf16"
+
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/sfnt"
+	"golang.org/x/image/math/fixed"
 )
 
 // WriteSRT writes segments to an SRT subtitle file.
@@ -56,6 +62,12 @@ func WriteASS(segments []Segment, outputPath string, opts ASSOptions) error {
 		resY = 1920
 	}
 	fontName := opts.FontName
+	fontInfo := loadASSFontInfo(opts.FontPath, opts.FontSize)
+	if fontInfo.Family != "" {
+		fontName = fontInfo.Family
+		opts.Bold = fontInfo.Bold
+		opts.Italic = fontInfo.Italic
+	}
 	if fontName == "" {
 		fontName = "Microsoft YaHei"
 	}
@@ -95,7 +107,7 @@ func WriteASS(segments []Segment, outputPath string, opts ASSOptions) error {
 			continue
 		}
 
-		wrapped := wrapTextByPixelWidth(text, resX-opts.MarginL-opts.MarginR, opts.FontSize)
+		wrapped := wrapTextByPixelWidth(text, resX-opts.MarginL-opts.MarginR, opts.FontSize, fontInfo)
 		displayText := escapeASSText(wrapped)
 
 		// Apply keyword highlight (with effect if any)
@@ -109,6 +121,7 @@ func WriteASS(segments []Segment, outputPath string, opts ASSOptions) error {
 	var allLines []string
 	allLines = append(allLines, header...)
 	allLines = append(allLines, body...)
+	allLines = append(allLines, assFontSection(fontName, opts.FontPath)...)
 	return os.WriteFile(outputPath, []byte(strings.Join(allLines, "\n")), 0644)
 }
 
@@ -140,6 +153,7 @@ type ASSOptions struct {
 	PlayResX       int
 	PlayResY       int
 	FontName       string
+	FontPath       string
 	FontSize       int
 	Color          string
 	StrokeColor    string
@@ -199,7 +213,11 @@ func escapeFilterPath(path string) string {
 }
 
 func renderWithHighlight(text, keyword string, fontSize int, scale float64, highlightColor string, effectType string) string {
+	keyword = strings.TrimSpace(keyword)
 	escaped := escapeASSText(text)
+	if keyword == "" {
+		return escaped
+	}
 	pos := strings.Index(text, keyword)
 	if pos < 0 {
 		return escaped
@@ -241,7 +259,185 @@ func appendEffect(text, effectType string) string {
 	return text + "{" + tag + "}"
 }
 
-func wrapTextByPixelWidth(text string, maxWidth int, fontSize int) string {
+type assFontInfo struct {
+	Family string
+	Bold   int
+	Italic int
+	Font   *sfnt.Font
+}
+
+func loadASSFontInfo(fontPath string, fontSize int) assFontInfo {
+	fontPath = strings.TrimSpace(fontPath)
+	if fontPath == "" {
+		return assFontInfo{}
+	}
+	data, err := os.ReadFile(fontPath)
+	if err != nil {
+		return assFontInfo{}
+	}
+	family, style := readFontNames(data)
+	parsed, err := sfnt.Parse(data)
+	if err != nil {
+		collection, collErr := sfnt.ParseCollection(data)
+		if collErr != nil || collection.NumFonts() == 0 {
+			return assFontInfo{Family: family, Bold: fontBold(style), Italic: fontItalic(style)}
+		}
+		parsed, err = collection.Font(0)
+		if err != nil {
+			return assFontInfo{Family: family, Bold: fontBold(style), Italic: fontItalic(style)}
+		}
+	}
+	var buf sfnt.Buffer
+	if family == "" {
+		family, _ = parsed.Name(&buf, sfnt.NameIDFamily)
+		if family == "" {
+			family, _ = parsed.Name(&buf, sfnt.NameIDTypographicFamily)
+		}
+	}
+	if style == "" {
+		style, _ = parsed.Name(&buf, sfnt.NameIDSubfamily)
+	}
+	return assFontInfo{Family: strings.TrimSpace(family), Bold: fontBold(style), Italic: fontItalic(style), Font: parsed}
+}
+
+func fontBold(style string) int {
+	style = strings.ToLower(style)
+	if strings.Contains(style, "bold") || strings.Contains(style, "black") || strings.Contains(style, "heavy") || strings.Contains(style, "semibold") {
+		return -1
+	}
+	return 0
+}
+
+func fontItalic(style string) int {
+	style = strings.ToLower(style)
+	if strings.Contains(style, "italic") || strings.Contains(style, "oblique") {
+		return -1
+	}
+	return 0
+}
+
+func readFontNames(data []byte) (family, style string) {
+	offset := uint32(0)
+	if len(data) >= 12 && string(data[0:4]) == "ttcf" {
+		if len(data) < 16 || binary.BigEndian.Uint32(data[8:12]) == 0 {
+			return "", ""
+		}
+		offset = binary.BigEndian.Uint32(data[12:16])
+	}
+	names := readNameTable(data, offset)
+	family = firstNonEmpty(names[16], names[1])
+	style = firstNonEmpty(names[17], names[2])
+	return family, style
+}
+
+func readNameTable(data []byte, fontOffset uint32) map[uint16]string {
+	out := map[uint16]string{}
+	if uint64(fontOffset)+12 > uint64(len(data)) {
+		return out
+	}
+	base := int(fontOffset)
+	numTables := int(binary.BigEndian.Uint16(data[base+4 : base+6]))
+	tableDir := base + 12
+	var nameOffset, nameLength uint32
+	for i := 0; i < numTables; i++ {
+		entry := tableDir + i*16
+		if entry+16 > len(data) {
+			return out
+		}
+		if string(data[entry:entry+4]) == "name" {
+			nameOffset = binary.BigEndian.Uint32(data[entry+8 : entry+12])
+			nameLength = binary.BigEndian.Uint32(data[entry+12 : entry+16])
+			break
+		}
+	}
+	if nameOffset == 0 || uint64(nameOffset)+uint64(nameLength) > uint64(len(data)) || nameLength < 6 {
+		return out
+	}
+	table := data[nameOffset : nameOffset+nameLength]
+	count := int(binary.BigEndian.Uint16(table[2:4]))
+	stringOffset := int(binary.BigEndian.Uint16(table[4:6]))
+	for i := 0; i < count; i++ {
+		rec := 6 + i*12
+		if rec+12 > len(table) {
+			break
+		}
+		platformID := binary.BigEndian.Uint16(table[rec : rec+2])
+		nameID := binary.BigEndian.Uint16(table[rec+6 : rec+8])
+		if nameID != 1 && nameID != 2 && nameID != 16 && nameID != 17 {
+			continue
+		}
+		length := int(binary.BigEndian.Uint16(table[rec+8 : rec+10]))
+		off := stringOffset + int(binary.BigEndian.Uint16(table[rec+10:rec+12]))
+		if off < 0 || length <= 0 || off+length > len(table) {
+			continue
+		}
+		value := decodeFontName(platformID, table[off:off+length])
+		if value != "" && out[nameID] == "" {
+			out[nameID] = value
+		}
+	}
+	return out
+}
+
+func decodeFontName(platformID uint16, raw []byte) string {
+	if platformID == 0 || platformID == 3 {
+		u16 := make([]uint16, 0, len(raw)/2)
+		for i := 0; i+1 < len(raw); i += 2 {
+			u16 = append(u16, binary.BigEndian.Uint16(raw[i:i+2]))
+		}
+		return strings.TrimSpace(string(utf16.Decode(u16)))
+	}
+	return strings.TrimSpace(string(raw))
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value = strings.TrimSpace(value); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func assFontSection(fontName, fontPath string) []string {
+	fontPath = strings.TrimSpace(fontPath)
+	if fontPath == "" {
+		return nil
+	}
+	data, err := os.ReadFile(fontPath)
+	if err != nil || len(data) == 0 {
+		return nil
+	}
+	return []string{"", "[Fonts]", "fontname: " + fontName + ".ttf", encodeFontForASS(data)}
+}
+
+func encodeFontForASS(data []byte) string {
+	var chars []rune
+	for i := 0; i < len(data); i += 3 {
+		chunk := data[i:min(i+3, len(data))]
+		n := len(chunk)
+		b := []byte{0, 0, 0}
+		copy(b, chunk)
+		values := []byte{
+			b[0] >> 2,
+			((b[0] & 0x03) << 4) | (b[1] >> 4),
+			((b[1] & 0x0F) << 2) | (b[2] >> 6),
+			b[2] & 0x3F,
+		}
+		outCount := map[int]int{1: 2, 2: 3, 3: 4}[n]
+		for _, value := range values[:outCount] {
+			chars = append(chars, rune(value+33))
+		}
+	}
+	var lines []string
+	for start := 0; start < len(chars); start += 80 {
+		end := min(start+80, len(chars))
+		lines = append(lines, string(chars[start:end]))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func wrapTextByPixelWidth(text string, maxWidth int, fontSize int, fontInfo assFontInfo) string {
 	runes := []rune(strings.TrimSpace(text))
 	if len(runes) <= 18 {
 		return string(runes)
@@ -252,19 +448,38 @@ func wrapTextByPixelWidth(text string, maxWidth int, fontSize int) string {
 	if fontSize <= 0 {
 		fontSize = 48
 	}
-	charWidth := float64(fontSize) * 0.72
-	maxChars := int(float64(maxWidth) / charWidth)
-	if maxChars < 12 {
-		maxChars = 12
+	widthOf := func(r rune) float64 {
+		if fontInfo.Font != nil {
+			var buf sfnt.Buffer
+			glyph, err := fontInfo.Font.GlyphIndex(&buf, r)
+			if err == nil && glyph != 0 {
+				advance, err := fontInfo.Font.GlyphAdvance(&buf, glyph, fixed.I(fontSize), font.HintingNone)
+				if err == nil && advance > 0 {
+					return float64(advance) / 64.0
+				}
+			}
+		}
+		if r >= 0x4E00 && r <= 0x9FFF {
+			return float64(fontSize) * 0.98
+		}
+		return float64(fontSize) * 0.55
 	}
 
 	var lines []string
-	for start := 0; start < len(runes); start += maxChars {
-		end := start + maxChars
-		if end > len(runes) {
-			end = len(runes)
+	var current strings.Builder
+	currentWidth := 0.0
+	for _, r := range runes {
+		w := widthOf(r)
+		if current.Len() > 0 && currentWidth+w > float64(maxWidth) {
+			lines = append(lines, current.String())
+			current.Reset()
+			currentWidth = 0
 		}
-		lines = append(lines, string(runes[start:end]))
+		current.WriteRune(r)
+		currentWidth += w
+	}
+	if current.Len() > 0 {
+		lines = append(lines, current.String())
 	}
 	return strings.Join(lines, "\\N")
 }

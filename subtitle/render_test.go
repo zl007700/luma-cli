@@ -1,6 +1,8 @@
 package subtitle
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -53,5 +55,52 @@ func TestEscapeFilterPath(t *testing.T) {
 	got := escapeFilterPath(path)
 	if strings.Contains(got, `\`) {
 		t.Logf("escapeFilterPath result: %q", got)
+	}
+}
+
+func TestWriteASSUsesRealFontFamilyAndWrapsByFontWidth(t *testing.T) {
+	fontPath := filepath.Join("..", "fonts", "字由ID江湖体.ttf")
+	if _, err := os.Stat(fontPath); err != nil {
+		t.Skipf("font fixture missing: %v", err)
+	}
+	out := filepath.Join(t.TempDir(), "subtitle.ass")
+	err := WriteASS([]Segment{{
+		Start: 0,
+		End:   1,
+		Text:  "这是一个非常非常长的字幕文本用来验证不会因为估算宽度太小而超出屏幕",
+	}}, out, ASSOptions{
+		PlayResX:  720,
+		PlayResY:  1280,
+		FontPath:  fontPath,
+		FontSize:  80,
+		MarginL:   60,
+		MarginR:   60,
+		MarginV:   500,
+		Color:     "#FDFDFF",
+		BackColor: "#000000",
+	})
+	if err != nil {
+		t.Fatalf("WriteASS failed: %v", err)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read ASS: %v", err)
+	}
+	content := string(data)
+	if strings.Contains(content, "Style: Default,Microsoft YaHei") {
+		t.Fatalf("expected real font family, got fallback style:\n%s", content)
+	}
+	if !strings.Contains(content, `\N`) {
+		t.Fatalf("expected wrapped subtitle line, got:\n%s", content)
+	}
+	if !strings.Contains(content, "[Fonts]") {
+		t.Fatalf("expected embedded font section, got:\n%s", content[:min(len(content), 500)])
+	}
+}
+
+func TestRenderWithHighlightIgnoresEmptyKeyword(t *testing.T) {
+	got := renderWithHighlight("测试字幕", "", 80, 1.25, "&H005AD9FF", "")
+	if strings.Contains(got, `\fs`) || strings.Contains(got, `\1c`) {
+		t.Fatalf("empty keyword should not emit highlight tags: %q", got)
 	}
 }
