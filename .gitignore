@@ -48,6 +48,7 @@ logs/
 .cache/
 tmp/
 smoke/
+tmp_audio_volume_test/
 
 # Local/internal notes
 .internal/
