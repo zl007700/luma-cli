@@ -66,11 +66,18 @@ If the generated name is uncertain, ask:
 ## Common Groups
 
 - `voice`: voice samples or generated voice assets
-- `roles`: digital human avatar videos
+- `roles`: digital human avatar videos. Use this group for avatars/source-role videos; `avatar` and `avatars` are conversation aliases, not the canonical command group.
 - `asr_input`: uploaded media for transcription
 - `enhance_input`: uploaded videos for enhancement
 - `lipsync_input`: uploaded audio for lip-sync
 - `default`: generic assets
+
+Default assets:
+
+- Users should have common/default assets for voices and digital-human roles.
+- `luma-cli asset list roles` is the correct way to inspect available digital-human avatars and should include default/common roles.
+- Do not assume default roles are missing because `asset list avatar` fails or returns nothing. Use `asset list roles`.
+- Do not create avatar assets from generated images. A digital-human role must be a video asset in `roles`.
 
 ## Commands
 
@@ -90,6 +97,7 @@ luma-cli material search --materials materials.json --query "AI assistant" --lim
 
 - Prefer friendly names from `asset list` when available.
 - Prefer stable asset names or IDs returned by CLI commands.
+- For digital-human avatars, always inspect `asset list roles`; do not use `asset list avatar`.
 - For uploaded videos, confirm intent before choosing voice clone, avatar, material, ASR, or video-processing workflows.
 - Do not treat uploaded videos as digital-human avatar/source-role assets unless the user explicitly asks for the visual person to appear.
 - Do not upload a user-provided video with only a hash-like name. If no friendly name is available, generate one from understanding or ask the user to confirm a proposed name.

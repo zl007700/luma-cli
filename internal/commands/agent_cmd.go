@@ -60,7 +60,7 @@ func cmdAgentRun(raw []string) error {
 	}
 	cfg := loadConfig()
 	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <phone_or_account>")
 	}
 	input, _ := payload["input"].(map[string]any)
 	if input == nil {

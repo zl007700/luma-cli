@@ -56,7 +56,7 @@ func printUsage() {
 	fmt.Println("  luma-cli resource list [type]    List cloud-managed client resources")
 	fmt.Println("  luma-cli research run --role <description>")
 	fmt.Println("  luma-cli script rewrite <text>   Rewrite short-video script copy")
-	fmt.Println("  luma-cli subtitle <video> <srt_or_txt> [options]")
+	fmt.Println("  luma-cli subtitle <video_or_text> [options]")
 	fmt.Println("")
 	fmt.Println("Agent tools:")
 	fmt.Println("  luma-cli tools list")
@@ -66,7 +66,8 @@ func printUsage() {
 	fmt.Println("  luma-cli auth login <account_number>")
 	fmt.Println("  luma-cli auth login --key <API_KEY>")
 	fmt.Println("  luma-cli asr video.mp4")
-	fmt.Println("  luma-cli lipsync --avatar 数字人男 --audio tts_output.wav")
+	fmt.Println("  luma-cli asset list roles")
+	fmt.Println("  luma-cli lipsync --avatar <selected_role_name> --audio tts_output.wav")
 	fmt.Println("  luma-cli enhance lipsync_output.mp4")
 }
 

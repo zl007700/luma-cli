@@ -27,6 +27,18 @@ luma-cli asset list voice
 luma-cli asset list roles
 ```
 
+Avatar group rules:
+
+- Digital-human avatars are video assets in the `roles` group.
+- `avatar` and `avatars` are only natural-language aliases. In commands, use `roles`.
+- Default/common avatars should be available to every user through `luma-cli asset list roles`.
+- Do not conclude there is no avatar until `luma-cli asset list roles` has been checked.
+- Do not run `luma-cli asset list avatar`; translate that intent to `luma-cli asset list roles`.
+- Do not use `image generate` to create an avatar. A generated image is not a lip-sync avatar video.
+- Do not upload a generated image to `roles`.
+- Only upload to `roles` when the user explicitly provides a local avatar/source-role video.
+- If no suitable role appears, stop and ask the user to choose or upload a role video. Do not invent one.
+
 If the user provides a reference voice sample, clone it first:
 
 ```bash
@@ -56,7 +68,8 @@ luma-cli asset upload avatar.mp4 --group roles
 
 3. Generate lip-sync video (prefer `--audio-key` over `--audio`):
    ```bash
-   luma-cli lipsync --avatar 数字人男 --audio-key <audio_object_key> --output step3_lipsync.mp4
+   luma-cli asset list roles
+   luma-cli lipsync --avatar <selected_role_name> --audio-key <audio_object_key> --output step3_lipsync.mp4
    ```
    If `--audio-key` is omitted, lipsync falls back to the project's `latest_tts_key`, then to `--audio` file upload.
 4. Add subtitles:
@@ -75,6 +88,7 @@ luma-cli asset upload avatar.mp4 --group roles
 - Uploaded videos are ambiguous. If the user did not clearly say whether the video is for voice clone, avatar/source role, PIP material, ASR/rewrite, or video processing, ask a short confirmation before choosing a workflow.
 - Do not assume a user-uploaded video is a digital-human avatar. If the user asks to use "the voice/audio/sound inside this video", extract or use audio for voice clone instead.
 - Use `asset.list voice` and `asset.list roles` when the user asks what is available.
+- Never use `image.generate` or `video.generate` to fabricate a missing avatar during a production workflow. Use default `roles` assets or ask the user.
 - Use the latest project TTS output for lip-sync unless the user explicitly provides `--audio`.
 - Keep the script text outside media commands until it is final enough for this generation attempt.
 - Do not enhance every draft; enhance only the selected final render.

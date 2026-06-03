@@ -24,7 +24,7 @@ func cmdUpdate(args []string) error {
 		}
 		if opts.Registry == "" {
 			if official, err := skillsync.LatestNpmVersionFromRegistry(skillsync.OfficialNpmRegistry); err == nil && skillsync.CompareSemver(official, target) > 0 {
-				fmt.Printf("Current npm registry latest is %s, official registry latest is %s. Using official registry for this update.\n", target, official)
+				fmt.Printf("@lumageo/luma-cli latest on current npm registry is %s, official registry latest is %s. Using official registry for this update.\n", target, official)
 				target = official
 				installVersion = official
 				registry = skillsync.OfficialNpmRegistry
@@ -36,7 +36,7 @@ func cmdUpdate(args []string) error {
 		installVersion = opts.Version
 	}
 
-	fmt.Printf("Updating luma-cli via npm (%s)...\n", target)
+	fmt.Printf("Updating @lumageo/luma-cli via npm (%s)...\n", target)
 	if err := skillsync.RunNpmInstall(skillsync.NpmInstallOptions{
 		Version:  installVersion,
 		Registry: registry,

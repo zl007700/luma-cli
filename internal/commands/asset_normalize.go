@@ -88,6 +88,40 @@ func prepareVideoAssetForUpload(inputPath string) (*normalizedUploadAsset, error
 	}, nil
 }
 
+func prepareVoiceSampleForUpload(inputPath string) (*normalizedUploadAsset, error) {
+	ffmpeg, err := installedFFmpegPath()
+	if err != nil {
+		return nil, err
+	}
+	temp, err := os.CreateTemp("", "luma-voice-normalized-*.wav")
+	if err != nil {
+		return nil, err
+	}
+	outputPath := temp.Name()
+	_ = temp.Close()
+
+	cmd := exec.Command(
+		ffmpeg,
+		"-y",
+		"-i", inputPath,
+		"-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+		"-ar", "24000",
+		"-ac", "1",
+		outputPath,
+	)
+	if data, err := cmd.CombinedOutput(); err != nil {
+		_ = os.Remove(outputPath)
+		return nil, fmt.Errorf("normalize voice sample failed: %w\n%s", err, strings.TrimSpace(string(data)))
+	}
+	return &normalizedUploadAsset{
+		Path:       outputPath,
+		Normalized: true,
+		Cleanup: func() {
+			_ = os.Remove(outputPath)
+		},
+	}, nil
+}
+
 func normalizeVideoAssetToFile(source, target string, mode os.FileMode) (bool, error) {
 	prepared, err := prepareVideoAssetForUpload(source)
 	if err != nil {

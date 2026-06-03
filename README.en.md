@@ -12,7 +12,20 @@ The CLI stays atomic. Multi-step business workflows live in `skills/` so agents 
 
 ```bash
 npm install -g @lumageo/luma-cli
-luma-cli auth login <CARD_KEY>
+luma-cli auth login <phone_or_account>
+luma-cli auth complete
+luma-cli auth status
+```
+
+If you already have an API key, or you are an existing user with a legacy card key, save it directly:
+
+```bash
+luma-cli auth login --key <API_KEY_OR_LEGACY_CARD_KEY>
+```
+
+Install the local video runtime:
+
+```bash
 luma-cli runtime install ffmpeg
 ```
 

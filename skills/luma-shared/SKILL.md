@@ -23,6 +23,12 @@ Trigger this skill when the user mentions 拾光, 拾光智能体, 拾光工具,
    ```bash
    luma-cli auth status
    ```
+   If not logged in, use the recommended phone/account browser flow:
+   ```bash
+   luma-cli auth login <phone_or_account>
+   luma-cli auth complete
+   ```
+   `luma-cli auth login --key <api_key>` is supported when the user already has an API key. Legacy card keys are also accepted through `--key`, but do not ask new users for a card key.
 2. Discover the exact atom before using unfamiliar parameters:
    ```bash
    luma-cli --json tools describe <tool_id>
@@ -74,7 +80,7 @@ Use stable names unless the user gives a project convention:
 - Prompt-heavy logic, material understanding, semantic matching, and protected model behavior belong on the backend.
 - Local logic is for stable cross-platform work: file organization, runtime cache, ffmpeg rendering, and result formatting.
 - Prefer friendly names for voices, avatars, and resources. Do not ask users to manually copy internal object keys.
-- Never print card keys, backend tokens, or private object credentials.
+- Never print API keys, legacy card keys, backend tokens, or private object credentials.
 
 ## Failure Handling
 

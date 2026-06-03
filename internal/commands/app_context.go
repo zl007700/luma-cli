@@ -23,7 +23,7 @@ func loadConfig() *config {
 func requireConfig() (*config, error) {
 	cfg := loadConfig()
 	if cfg == nil || cfg.CardKey == "" {
-		return nil, fmt.Errorf("not logged in. Run: luma-cli auth login <card_key>")
+		return nil, fmt.Errorf("not logged in. Run: luma-cli auth login <phone_or_account>")
 	}
 	return cfg, nil
 }

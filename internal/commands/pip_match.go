@@ -92,7 +92,7 @@ func matchPIPMaterials(sceneUnits, materials []map[string]any, mode string, maxI
 				return nil, "cloud", err
 			}
 		} else if mode == "cloud" {
-			return nil, "cloud", fmt.Errorf("not logged in. Run: luma-cli auth login <card_key>")
+			return nil, "cloud", fmt.Errorf("not logged in. Run: luma-cli auth login <phone_or_account>")
 		}
 	}
 	return localPIPMaterialMatches(sceneUnits, materials, maxInserts), "local", nil

@@ -94,7 +94,7 @@ func Shortcuts() []common.Shortcut {
 				{Name: "multi-shot-json", Description: "Path to backend multi_shot JSON payload."},
 			},
 			Outputs:  []string{"task_id", "output_path", "output_url"},
-			Examples: []string{"luma-cli lipsync --avatar 数字人男 --audio tts_output.wav", "luma-cli lipsync --avatar 数字人男 --audio-key prod/resource/xxx/yyy.wav"},
+			Examples: []string{"luma-cli asset list roles", "luma-cli lipsync --avatar <selected_role_name> --audio tts_output.wav", "luma-cli lipsync --avatar <selected_role_name> --audio-key prod/resource/xxx/yyy.wav"},
 			Skills:   []string{"luma-digital-human"},
 		},
 		{
@@ -144,18 +144,19 @@ func Shortcuts() []common.Shortcut {
 		{
 			ID:          "subtitle.render",
 			Service:     "subtitle",
-			Description: "Generate styled subtitles and optionally burn them into a video.",
+			Description: "Generate styled subtitles and burn them into a video. For video input, do not use --text, hand-write SRT/ASS, or guess timestamps; pass an approved transcript with --transcript when available.",
 			Risk:        "write",
 			Flags: []common.Flag{
-				{Name: "video_or_text", Description: "Local video file path, or raw text with --text.", Required: true},
-				{Name: "text", Description: "Treat positional input as raw text."},
+				{Name: "video_or_text", Description: "Local video file path. Raw text is allowed only with --text for ASS/segments drafts.", Required: true},
+				{Name: "text", Description: "Treat positional input as raw text. Do not use this flag when the input is a video."},
+				{Name: "transcript", Description: "Transcript text file to use instead of ASR for video input."},
 				{Name: "output", Description: "Output video path.", Default: "step5_subtitle.mp4"},
 				{Name: "segments-output", Description: "Output segment JSON path for PIP planning."},
 				{Name: "project", Description: "Project name for organized outputs."},
 				{Name: "max-chars", Description: "Maximum characters per subtitle segment.", Default: "15"},
 			},
 			Outputs:  []string{"output_path", "ass_path", "segments"},
-			Examples: []string{"luma-cli subtitle input.mp4 --project demo"},
+			Examples: []string{"luma-cli subtitle input.mp4 --project demo", "luma-cli subtitle input.mp4 --transcript transcript.txt --output step5_subtitle.mp4"},
 			Skills:   []string{"luma-subtitle", "luma-workflow-viral-remix"},
 		},
 	}

@@ -16,11 +16,10 @@ import (
 
 func cmdAuth(args []string) error {
 	if len(args) < 1 {
-		fmt.Println("usage: luma-cli auth login       (browser-based login)")
-		fmt.Println("       luma-cli auth login <account> (browser-based login with account hint)")
-		fmt.Println("       luma-cli auth login --account <account>")
-		fmt.Println("       luma-cli auth login --key <key> (paste API key or legacy card key directly)")
-		fmt.Println("       luma-cli auth login <key> (paste API key or legacy card key directly)")
+		fmt.Println("usage: luma-cli auth login                  (recommended browser-based login)")
+		fmt.Println("       luma-cli auth login <phone_or_account> (browser login with account hint)")
+		fmt.Println("       luma-cli auth login --account <phone_or_account>")
+		fmt.Println("       luma-cli auth login --key <api_key>  (API key or legacy card key)")
 		fmt.Println("       luma-cli auth complete    (finish after the user approves)")
 		fmt.Println("       luma-cli auth status      (show login status)")
 		return nil
@@ -92,9 +91,9 @@ type authLoginOptions struct {
 
 func printAuthUsage() {
 	fmt.Println("usage: luma-cli auth login")
-	fmt.Println("       luma-cli auth login <account>")
-	fmt.Println("       luma-cli auth login --account <account>")
-	fmt.Println("       luma-cli auth login --key <key>")
+	fmt.Println("       luma-cli auth login <phone_or_account>")
+	fmt.Println("       luma-cli auth login --account <phone_or_account>")
+	fmt.Println("       luma-cli auth login --key <api_key>")
 	fmt.Println("       luma-cli auth complete")
 	fmt.Println("       luma-cli auth status")
 }

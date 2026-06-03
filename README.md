@@ -24,8 +24,15 @@ npm install -g @lumageo/luma-cli
 首次使用需要登录：
 
 ```bash
-luma-cli auth login <CARD_KEY>
+luma-cli auth login <phone_or_account>
+luma-cli auth complete
 luma-cli auth status
+```
+
+如果你已经有 API key，或老用户还在使用 card key，也可以直接保存：
+
+```bash
+luma-cli auth login --key <API_KEY_OR_LEGACY_CARD_KEY>
 ```
 
 安装本地视频运行时：
@@ -100,7 +107,8 @@ luma-cli research keywords --input step0_content_research.json --output step0_ke
 
 luma-cli script rewrite --input source_script.txt --output step1_rewrite.json
 luma-cli tts "<rewritten_text>" --voice 男声3 --output step2_tts.wav
-luma-cli lipsync --avatar 数字人男 --audio step2_tts.wav --output step3_lipsync.mp4
+luma-cli asset list roles
+luma-cli lipsync --avatar <selected_role_name> --audio step2_tts.wav --output step3_lipsync.mp4
 
 luma-cli material group describe vlm_ai --output step4_materials_enriched.json
 luma-cli material search --materials step4_materials_enriched.json --query "<rewritten_text>" --limit 8 --output step4_material_matches.json

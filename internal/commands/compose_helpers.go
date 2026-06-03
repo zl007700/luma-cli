@@ -33,7 +33,7 @@ func resolveLocalCachedOrCloudResource(value string, cfg *config) (string, error
 		return cached.Path, nil
 	}
 	if cfg == nil {
-		return "", fmt.Errorf("not a local file or cached resource: %s. Run 'luma-cli auth login <card_key>' to cache cloud resources", value)
+		return "", fmt.Errorf("not a local file or cached resource: %s. Run 'luma-cli auth login <phone_or_account>' to cache cloud resources", value)
 	}
 	cached, err := clientruntime.CacheResource(cfg.CardKey, value)
 	if err != nil {

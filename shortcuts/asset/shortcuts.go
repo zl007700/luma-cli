@@ -24,13 +24,13 @@ func Shortcuts() []common.Shortcut {
 			ID:          "asset.list",
 			Service:     "asset",
 			Command:     "list",
-			Description: "List assets in a cloud group.",
+			Description: "List assets in a cloud group. Use roles for digital-human avatars; avatar/avatars are aliases for roles. Default/common assets are included when available.",
 			Risk:        "read",
 			Flags: []common.Flag{
-				{Name: "group", Description: "Asset group name.", Default: "default"},
+				{Name: "group", Description: "Asset group name. Use roles for digital-human avatars and voice for voice assets.", Default: "default"},
 			},
 			Outputs:  []string{"items"},
-			Examples: []string{"luma-cli asset list voice"},
+			Examples: []string{"luma-cli asset list voice", "luma-cli asset list roles"},
 			Skills:   []string{"luma-assets"},
 		},
 		{

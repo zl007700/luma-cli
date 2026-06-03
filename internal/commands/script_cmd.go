@@ -51,7 +51,7 @@ func cmdScriptRewrite(raw []string) error {
 
 	cfg := loadConfig()
 	if cfg == nil {
-		printScriptError("not_logged_in", "Error: not logged in. Run: luma-cli auth login <card_key>\n")
+		printScriptError("not_logged_in", "Error: not logged in. Run: luma-cli auth login <phone_or_account>\n")
 		return nil
 	}
 

@@ -61,7 +61,7 @@ func cmdResearchRun(raw []string) error {
 	outputPath := strings.TrimSpace(args.String("output", "step0_content_research.json"))
 	cfg := loadConfig()
 	if cfg == nil {
-		return output.ErrAuth("not logged in. Run: luma-cli auth login <card_key>")
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <phone_or_account>")
 		return nil
 	}
 	resp, err := cloud.RunResearch(role, mode, dateRange, cfg.CardKey)

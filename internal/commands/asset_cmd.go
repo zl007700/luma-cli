@@ -41,7 +41,7 @@ func cmdAsset(args []string) error {
 			fmt.Println("usage: luma-cli asset upload <file> [--group <name>] [--name <display_name>]")
 			return nil
 		}
-		group := parsed.String("group", "default")
+		group := normalizeAssetGroupName(parsed.String("group", "default"))
 		displayName := strings.TrimSpace(parsed.String("name", ""))
 		prepared, err := prepareVideoAssetForUpload(filePath)
 		if err != nil {
@@ -89,9 +89,15 @@ func cmdAsset(args []string) error {
 		if parsed.Pos(0) != "" {
 			group = parsed.Pos(0)
 		}
+		group = normalizeAssetGroupName(group)
 		items, err := cloud.AssetList(group, cfg.CardKey)
 		if err != nil {
 			return output.ErrSystem("%v\n", err)
+		}
+		if shouldIncludeCommonAssets(group) {
+			if commonItems, commonErr := cloud.AssetList("common/"+group, cfg.CardKey); commonErr == nil {
+				items = mergeAssetItems(items, commonItems)
+			}
 		}
 		if len(items) == 0 {
 			fmt.Println("No assets found.")
@@ -106,10 +112,14 @@ func cmdAsset(args []string) error {
 			rtype, _ := m["resource_type"].(string)
 			key := atom.ResourceKeyFromMap(m, cfg.CardKey)
 			name := assetDisplayName(m, key)
+			viewGroup := group
+			if isCommonAssetItem(m, key) {
+				viewGroup = "common/" + group
+			}
 			view := assetView{
 				Type:      rtype,
 				Name:      name,
-				Group:     group,
+				Group:     viewGroup,
 				ObjectKey: key,
 			}
 			if !verbose {
@@ -137,7 +147,7 @@ func cmdAsset(args []string) error {
 
 	case "understand":
 		parsed := cmdutil.Parse(args[1:])
-		group := parsed.String("group", "default")
+		group := normalizeAssetGroupName(parsed.String("group", "default"))
 		objectName := parsed.String("object", "")
 		if objectName == "" {
 			objectName = parsed.Pos(0)
@@ -176,7 +186,7 @@ func cmdAsset(args []string) error {
 
 	case "delete", "remove", "rm":
 		parsed := cmdutil.Parse(args[1:])
-		group := parsed.String("group", "")
+		group := normalizeAssetGroupName(parsed.String("group", ""))
 		stem := strings.TrimSpace(parsed.String("stem", ""))
 		if stem == "" {
 			stem = strings.TrimSpace(parsed.Pos(0))
@@ -217,4 +227,57 @@ func assetDisplayName(item map[string]any, key string) string {
 		return atom.AssetFriendlyName(filename)
 	}
 	return atom.AssetFriendlyName(key)
+}
+
+func normalizeAssetGroupName(group string) string {
+	group = strings.TrimSpace(group)
+	switch strings.ToLower(group) {
+	case "avatar", "avatars", "role":
+		return "roles"
+	case "voices":
+		return "voice"
+	default:
+		return group
+	}
+}
+
+func shouldIncludeCommonAssets(group string) bool {
+	group = strings.TrimSpace(group)
+	return group != "" && !strings.HasPrefix(group, "common/")
+}
+
+func mergeAssetItems(primary, common []any) []any {
+	seen := map[string]bool{}
+	merged := make([]any, 0, len(primary)+len(common))
+	for _, item := range append(primary, common...) {
+		key := assetItemStableKey(item)
+		if key != "" {
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+		}
+		merged = append(merged, item)
+	}
+	return merged
+}
+
+func assetItemStableKey(item any) string {
+	m, ok := item.(map[string]any)
+	if !ok {
+		return ""
+	}
+	for _, field := range []string{"object_key", "resource_id", "filename"} {
+		if value, _ := m[field].(string); strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func isCommonAssetItem(item map[string]any, key string) bool {
+	if userID, _ := item["user_id"].(string); userID == "common" {
+		return true
+	}
+	return strings.HasPrefix(key, "common/")
 }

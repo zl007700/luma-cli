@@ -133,25 +133,33 @@ Do not use this workflow when the user only asks for one atomic operation such a
    ```
    The `--json` flag outputs `audio_object_key` which can be passed directly to lipsync, avoiding a redundant upload.
 
-7. Generate digital-human video (use `--audio-key` to reference the cloud audio directly):
+7. Select an existing digital-human role:
    ```bash
-   luma-cli lipsync --avatar 数字人男 --audio-key <audio_object_key> --random-start --output step3_lipsync.mp4
+   luma-cli asset list roles
+   ```
+   Choose one returned role name. `roles` is the digital-human avatar group; do not run `asset list avatar`.
+   Default/common roles should be available to every user.
+   Do not generate or upload an AI image as a role. A role must be an existing `roles` video asset or a user-provided local role video.
+
+8. Generate digital-human video (use `--audio-key` to reference the cloud audio directly):
+   ```bash
+   luma-cli lipsync --avatar <selected_role_name> --audio-key <audio_object_key> --random-start --output step3_lipsync.mp4
    ```
    If `--audio-key` is omitted, lipsync falls back to the project's `latest_tts_key`, then to `--audio` file upload.
 
-8. Segment text and build scene units:
+9. Segment text and build scene units:
    ```bash
    luma-cli subtitle transcript.txt --text --segments-output step4_segments.json --no-effects --no-highlight
    luma-cli pip scene --segments step4_segments.json --output step4_scene_units.json
    ```
 
-9. Prepare and match local PIP materials:
+10. Prepare and match local PIP materials:
    ```bash
    luma-cli material group describe vlm_ai --output step4_materials_enriched.json
    luma-cli pip match --scenes step4_scene_units.json --materials step4_materials_enriched.json --mode auto --output step4_material_matches.json
    ```
 
-10. Plan and render PIP:
+11. Plan and render PIP:
    ```bash
    luma-cli pip plan --segments step4_segments.json --materials step4_materials_enriched.json --match-mode auto --output step4_picture_in_picture_plan.json
    luma-cli pip render step3_lipsync.mp4 --plan step4_picture_in_picture_plan.json --output step4_picture_in_picture.mp4
@@ -159,17 +167,17 @@ Do not use this workflow when the user only asks for one atomic operation such a
 
    If no insert is matched, continue with `step3_lipsync.mp4` as the subtitle input.
 
-11. Add subtitles (uses `--transcript` to skip ASR since we already have the exact script):
+12. Add subtitles (uses `--transcript` to skip ASR since we already have the exact script):
    ```bash
    luma-cli subtitle step4_picture_in_picture.mp4 --transcript transcript.txt --output step5_subtitle.mp4
    ```
 
-12. Add BGM:
+13. Add BGM:
     ```bash
     luma-cli bgm mix step5_subtitle.mp4 --output step6_bgm.mp4
     ```
 
-13. Create a cover:
+14. Create a cover:
     ```bash
     luma-cli cover generate step4_picture_in_picture.mp4 --title "<cover_title>" --subtitle "<cover_subtitle>" --count 12 --output-dir step7_covers
     ```
@@ -182,6 +190,8 @@ Do not use this workflow when the user only asks for one atomic operation such a
 - If `step0_content_research.json` only has titles/links and no transcript, do not proceed to rewrite until reference videos have been downloaded and ASR has produced usable text.
 - ASR is an expensive validation step, not a bulk-processing step. Never ASR more than 3 reference videos for one remix unless the user explicitly approves it.
 - Use the rewritten script as the single source for TTS, segmentation, subtitles, and cover text extraction.
+- Before lip-sync, run `luma-cli asset list roles` and select an existing role. Do not run `asset list avatar`; `avatar` is not the canonical asset group.
+- Never create a missing digital-human role with `image generate`, `video generate`, or by uploading a generated image. Use default `roles` assets or ask the user.
 - Covers must use clean visual frames, not videos that already contain burned subtitles.
 - If the material library does not fit the script, skip PIP instead of forcing weak matches.
 - Use `project artifact list` before resuming or rerunning a partial workflow.

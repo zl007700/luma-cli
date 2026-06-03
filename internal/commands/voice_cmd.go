@@ -51,7 +51,15 @@ func cmdVoiceClone(raw []string, cfg *config) error {
 		return output.ErrValidation("audio file not found: %s\n", audioPath)
 	}
 	name := strings.TrimSpace(parsed.String("name", ""))
-	objectKey, err := cloud.UploadFileWithName(audioPath, cfg.CardKey, "voice", name)
+	prepared, err := prepareVoiceSampleForUpload(audioPath)
+	if err != nil {
+		return output.ErrSystem("prepare voice sample failed: %v\n", err)
+	}
+	defer prepared.Cleanup()
+	if prepared.Normalized && !runtimeOpts.JSON {
+		fmt.Println("Normalized voice sample: 24k mono, -16 LUFS target")
+	}
+	objectKey, err := cloud.UploadFileWithName(prepared.Path, cfg.CardKey, "voice", name)
 	if err != nil {
 		return output.ErrNetwork("voice upload failed: %v\n", err)
 	}
