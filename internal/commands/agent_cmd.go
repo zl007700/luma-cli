@@ -19,6 +19,7 @@ var agentAbilityPaths = map[string]string{
 	"subtitle.effects":   "/v1/agent/subtitle/effects",
 	"script.rewrite":     "/v1/agent/script/rewrite",
 	"script.write":       "/v1/agent/script/write",
+	"topic.review":       "/v1/agent/topic/review",
 	"title.generate":     "/v1/agent/title/generate",
 	"storyboard.scene":   "/v1/agent/storyboard/scene",
 	"storyboard.shot":    "/v1/agent/storyboard/shot",
