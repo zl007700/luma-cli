@@ -18,6 +18,7 @@ var agentAbilityPaths = map[string]string{
 	"subtitle.highlight": "/v1/agent/subtitle/highlight",
 	"subtitle.effects":   "/v1/agent/subtitle/effects",
 	"script.rewrite":     "/v1/agent/script/rewrite",
+	"script.write":       "/v1/agent/script/write",
 	"title.generate":     "/v1/agent/title/generate",
 	"storyboard.scene":   "/v1/agent/storyboard/scene",
 	"storyboard.shot":    "/v1/agent/storyboard/shot",
@@ -32,7 +33,7 @@ func cmdAgent(args []string) error {
 	}
 	switch args[0] {
 	case "run":
-		cmdAgentRun(args[1:])
+		return cmdAgentRun(args[1:])
 	default:
 		fmt.Printf("unknown agent subcommand: %s\n\n", args[0])
 		printAgentUsage()
