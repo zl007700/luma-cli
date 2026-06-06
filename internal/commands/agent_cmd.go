@@ -20,6 +20,8 @@ var agentAbilityPaths = map[string]string{
 	"script.rewrite":     "/v1/agent/script/rewrite",
 	"script.write":       "/v1/agent/script/write",
 	"topic.review":       "/v1/agent/topic/review",
+	"plan.review":        "/v1/agent/plan/review",
+	"script.review":      "/v1/agent/script/review",
 	"title.generate":     "/v1/agent/title/generate",
 	"storyboard.scene":   "/v1/agent/storyboard/scene",
 	"storyboard.shot":    "/v1/agent/storyboard/shot",
@@ -35,9 +37,92 @@ func cmdAgent(args []string) error {
 	switch args[0] {
 	case "run":
 		return cmdAgentRun(args[1:])
+	case "plan-review":
+		return cmdAgentReview(args[1:], "plan.review", "plan_review.json")
+	case "script-review":
+		return cmdAgentReview(args[1:], "script.review", "script_review.json")
 	default:
 		fmt.Printf("unknown agent subcommand: %s\n\n", args[0])
 		printAgentUsage()
+	}
+	return nil
+}
+
+func cmdAgentReview(raw []string, ability string, defaultOutput string) error {
+	args := cmdutil.Parse(raw)
+	inputPath := strings.TrimSpace(args.String("input", args.Pos(0)))
+	if inputPath == "" {
+		return output.ErrValidation("--input payload.json is required")
+	}
+	payload, err := readAgentPayload(inputPath)
+	if err != nil {
+		return output.ErrSystem("read input failed: %v", err)
+	}
+	input, _ := payload["input"].(map[string]any)
+	if input == nil {
+		input = payload
+	}
+	options, _ := payload["options"].(map[string]any)
+	if options == nil {
+		options = map[string]any{}
+	}
+	if model := strings.TrimSpace(args.String("model", args.String("model-tier", ""))); model != "" {
+		options["model_tier"] = model
+	}
+	if temperature, err := args.Float("temperature", -1); err != nil {
+		return output.ErrValidation("%v", err)
+	} else if temperature >= 0 {
+		options["temperature"] = temperature
+	}
+	if maxTokens, err := args.Int("max-tokens", 0); err != nil {
+		return output.ErrValidation("%v", err)
+	} else if maxTokens > 0 {
+		options["max_tokens"] = maxTokens
+	}
+
+	cfg := loadConfig()
+	if cfg == nil {
+		return output.ErrAuth("not logged in. Run: luma-cli auth login <phone_or_account>")
+	}
+	path := agentAbilityPaths[ability]
+	if path == "" {
+		return output.ErrValidation("unknown agent ability: %s", ability)
+	}
+	resp, err := cloud.RunAgentAbility(path, input, options, cfg.CardKey)
+	if err != nil {
+		return output.ErrNetwork("agent review failed: %v", err)
+	}
+
+	outputPath := strings.TrimSpace(args.String("output", defaultOutput))
+	if outputPath != "" {
+		abs, err := absoluteOutputPath(outputPath)
+		if err != nil {
+			return output.ErrValidation("bad output path: %v", err)
+		}
+		if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
+			return output.ErrSystem("create output dir failed: %v", err)
+		}
+		data, _ := json.MarshalIndent(resp, "", "  ")
+		if err := os.WriteFile(abs, data, 0644); err != nil {
+			return output.ErrSystem("write output failed: %v", err)
+		}
+		outputPath = abs
+	}
+
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"response": resp, "output_path": outputPath}})
+		return nil
+	}
+	fmt.Printf("Done! Ability: %s\n", ability)
+	fmt.Printf("Request ID: %s\n", resp.RequestID)
+	if score, ok := resp.Result["total_score"]; ok {
+		fmt.Printf("Total score: %v/10\n", score)
+	}
+	if summary, _ := resp.Result["summary"].(string); strings.TrimSpace(summary) != "" {
+		fmt.Printf("Summary: %s\n", strings.TrimSpace(summary))
+	}
+	if outputPath != "" {
+		fmt.Printf("Saved to: %s\n", outputPath)
 	}
 	return nil
 }
@@ -126,6 +211,8 @@ func printAgentUsage() {
 	fmt.Println("")
 	fmt.Println("Subcommands:")
 	fmt.Println("  run <ability> --input payload.json [--output result.json]")
+	fmt.Println("  plan-review --input payload.json [--model basic_model|pro_model] [--output plan_review.json]")
+	fmt.Println("  script-review --input payload.json [--model basic_model|pro_model] [--output script_review.json]")
 	fmt.Println("")
 	fmt.Println("Abilities:")
 	for ability := range agentAbilityPaths {
