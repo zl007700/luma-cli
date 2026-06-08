@@ -81,6 +81,10 @@ that more complex scene treatment.
    Use `luma-content-script` to avoid used topics, discover/select a fresh original topic, submit
    `plan.review`, find materials, write the script locally, and submit `script.review`.
 
+   Do not accept a `research.run` response as `02_raw_signals.json`. Original-topic discovery must
+   combine Douyin/social signals and websearch through `content topic mine`, and must pass the
+   source-diversity and minimum-signal gates in `luma-content-script`.
+
    Output must include a reviewed `07_script.json` with `full_script`.
 
 3. Select voice and avatar.

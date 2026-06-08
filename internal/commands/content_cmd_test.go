@@ -227,3 +227,34 @@ func TestValidateWebsearchDateRange(t *testing.T) {
 		t.Fatal("expected 365d to be rejected")
 	}
 }
+
+func TestValidateTopicMineForReviewRejectsWrongOrSparseArtifact(t *testing.T) {
+	if err := validateTopicMineForReview(contentTopicMineResult{}, 15); err == nil {
+		t.Fatal("expected empty research-style artifact to be rejected")
+	}
+
+	sparse := contentTopicMineResult{RawSignals: make([]map[string]any, 3)}
+	if err := validateTopicMineForReview(sparse, 15); err == nil {
+		t.Fatal("expected sparse discovery to be rejected")
+	}
+}
+
+func TestValidateTopicMineForReviewRequiresRequestedSourceDiversity(t *testing.T) {
+	mine := contentTopicMineResult{
+		SocialKeywords: []string{"AI获客"},
+		WebQueries:     []string{"AI sales workflow"},
+		RawSignals:     make([]map[string]any, 15),
+		Counts: contentTopicMineCounts{
+			SocialRaw: 15,
+			WebRaw:    0,
+		},
+	}
+	if err := validateTopicMineForReview(mine, 15); err == nil {
+		t.Fatal("expected missing web source to be rejected")
+	}
+
+	mine.Counts.WebRaw = 6
+	if err := validateTopicMineForReview(mine, 15); err != nil {
+		t.Fatalf("expected diverse discovery to pass: %v", err)
+	}
+}

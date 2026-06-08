@@ -684,6 +684,10 @@ func cmdContentTopicReview(raw []string) error {
 	if err != nil {
 		return output.ErrValidation("%v", err)
 	}
+	minSignals, err := args.Int("min-signals", 15)
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
 	targetDuration := strings.TrimSpace(args.String("target-duration", "auto"))
 	modelTier := strings.TrimSpace(args.String("model", args.String("model-tier", "")))
 	absInput, err := absoluteOutputPath(inputPath)
@@ -697,6 +701,11 @@ func cmdContentTopicReview(raw []string) error {
 	var mineResult contentTopicMineResult
 	if err := json.Unmarshal(data, &mineResult); err != nil {
 		return output.ErrValidation("parse mine result failed: %v", err)
+	}
+	if !args.Has("allow-sparse") {
+		if err := validateTopicMineForReview(mineResult, minSignals); err != nil {
+			return output.ErrValidation("%v", err)
+		}
 	}
 	profileID := strings.TrimSpace(args.String("profile", mineResult.ProfileID))
 	var profile *lumaProfile
@@ -766,6 +775,24 @@ func cmdContentTopicReview(raw []string) error {
 	fmt.Printf("Saved to: %s\n", absOutput)
 	if cloudArtifact != nil {
 		fmt.Printf("Uploaded to cloud group: %s\n", cloudArtifact["group_name"])
+	}
+	return nil
+}
+
+func validateTopicMineForReview(mine contentTopicMineResult, minSignals int) error {
+	if minSignals < 1 {
+		minSignals = 1
+	}
+	if len(mine.RawSignals) == 0 {
+		return fmt.Errorf("topic review requires a content topic mine artifact with raw_signals; research.run output is not accepted")
+	}
+	if len(mine.RawSignals) < minSignals {
+		return fmt.Errorf("topic discovery is too sparse: got %d unique signals, need at least %d; broaden queries and rerun content topic mine", len(mine.RawSignals), minSignals)
+	}
+	if len(mine.SocialKeywords) > 0 && len(mine.WebQueries) > 0 {
+		if mine.Counts.SocialRaw == 0 || mine.Counts.WebRaw == 0 {
+			return fmt.Errorf("topic discovery requested social and web sources but one source returned no signals; revise queries and rerun content topic mine")
+		}
 	}
 	return nil
 }

@@ -126,6 +126,45 @@ project directory.
 3. Discover or select a topic using search atoms and agent judgment. Submit promising topic cards to
    `topic.review` when ranking needs protected reviewer judgment.
 
+   `research.run` is an optional keyword-expansion input, not the final discovery artifact. Never
+   save its response directly as `02_raw_signals.json`; it may generate only one query and a handful
+   of references.
+
+   For original topic discovery, build a query matrix from the profile:
+
+   - 2 category terms
+   - 2 audience pain or objection terms
+   - 2 workflow/use-case terms
+   - 1-2 contrarian or decision terms
+   - 1-2 current product, policy, or market terms when relevant
+
+   Remove near-duplicates, then run both social and web discovery in one mine:
+
+   ```bash
+   luma-cli content topic mine \
+     --profile <profile_id> \
+     --social-keywords "<6-10 comma-separated keywords>" \
+     --web-queries "<3-5 comma-separated queries>" \
+     --date-range 7d \
+     --limit-per-keyword 20 \
+     --web-num 6 \
+     --max-raw 200 \
+     --output 02_raw_signals.json
+   ```
+
+   Discovery quality gate before topic review:
+
+   - target at least 30 unique raw signals; hard floor is 15
+   - both `counts.social_raw` and `counts.web_raw` must be non-zero
+   - at least 8 signals must be plausibly relevant after removing ads, generic traffic bait, and
+     off-profile results
+   - queries must cover at least three different intent dimensions from the matrix above
+
+   If the gate fails, broaden or replace weak queries and rerun. Use `research.run --mode expanded`
+   only to discover additional language, then feed the useful terms back into `content topic mine`.
+   Do not continue to planning from a sparse or low-relevance result merely because a search call
+   technically succeeded.
+
 4. Draft a compact `longform_plan` with only the required fields from `luma-find-material`.
    Mark this local step as `plan.draft`.
    Submit it to:
@@ -175,6 +214,8 @@ project directory.
 ## Quality Gates
 
 - Public entry must make ordinary strangers want to stay before narrowing to the target audience.
+- Topic discovery must use the canonical `content topic mine` artifact. A raw `research.run`
+  response, one-query search, or fewer than 15 unique signals fails the workflow.
 - The hook is not the topic. The next sentence must explicitly reveal the topic and the viewer
   promise; otherwise the script fails before backend review.
 - Adjacent sections must pass a "why now?" check. If the relationship is not obvious from the spoken
