@@ -48,7 +48,7 @@ that more complex scene treatment.
 
 - `01_profile.json`
 - `02_content_history.json`
-- `03_topic_review.json`
+- `03_topic_selection.json`
 - `04_longform_plan.json`
 - `05_plan_review.json`
 - `06_material_assets.json`
@@ -78,14 +78,12 @@ that more complex scene treatment.
 
 2. Run the original content script workflow.
 
-   Use `luma-content-script` to avoid used topics, discover/select a fresh original topic, submit
-   `plan.review`, find materials, write the script locally, and submit `script.review`.
+   Open `../luma-content-script/SKILL.md` and execute Checkpoints 0-12 without skipping or replacing
+   named commands. This workflow delegates the entire profile-to-reviewed-script phase to that SOP;
+   it must not improvise a shorter topic or writing path.
 
-   Do not accept a `research.run` response as `02_raw_signals.json`. Original-topic discovery must
-   combine Douyin/social signals and websearch through `content topic mine`, and must pass the
-   source-diversity and minimum-signal gates in `luma-content-script`.
-
-   Output must include a reviewed `07_script.json` with `full_script`.
+   Do not start voice or video work until the SOP handoff contains an accepted script, script review,
+   material assets, deliverables manifest, and selected topic ID/title.
 
 3. Select voice and avatar.
 
@@ -166,7 +164,7 @@ that more complex scene treatment.
 - Use large typography for phone readability. For 1920x1080, body text should usually be at least
   38px.
 - The digital human is the narrator, not the main canvas. Keep it bottom-left by default.
-- Preserve topic/script review outputs. Do not let PPT design rewrite the approved viewpoint.
+- Preserve topic selection and script review outputs. Do not let PPT design rewrite the approved viewpoint.
 
 ## Cost Boundary
 

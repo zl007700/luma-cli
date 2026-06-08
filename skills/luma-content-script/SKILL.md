@@ -1,227 +1,559 @@
 ---
 name: luma-content-script
-description: Create one original Luma spoken-video script from profile memory: choose a fresh topic, review the plan, find materials, write locally, and submit script review.
-metadata:
-  relatedSkills: ["luma-shared", "luma-profile-onboarding", "luma-find-material", "luma-workflow-original-ip-talk"]
+description: Run the complete Luma original spoken-script workflow as a strict step-by-step SOP. Use when an agent must load a creator profile, inspect content history, mine Douyin and web topic signals, select a topic locally, draft and review a longform plan, collect materials, write the script locally, review it, and upload final artifacts.
 ---
 
-# Luma Content Script
+# Luma Content Script SOP
 
-Read `../luma-shared/SKILL.md` first. This is the main skill for creating one original content
-script. It starts at topic selection and ends at a reviewed final spoken script. The CLI provides
-atomic cloud/resource commands; the agent does the orchestration, judgment, iteration, and writing.
+Follow every checkpoint in order. Do not replace a named command with a similar-looking capability.
+All required commands, schemas, gates, and failure branches are contained in this file.
 
-## Ownership
-
-Cloud/TOS owns memory and history:
-
-- profile resources: `profile_<profile_id>/profile.current.json`, `profile_extra.current.md`
-- content artifacts: `content_<profile_id>/raw_signals.current.json`, `topic_review.current.json`
-- project artifacts: approved longform plan, material plan/assets, final script, review result
-- reviewer APIs: `topic.review`, `plan.review`, `script.review`
-- search/resource atoms: social search, websearch, image search, screenshot workers, VLM review
-
-Skill/agent owns content intelligence:
-
-- decide what history matters
-- aggregate and interpret signals
-- select or draft the topic/plan
-- revise based on reviewer feedback
-- collect and downgrade material evidence
-- write the spoken script
-- decide when the result is good enough
-
-CLI owns thin operations only:
-
-- upload/download/list cloud resources
-- call search and reviewer atoms
-- save local project artifact copies
-- never become the long-term authority for profile/content memory
-
-If no current profile exists, use `../luma-profile-onboarding/SKILL.md` first and save a usable
-profile before topic discovery.
-
-## Standard Chain
+## Non-Negotiable Route
 
 ```text
-profile.load
-  -> content.history
-  -> content.discovery
-  -> topic.review
-  -> plan.draft
-  -> plan.review
-  -> material.plan
-  -> material.collect
-  -> script.write.local
-  -> script.review
-  -> content.artifact.upload
+profile get
+-> content history
+-> content topic mine
+-> select topic locally
+-> write longform plan locally
+-> agent plan-review
+-> luma-find-material plan and collect
+-> build local writing brief
+-> write script locally
+-> agent script-review
+-> revise until accepted
+-> content artifact upload
 ```
 
-Use these step names in artifact metadata, notes, and local filenames. Prefixes mean ownership:
+`research.run` is not a substitute for `content topic mine`. It may only suggest additional search
+language. Do not call backend `script.write`; this skill requires agent-authored local writing.
 
-- `content.*`: CLI/cloud resource or search atom.
-- `topic.review`, `plan.review`, `script.review`: backend reviewer atom.
-- `plan.draft`, `script.write.local`: agent/skill-authored content, no backend writer call.
-- `material.plan`, `material.collect`: local skill planning/collection around cloud search/review atoms.
+## Files
 
-## Credit Planning
+Create these files in the active project:
 
-These are planning estimates only; backend usage/metering is the billing source of truth.
+```text
+01_profile.json
+01_profile_extra.md
+02_content_history.json
+02_raw_signals.json
+03_topic_selection.json
+03a_longform_plan_<topic_id>.json
+03b_plan_review_<topic_id>.json
+04_material_plan_<topic_id>.json
+05_material_assets_<topic_id>.json
+materials/<topic_id>/final_assets/deliverables_manifest.json
+06_script_writer_payload_<topic_id>.json
+07_script_<topic_id>.json
+08_script_review_payload_<topic_id>.json
+09_script_review_<topic_id>.json
+```
 
-| Step | Default estimate |
-| --- | ---: |
-| `profile.load` / `content.history` / `content.artifact.upload` | 0 credits |
-| `content.search.social` / `content.search.social-account` / `content.search.websearch` | 5 credits |
-| `content.search.image` | 8 credits per query |
-| `topic.review` / `plan.review` / `script.review` with `basic_model` | 5 credits |
-| `topic.review` / `plan.review` / `script.review` with `pro_model` | 80 credits |
-| `material.review` | 5 credits per asset |
-| `plan.draft` / `script.write.local` | 0 backend credits |
+Never overwrite an accepted artifact while revising. Add `_v2`, `_v3`, and so on, then promote the
+accepted version to the stable filename.
 
-Do not mention provider/model names to end users. Use only `basic_model` and `pro_model`.
+## Checkpoint 0: Prepare
 
-## Required Files
+1. Confirm authentication and active project:
 
-Use stable names in the project workspace:
+   ```bash
+   luma-cli auth status
+   luma-cli project artifact list
+   ```
 
-- `01_profile.json`
-- `01_profile_extra.md`
-- `02_raw_signals.json`
-- `03_topic_review.json`
-- `03a_longform_plan_<topic_id>.json`
-- `03b_plan_review_<topic_id>.json`
-- `04_material_plan_<topic_id>.json`
-- `05_material_assets_<topic_id>.json`
-- `06_script_writer_payload_<topic_id>.json`
-- `07_script_<topic_id>.json`
-- `08_script_review_payload_<topic_id>.json`
-- `09_script_review_<topic_id>.json`
+2. If no project is active:
 
-Upload durable JSON/MD artifacts back to TOS through CLI resource helpers whenever a command supports
-cloud artifact persistence. Keep local copies because downstream video production works from the
-project directory.
+   ```bash
+   luma-cli project create <project_name>
+   luma-cli project use <project_name>
+   ```
 
-## Procedure
+3. Resolve the profile:
 
-1. Load profile:
+   ```bash
+   luma-cli --json profile current
+   ```
+
+4. If no usable profile exists, stop this SOP and run `luma-profile-onboarding`.
+
+Pass condition: one active project and one explicit `<profile_id>`.
+
+## Checkpoint 1: Save Profile Snapshot
+
+1. Run:
 
    ```bash
    luma-cli --json profile get <profile_id>
+   ```
+
+2. Save the JSON response `data` object, without the CLI envelope, as `01_profile.json`.
+3. Save `data.extra` as `01_profile_extra.md`. Keep the remaining profile fields in
+   `01_profile.json`.
+4. Verify that identity, audience, and stance are non-empty. If any is empty, update the profile
+   before continuing.
+
+Pass condition: the agent can state who is speaking, to whom, and what judgments this creator owns.
+
+## Checkpoint 2: Inspect Used Topics
+
+1. Run and save the JSON result as `02_content_history.json`:
+
+   ```bash
    luma-cli --json content history --profile <profile_id>
    ```
 
-2. Build the used-topic set before discovering new topics. Treat any historical artifact with one of
-   these signals as already used:
+2. Build a used-topic set from:
 
    - `meta.topic_id`
    - `meta.topic_title`
    - `meta.content_fingerprint`
-   - a downloadable `script`, `script_review`, `topic_review`, or `longform_plan` artifact whose JSON
-     contains the same topic title, topic id, core thesis, or substantially equivalent angle
+   - downloadable script, script-review, topic-selection, and longform-plan artifacts
 
-   Do not reuse an already used topic or near-duplicate angle unless the user explicitly asks to
-   rerun that topic. If history is unavailable, say so and prefer fresher signals instead of
-   reusing local old test artifacts.
+3. Treat equivalent thesis and angle combinations as duplicates even when titles differ.
 
-3. Discover or select a topic using search atoms and agent judgment. Submit promising topic cards to
-   `topic.review` when ranking needs protected reviewer judgment.
+Pass condition: write a short local list of excluded topic IDs, titles, and near-duplicate angles.
+If history cannot be loaded, record that limitation and continue with stricter freshness checks.
 
-   `research.run` is an optional keyword-expansion input, not the final discovery artifact. Never
-   save its response directly as `02_raw_signals.json`; it may generate only one query and a handful
-   of references.
+## Checkpoint 3: Build Search Matrix
 
-   For original topic discovery, build a query matrix from the profile:
+Derive non-duplicate searches from the profile and used-topic set:
 
-   - 2 category terms
-   - 2 audience pain or objection terms
-   - 2 workflow/use-case terms
-   - 1-2 contrarian or decision terms
-   - 1-2 current product, policy, or market terms when relevant
+| Dimension | Required |
+| --- | ---: |
+| category terms | 2 |
+| audience pains or objections | 2 |
+| workflow or use-case terms | 2 |
+| decision, misconception, or contrarian terms | 1-2 |
+| current product, policy, or market terms | 1-2 when relevant |
 
-   Remove near-duplicates, then run both social and web discovery in one mine:
+Produce:
 
-   ```bash
-   luma-cli content topic mine \
-     --profile <profile_id> \
-     --social-keywords "<6-10 comma-separated keywords>" \
-     --web-queries "<3-5 comma-separated queries>" \
-     --date-range 7d \
-     --limit-per-keyword 20 \
-     --web-num 6 \
-     --max-raw 200 \
-     --output 02_raw_signals.json
-   ```
+- 6-10 concise Douyin/social keywords
+- 3-5 natural-language web queries
 
-   Discovery quality gate before topic review:
+Do not use one broad phrase for every query. Do not search only the topic the agent already wants to
+write.
 
-   - target at least 30 unique raw signals; hard floor is 15
-   - both `counts.social_raw` and `counts.web_raw` must be non-zero
-   - at least 8 signals must be plausibly relevant after removing ads, generic traffic bait, and
-     off-profile results
-   - queries must cover at least three different intent dimensions from the matrix above
+Optional recovery only:
 
-   If the gate fails, broaden or replace weak queries and rerun. Use `research.run --mode expanded`
-   only to discover additional language, then feed the useful terms back into `content topic mine`.
-   Do not continue to planning from a sparse or low-relevance result merely because a search call
-   technically succeeded.
+```bash
+luma-cli research run \
+  --role "<profile identity, audience, and domain>" \
+  --mode expanded \
+  --date-range 7d \
+  --output keyword_expansion.json
+```
 
-4. Draft a compact `longform_plan` with only the required fields from `luma-find-material`.
-   Mark this local step as `plan.draft`.
-   Submit it to:
+Use useful phrases from that result in the matrix, then continue to `content topic mine`.
 
-   ```bash
-   luma-cli agent plan-review --input 03a_longform_plan_<topic_id>.json --output 03b_plan_review_<topic_id>.json --model basic_model
-   ```
+Pass condition: the matrix covers at least three distinct intent dimensions.
 
-   Use `pro_model` only when the user asks or the gate is ambiguous.
+## Checkpoint 4: Mine Canonical Raw Signals
 
-5. Run `material.plan` / `material.collect` through `luma-find-material`. Do not let material collection
-   change the topic.
+Run exactly this capability:
 
-6. Write the script directly as the agent. Mark this local step as `script.write.local`. Preserve
-   `longform_plan.public_entry` as the opening direction unless reviewer feedback explicitly requires
-   changing it. The opening sequence must be `public_entry` -> `topic_reveal` -> `viewer_promise`
-   before the script narrows to the target audience.
+```bash
+luma-cli content topic mine \
+  --profile <profile_id> \
+  --social-keywords "<6-10 comma-separated keywords>" \
+  --web-queries "<3-5 comma-separated queries>" \
+  --date-range 7d \
+  --limit-per-keyword 20 \
+  --web-num 6 \
+  --max-raw 200 \
+  --output 02_raw_signals.json
+```
 
-   Before review, run a local continuity pass:
+Validate:
 
-   - The actual topic is spoken explicitly within the first 10 seconds; do not rely on a title card.
-   - Every adjacent section has a spoken bridge explaining why the next section follows.
-   - Every cited source has a declared argument role: example, analogy, supporting evidence, or
-     direct proof.
-   - Analogies are introduced as analogies. Never let an official product screenshot appear to prove
-     a framework that the source itself does not describe.
-   - `material_asset_ids` contains only ready assets from `05_material_assets_<topic_id>.json`.
+```bash
+node <skill_dir>/scripts/validate_artifact.js \
+  --type discovery \
+  --input 02_raw_signals.json
+```
 
-7. Submit script review:
+Required:
 
-   ```bash
-   luma-cli agent script-review --input 08_script_review_payload_<topic_id>.json --output 09_script_review_<topic_id>.json --model basic_model
-   ```
+- `raw_signals` contains at least 15 unique signals; target 30 or more
+- `counts.social_raw > 0`
+- `counts.web_raw > 0`
+- at least 8 signals remain plausibly relevant after obvious ads, generic traffic bait, and
+  off-profile items are removed
 
-8. If review says `revise` or `major_revise`, revise the agent-written script and resubmit. Do not
-   call backend `script.write` as fallback.
+Failure branch:
 
-9. Save final durable artifacts to cloud history with topic metadata:
+1. Identify which query dimension failed.
+2. Replace weak queries; do not merely add synonyms.
+3. Rerun `content topic mine`.
+4. Do not manually wrap `research.run` output as `02_raw_signals.json`.
 
-   ```bash
-   luma-cli content artifact upload --profile <profile_id> --type script --input 07_script_<topic_id>.json --name script.current.json --topic-id <topic_id> --topic-title "<title>"
-   luma-cli content artifact upload --profile <profile_id> --type script_review --input 09_script_review_<topic_id>.json --name script_review.current.json --topic-id <topic_id> --topic-title "<title>"
-   ```
+## Checkpoint 5: Select Topic Locally
 
-   This is what prevents the next workflow run from selecting the same topic again.
+There is no topic reviewer in this workflow. Read `02_raw_signals.json`, cluster related signals,
+compare them with profile/history, and choose the topic as the agent.
 
-## Quality Gates
+Score candidate clusters on:
 
-- Public entry must make ordinary strangers want to stay before narrowing to the target audience.
-- Topic discovery must use the canonical `content topic mine` artifact. A raw `research.run`
-  response, one-query search, or fewer than 15 unique signals fails the workflow.
-- The hook is not the topic. The next sentence must explicitly reveal the topic and the viewer
-  promise; otherwise the script fails before backend review.
-- Adjacent sections must pass a "why now?" check. If the relationship is not obvious from the spoken
-  copy, add a bridge or reorder/remove the section.
-- Plan/script review gates are not averages; opening survival caps the decision.
-- Material evidence constrains facts. Unsupported claims must be softened or removed.
-- A backend `pass` does not override these local gates. Reviewers may miss topic omission, weak
-  transitions, or evidence-role inflation.
-- Final script must be complete spoken copy, not an outline.
+- audience relevance
+- creator stance fit
+- freshness
+- conflict or misconception
+- material availability
+- ability to support a complete argument rather than one isolated headline
+
+Reject a candidate when:
+
+- it duplicates content history
+- its evidence is only generic engagement
+- its public entry does not lead naturally to the actual topic
+- it has no creator-specific stance
+- available materials cannot support its factual claims
+
+Write `03_topic_selection.json` yourself:
+
+```json
+{
+  "topic_cards": [
+    {
+      "topic_id": "topic_001",
+      "status": "selected",
+      "title": "internal topic title",
+      "theme": "topic cluster",
+      "angle": "specific angle",
+      "public_entry": "candidate first spoken hook",
+      "core_opinion": "creator-specific thesis",
+      "common_misunderstanding": "what the audience usually gets wrong",
+      "audience_value": "why the audience should care",
+      "why_selected": "comparison-based selection reason",
+      "evidence_signals": [
+        {
+          "source": "social or websearch",
+          "title": "signal title",
+          "url": "source URL",
+          "author_name": "optional",
+          "published_at": "optional"
+        }
+      ],
+      "rejected_alternatives": [
+        {
+          "title": "candidate title",
+          "reason": "duplicate, weak evidence, low fit, or weak argument"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Keep exactly one `status=selected` card. Include at least three evidence signals spanning social and
+web sources. Record at least two rejected alternatives so selection is comparative rather than
+arbitrary.
+
+Validate:
+
+```bash
+node <skill_dir>/scripts/validate_artifact.js \
+  --type topic-selection \
+  --input 03_topic_selection.json
+```
+
+Pass condition: the selected topic has a clear hook direction, thesis, audience value, evidence
+path, and no near-duplicate in history.
+
+## Checkpoint 6: Draft Longform Plan Locally
+
+Create `03a_longform_plan_<topic_id>.json` yourself:
+
+```json
+{
+  "input": {
+    "profile": {},
+    "topic_card": {},
+    "longform_plan": {
+      "plan_id": "longplan_<topic_id>",
+      "target_duration_sec": 240,
+      "topic": "spoken subject",
+      "public_entry": "first spoken hook",
+      "topic_reveal": "second spoken sentence naming the subject",
+      "viewer_promise": "what the viewer will gain",
+      "core_thesis": "one defensible thesis",
+      "stance": "creator judgment",
+      "audience_filter_turn": "how the opening narrows to the target audience",
+      "outline": [
+        {
+          "section": "section label",
+          "claim": "one main claim",
+          "points": ["supporting point"],
+          "bridge_to_next": "why the next section follows",
+          "evidence_role": "none"
+        }
+      ],
+      "fact_boundary": ["claim requiring verification or softer wording"]
+    }
+  },
+  "options": {
+    "language": "zh-CN"
+  }
+}
+```
+
+Allowed `evidence_role`: `none`, `example`, `analogy`, `supporting_evidence`, `direct_proof`.
+Omit `bridge_to_next` only on the final outline item.
+
+Required logic:
+
+- `public_entry`: first spoken hook
+- `topic_reveal`: next sentence explicitly naming the subject
+- `viewer_promise`: why the viewer should continue
+- each outline item has one claim
+- each non-final item has `bridge_to_next`
+- each item declares `evidence_role`
+- analogies are not labeled as direct proof
+
+Validate:
+
+```bash
+node <skill_dir>/scripts/validate_artifact.js \
+  --type plan \
+  --input 03a_longform_plan_<topic_id>.json
+```
+
+Pass condition: a viewer hearing only the first three fields knows the topic and expected payoff,
+and every adjacent section has a stated logical relationship.
+
+## Checkpoint 7: Review Plan
+
+Run:
+
+```bash
+luma-cli agent plan-review \
+  --input 03a_longform_plan_<topic_id>.json \
+  --model basic_model \
+  --output 03b_plan_review_<topic_id>.json
+```
+
+Inspect `decision`, score, issues, and revision instructions. A backend pass does not override local
+topic-reveal, continuity, or evidence-role failures.
+
+Failure branch:
+
+1. Revise only the plan.
+2. Save a versioned plan.
+3. Rerun plan review.
+4. Do not start material collection before acceptance.
+
+## Checkpoint 8: Plan And Collect Materials
+
+Use the bundled material-planning and collection scripts:
+
+```bash
+node <luma-find-material>/scripts/plan_from_topic_review.js \
+  --review 03_topic_selection.json \
+  --topic-id <topic_id> \
+  --longform-plan 03a_longform_plan_<topic_id>.json \
+  --max-web-queries 2 \
+  --max-image-queries 1 \
+  --output 04_material_plan_<topic_id>.json
+
+node <luma-find-material>/scripts/collect_from_material_plan.js \
+  --plan 04_material_plan_<topic_id>.json \
+  --execute-collection \
+  --results-dir materials/<topic_id> \
+  --deliverables-dir materials/<topic_id>/final_assets \
+  --output 05_material_assets_<topic_id>.json
+```
+
+Validate:
+
+```bash
+node <skill_dir>/scripts/validate_artifact.js \
+  --type materials \
+  --input 05_material_assets_<topic_id>.json
+```
+
+Required:
+
+- every chapter has a ready asset or generated-component spec
+- factual claims have verified evidence or softened wording
+- rejected and failed assets remain recorded
+- `materials/<topic_id>/final_assets/deliverables_manifest.json` exists
+- search snippets never count as proof
+- official pages and primary documentation outrank media and social signals
+- social signals show attention, not factual truth
+- generated components explain the argument but never prove it
+
+Do not continue with an empty material result.
+
+## Checkpoint 9: Build Writing Brief
+
+Run:
+
+```bash
+node <skill_dir>/scripts/build_script_writer_payload.js \
+  --profile 01_profile.json \
+  --profile-extra 01_profile_extra.md \
+  --topic-selection 03_topic_selection.json \
+  --topic-id <topic_id> \
+  --longform-plan 03a_longform_plan_<topic_id>.json \
+  --plan-review 03b_plan_review_<topic_id>.json \
+  --material-plan 04_material_plan_<topic_id>.json \
+  --material-assets 05_material_assets_<topic_id>.json \
+  --deliverables materials/<topic_id>/final_assets/deliverables_manifest.json \
+  --duration-sec <seconds> \
+  --output 06_script_writer_payload_<topic_id>.json
+```
+
+This file is a local writing brief. Do not submit it to backend `script.write`.
+
+Pass condition: the brief contains the selected topic, approved plan, claim constraints, material
+coverage, and section briefs.
+
+## Checkpoint 10: Write Script Locally
+
+Write `07_script_<topic_id>.json` yourself:
+
+```json
+{
+  "topic_id": "<topic_id>",
+  "title": "internal and cover title",
+  "hook": "first spoken hook",
+  "topic_reveal": "spoken subject sentence",
+  "viewer_promise": "spoken payoff sentence",
+  "sections": [
+    {
+      "section": "section label",
+      "spoken_text": "complete spoken copy including transition",
+      "claim_ids": ["claim_001"],
+      "material_asset_ids": ["asset_001"],
+      "evidence_role": "supporting_evidence",
+      "bridge_to_next": "spoken transition logic",
+      "visual_intent": "what the audience should see"
+    }
+  ],
+  "full_script": "complete concatenated spoken copy",
+  "evidence_notes": [],
+  "risk_notes": [],
+  "estimated_duration_sec": 240
+}
+```
+
+`full_script` must contain the same spoken content as the ordered opening and sections. The title is
+not spoken context unless its words also appear in `full_script`.
+
+Mandatory opening order:
+
+```text
+public_entry -> topic_reveal -> viewer_promise -> audience_filter_turn
+```
+
+Mandatory section rules:
+
+- spoken text, not outline prose
+- one argument per section
+- explicit bridge between adjacent sections
+- source role stated accurately: example, analogy, supporting evidence, or direct proof
+- only ready asset IDs in `material_asset_ids`
+- no title-card-dependent context
+
+Validate:
+
+```bash
+node <skill_dir>/scripts/validate_artifact.js \
+  --type script \
+  --input 07_script_<topic_id>.json
+```
+
+Pass condition: the full script can be understood with the screen turned off.
+
+## Checkpoint 11: Review And Revise Script
+
+Create `08_script_review_payload_<topic_id>.json`:
+
+```json
+{
+  "input": {
+    "profile": {},
+    "topic_card": {},
+    "longform_plan": {},
+    "plan_review": {},
+    "material_assets": {},
+    "script": {}
+  },
+  "options": {
+    "language": "zh-CN"
+  }
+}
+```
+
+Use the accepted profile snapshot, selected topic card, approved plan, latest plan review, material
+coverage summary, and complete local script. Do not submit only `full_script`.
+
+Then run:
+
+```bash
+luma-cli agent script-review \
+  --input 08_script_review_payload_<topic_id>.json \
+  --model basic_model \
+  --output 09_script_review_<topic_id>.json
+```
+
+If the decision is `revise` or `major_revise`:
+
+1. Map every issue to a script location.
+2. Revise the local script, not the approved thesis unless the review identifies a plan defect.
+3. Save versioned script, payload, and review files.
+4. Rerun local validation and backend review.
+
+Stop after three failed cycles and report the repeated blocker. Do not silently lower the standard.
+
+Pass condition:
+
+- backend decision accepted
+- local topic-reveal, continuity, evidence, and material-ID gates pass
+- `full_script` is complete spoken copy
+
+## Checkpoint 12: Upload Durable History
+
+Upload the accepted artifacts:
+
+```bash
+luma-cli content artifact upload \
+  --profile <profile_id> \
+  --type longform_plan \
+  --input 03a_longform_plan_<topic_id>.json \
+  --name longform_plan.current.json \
+  --topic-id <topic_id> \
+  --topic-title "<title>"
+
+luma-cli content artifact upload \
+  --profile <profile_id> \
+  --type script \
+  --input 07_script_<topic_id>.json \
+  --name script.current.json \
+  --topic-id <topic_id> \
+  --topic-title "<title>"
+
+luma-cli content artifact upload \
+  --profile <profile_id> \
+  --type script_review \
+  --input 09_script_review_<topic_id>.json \
+  --name script_review.current.json \
+  --topic-id <topic_id> \
+  --topic-title "<title>"
+```
+
+Verify with:
+
+```bash
+luma-cli --json content history --profile <profile_id>
+```
+
+Final handoff to `luma-workflow-original-ip-talk`:
+
+- accepted `07_script_<topic_id>.json`
+- accepted `09_script_review_<topic_id>.json`
+- `05_material_assets_<topic_id>.json`
+- deliverables manifest
+- explicit selected topic ID and title
+
+Do not begin TTS or video production without this handoff.

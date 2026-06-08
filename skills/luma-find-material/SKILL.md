@@ -1,6 +1,6 @@
 ---
 name: luma-find-material
-description: Find evidence and visual materials for one approved Luma content plan. Use after topic/plan review to search web/image sources, capture screenshots, filter assets, and record claim coverage.
+description: Find evidence and visual materials for one selected Luma topic and approved content plan. Use after local topic selection and plan review to search web/image sources, capture screenshots, filter assets, and record claim coverage.
 ---
 
 # Luma Find Material
@@ -12,7 +12,7 @@ and it must not change the topic.
 ## Output Chain
 
 ```text
-03_topic_review.json
+03_topic_selection.json
   -> 03a_longform_plan_<topic_id>.json
   -> 03b_plan_review_<topic_id>.json
   -> 04_material_plan_<topic_id>.json
@@ -66,7 +66,7 @@ Keep browser screenshots client-side because access, IP, cookies, and rendering 
 
 ## 0. Plan Review Gate
 
-After selecting one `topic.review` card and before collecting materials, write a compact
+After selecting one local topic card and before collecting materials, write a compact
 `03a_longform_plan_<topic_id>.json` for backend review.
 
 The review payload must include only:
@@ -149,12 +149,16 @@ resubmit. Do not start `material.plan` until the plan gate is accepted.
 
 ```bash
 node <skill_dir>/scripts/plan_from_topic_review.js \
-  --review 03_topic_review.json \
+  --review 03_topic_selection.json \
   --topic-id topic_002 \
+  --longform-plan 03a_longform_plan_topic_002.json \
   --max-web-queries 2 \
   --max-image-queries 1 \
   --output 04_material_plan_topic_002.json
 ```
+
+`--longform-plan` is required after plan review. It binds material claims and chapter visuals to the
+approved local plan instead of an older topic-card outline.
 
 Defaults deliberately limit cost:
 

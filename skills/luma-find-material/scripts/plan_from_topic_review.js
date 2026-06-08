@@ -37,7 +37,37 @@ function selectTopic(review, topicID) {
     if (!card) throw new Error(`topic not found: ${topicID}`);
     return card;
   }
-  return cards.find((item) => item.status === "shortlisted") || cards[0];
+  return cards.find((item) => item.status === "selected") || cards.find((item) => item.status === "shortlisted") || cards[0];
+}
+
+function approvedLongformPlan(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  return payload.input?.longform_plan || payload.longform_plan || payload.plan || null;
+}
+
+function applyApprovedPlan(topic, plan) {
+  if (!plan) return topic;
+  const outline = Array.isArray(plan.outline) ? plan.outline : [];
+  return {
+    ...topic,
+    title: plan.topic || topic.title,
+    public_entry: plan.public_entry || topic.public_entry,
+    core_opinion: plan.core_thesis || topic.core_opinion,
+    longform_plan: {
+      ...plan,
+      logic_chain: outline.map((item) => ({
+        section: item.section,
+        claim: item.claim,
+        evidence_role: item.evidence_role,
+        bridge_to_next: item.bridge_to_next,
+        evidence: []
+      }))
+    },
+    format_fit: {
+      ...(topic.format_fit || {}),
+      duration_sec: Number(plan.target_duration_sec) || topic.format_fit?.duration_sec
+    }
+  };
 }
 
 function sectionHas(section, values) {
@@ -247,6 +277,7 @@ function visualForSection(section, idx) {
 
 function main() {
   const reviewPath = arg("review") || arg("input");
+  const longformPlanPath = arg("longform-plan");
   const topicID = arg("topic-id");
   const output = arg("output", "04_material_plan.json");
   const maxWebQueries = Math.max(0, intArg("max-web-queries", 2));
@@ -254,8 +285,11 @@ function main() {
   if (!reviewPath) throw new Error("--review is required");
 
   const review = readJSON(reviewPath);
-  const topic = selectTopic(review, topicID);
+  let topic = selectTopic(review, topicID);
   if (!topic) throw new Error("no topic card found");
+  if (longformPlanPath) {
+    topic = applyApprovedPlan(topic, approvedLongformPlan(readJSON(longformPlanPath)));
+  }
 
   const claims = buildClaims(topic);
   const evidence = topic.evidence_signals || [];

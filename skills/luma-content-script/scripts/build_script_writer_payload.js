@@ -47,13 +47,14 @@ function selectTopic(review, topicID) {
   const cards = topicCards(review);
   if (!cards.length) return null;
   if (topicID) return cards.find((card) => card.topic_id === topicID) || null;
-  return cards.find((card) => card.status === "shortlisted") || cards[0];
+  return cards.find((card) => card.status === "selected") || cards.find((card) => card.status === "shortlisted") || cards[0];
 }
 
 function normalizeLongformPlan(payload, selectedTopic = null) {
   if (!payload || typeof payload !== "object") {
     return selectedTopic?.longform_plan || {};
   }
+  if (payload.input?.longform_plan && typeof payload.input.longform_plan === "object") return payload.input.longform_plan;
   if (payload.longform_plan && typeof payload.longform_plan === "object") return payload.longform_plan;
   if (payload.plan && typeof payload.plan === "object") return payload.plan;
   return selectedTopic?.longform_plan || {};
@@ -168,7 +169,7 @@ function estimateTokens(text) {
 
 function main() {
   const profilePath = arg("profile");
-  const topicReviewPath = arg("topic-review") || arg("review");
+  const topicReviewPath = arg("topic-selection") || arg("topic-review") || arg("review");
   const longformPlanPath = arg("longform-plan") || arg("longform");
   const planReviewPath = arg("plan-review");
   const materialPlanPath = arg("material-plan") || arg("plan");
@@ -180,7 +181,7 @@ function main() {
   const platform = arg("platform", "short_video");
 
   if (!profilePath) throw new Error("--profile is required");
-  if (!topicReviewPath) throw new Error("--topic-review is required");
+  if (!topicReviewPath) throw new Error("--topic-selection is required");
   if (!materialPlanPath) throw new Error("--material-plan is required");
   if (!materialAssetsPath) throw new Error("--material-assets is required");
   if (!deliverablesPath) throw new Error("--deliverables is required");
@@ -206,7 +207,7 @@ function main() {
       profile,
       topic: {
         topic_id: selectedTopic.topic_id || materialPlan.topic_id || topicID,
-        title: selectedTopic.title || materialPlan.topic_title || "",
+        title: longformPlan.topic || selectedTopic.title || materialPlan.topic_title || "",
         public_entry: longformPlan.public_entry || selectedTopic.public_entry || "",
         angle: selectedTopic.angle || "",
         core_opinion: longformPlan.core_thesis || selectedTopic.core_opinion || materialPlan.core_thesis || "",
@@ -251,7 +252,7 @@ function main() {
     source_files: {
       profile: path.resolve(profilePath),
       profile_extra: arg("profile-extra") ? path.resolve(arg("profile-extra")) : "",
-      topic_review: path.resolve(topicReviewPath),
+      topic_selection: path.resolve(topicReviewPath),
       longform_plan: longformPlanPath ? path.resolve(longformPlanPath) : "",
       plan_review: planReviewPath ? path.resolve(planReviewPath) : "",
       material_plan: path.resolve(materialPlanPath),
