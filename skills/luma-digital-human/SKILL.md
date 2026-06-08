@@ -8,7 +8,7 @@ metadata:
   cliHelp: "luma-cli tools list"
   category: "capability"
   entrypoint: true
-  relatedSkills: ["luma-shared", "luma-subtitle", "luma-workflow-viral-remix"]
+  relatedSkills: ["luma-shared", "luma-subtitle", "luma-ppt-video", "luma-workflow-viral-remix"]
   aliases: ["拾光数字人", "拾光智能体", "拾光工具", "Luma digital human", "数字人", "口播视频"]
 ---
 

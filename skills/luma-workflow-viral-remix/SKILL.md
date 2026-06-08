@@ -8,7 +8,7 @@ metadata:
   cliHelp: "luma-cli tools list"
   category: "workflow"
   entrypoint: true
-  relatedSkills: ["luma-shared", "luma-content-script", "luma-digital-human", "luma-material", "luma-subtitle"]
+  relatedSkills: ["luma-shared", "luma-content-script", "luma-digital-human", "luma-ppt-video", "luma-material", "luma-subtitle"]
   aliases: ["拾光", "拾光智能体", "拾光工具", "拾光运营套装", "Luma", "Luma CLI", "luma-cli", "爆款复刻", "爆款仿写"]
 ---
 
@@ -22,6 +22,7 @@ Read these first when needed:
 - Use `luma-cli research ...` atoms directly for topic search and keyword tables.
 - `../luma-material/SKILL.md` for local material groups and PIP matching.
 - `../luma-digital-human/SKILL.md` for voice, TTS, avatar, and lip-sync.
+- `../luma-ppt-video/SKILL.md` when the chosen output format is a PPT-style knowledge video.
 - `../luma-subtitle/SKILL.md` for subtitle rendering.
 
 ## Boundary

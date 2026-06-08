@@ -54,7 +54,9 @@ func cmdSkillsList() error {
 		{"name": "luma-content-script", "layer": "workflow", "description": "Create one original script from profile, topic discovery, materials, and reviews"},
 		{"name": "luma-assets", "layer": "capability", "description": "Cloud assets and reusable resources"},
 		{"name": "luma-digital-human", "layer": "capability", "description": "Voice clone, TTS, avatar, and lip-sync"},
+		{"name": "luma-ppt-video", "layer": "capability", "description": "Render align.json into PPT-style MP4, with optional avatar PiP"},
 		{"name": "luma-subtitle", "layer": "capability", "description": "Subtitle generation and rendering"},
+		{"name": "luma-workflow-original-ip-talk", "layer": "workflow", "description": "Original profile-to-video workflow with digital human and PPT visuals"},
 		{"name": "luma-workflow-viral-remix", "layer": "workflow", "description": "Research-to-video viral remix workflow"},
 	}
 	if runtimeOpts.JSON {

@@ -52,10 +52,22 @@
       "path": "luma-digital-human/SKILL.md"
     },
     {
+      "name": "luma-ppt-video",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-ppt-video/SKILL.md"
+    },
+    {
       "name": "luma-subtitle",
       "category": "capability",
       "entrypoint": true,
       "path": "luma-subtitle/SKILL.md"
+    },
+    {
+      "name": "luma-workflow-original-ip-talk",
+      "category": "workflow",
+      "entrypoint": true,
+      "path": "luma-workflow-original-ip-talk/SKILL.md"
     },
     {
       "name": "luma-workflow-viral-remix",

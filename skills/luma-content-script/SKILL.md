@@ -1,6 +1,8 @@
 ---
 name: luma-content-script
 description: Create one original Luma spoken-video script from profile memory: choose a fresh topic, review the plan, find materials, write locally, and submit script review.
+metadata:
+  relatedSkills: ["luma-shared", "luma-find-material", "luma-workflow-original-ip-talk"]
 ---
 
 # Luma Content Script

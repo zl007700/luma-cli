@@ -21,7 +21,9 @@ Current core skills:
 | `luma-find-material` | capability | Find evidence and visual materials for an approved content plan |
 | `luma-material` | capability | Local material groups, material search, PIP matching |
 | `luma-digital-human` | capability | Voice clone, TTS, avatar, lip-sync |
+| `luma-ppt-video` | capability | Render align.json into PPT-style MP4, with optional avatar PiP |
 | `luma-subtitle` | capability | Text segmentation and subtitle rendering |
+| `luma-workflow-original-ip-talk` | workflow | Original profile-to-video workflow with digital human and PPT visuals |
 | `luma-workflow-viral-remix` | workflow | Research-to-video viral remix workflow |
 
 ## Distribution
