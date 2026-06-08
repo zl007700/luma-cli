@@ -27,12 +27,12 @@ def load_units(path: Path) -> list[dict]:
 def normalize_units(items: list[dict]) -> list[dict]:
     out = []
     for index, item in enumerate(items):
-        text = str(item.get("text") or item.get("sentence") or "").strip()
+        text = str(item.get("text") or item.get("Text") or item.get("sentence") or item.get("Sentence") or "").strip()
         if not text:
             continue
-        start = float(item.get("start", item.get("start_time", 0)) or 0)
-        end = float(item.get("end", item.get("end_time", start + 1)) or start + 1)
-        sent_id = str(item.get("sent_id") or item.get("id") or f"sent_{index:04d}")
+        start = float(item.get("start", item.get("Start", item.get("start_time", 0))) or 0)
+        end = float(item.get("end", item.get("End", item.get("end_time", start + 1))) or start + 1)
+        sent_id = str(item.get("sent_id") or item.get("SentID") or item.get("seg_id") or item.get("SegID") or item.get("id") or item.get("ID") or f"sent_{index:04d}")
         out.append({"sent_id": sent_id, "start": start, "end": max(end, start + 0.1), "text": text})
     if not out:
         raise ValueError("no timed text units found")
@@ -43,15 +43,15 @@ def units_from_segments(segments: list[dict]) -> list[dict]:
     grouped: dict[str, dict] = {}
     order: list[str] = []
     for index, seg in enumerate(segments):
-        text = str(seg.get("text") or "").strip()
+        text = str(seg.get("text") or seg.get("Text") or "").strip()
         if not text:
             continue
-        sent_id = str(seg.get("sent_id") or seg.get("sentence_id") or f"sent_{index:04d}")
+        sent_id = str(seg.get("sent_id") or seg.get("SentID") or seg.get("sentence_id") or seg.get("SentenceID") or f"sent_{index:04d}")
         if sent_id not in grouped:
-            grouped[sent_id] = {"sent_id": sent_id, "start": float(seg.get("start", 0) or 0), "end": 0.0, "parts": []}
+            grouped[sent_id] = {"sent_id": sent_id, "start": float(seg.get("start", seg.get("Start", 0)) or 0), "end": 0.0, "parts": []}
             order.append(sent_id)
         grouped[sent_id]["parts"].append(text)
-        grouped[sent_id]["end"] = max(grouped[sent_id]["end"], float(seg.get("end", grouped[sent_id]["start"] + 1) or 0))
+        grouped[sent_id]["end"] = max(grouped[sent_id]["end"], float(seg.get("end", seg.get("End", grouped[sent_id]["start"] + 1)) or 0))
     return normalize_units([
         {"sent_id": sent_id, "start": grouped[sent_id]["start"], "end": grouped[sent_id]["end"], "text": "".join(grouped[sent_id]["parts"])}
         for sent_id in order

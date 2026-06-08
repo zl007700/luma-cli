@@ -14,7 +14,7 @@ func Shortcuts() []common.Shortcut {
 			Flags: []common.Flag{
 				{Name: "role", Description: "Role/persona description.", Required: true},
 				{Name: "mode", Description: "Research mode.", Default: "precise"},
-				{Name: "date-range", Description: "Search time window.", Default: "7d"},
+				{Name: "date-range", Description: "Search time window. Use 24h or 7d.", Default: "7d"},
 				{Name: "output", Description: "Output JSON path.", Default: "step0_content_research.json"},
 			},
 			Outputs:  []string{"response", "output_path"},

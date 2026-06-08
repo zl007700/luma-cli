@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
@@ -208,5 +209,21 @@ func TestContentSearchQueriesKeepsSingleQueryPunctuation(t *testing.T) {
 	}
 	if got[0] != "老板用 AI 没效果，问题不在工具，而在业务流程" {
 		t.Fatalf("query = %q", got[0])
+	}
+}
+
+func TestValidateWebsearchDateRange(t *testing.T) {
+	for _, value := range []string{"24h", "7d", " 7D "} {
+		got, err := validateWebsearchDateRange(value)
+		if err != nil {
+			t.Fatalf("validateWebsearchDateRange(%q) returned error: %v", value, err)
+		}
+		if got != strings.ToLower(strings.TrimSpace(value)) {
+			t.Fatalf("validateWebsearchDateRange(%q) = %q", value, got)
+		}
+	}
+
+	if _, err := validateWebsearchDateRange("365d"); err == nil {
+		t.Fatal("expected 365d to be rejected")
 	}
 }

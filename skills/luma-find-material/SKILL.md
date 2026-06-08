@@ -80,6 +80,8 @@ The review payload must include only:
     "target_duration_sec": 240,
     "topic": "selected topic title",
     "public_entry": "the first spoken entry sentence for ordinary strangers",
+    "topic_reveal": "the next spoken sentence that explicitly says what this video is about",
+    "viewer_promise": "what the viewer will understand or be able to do after watching",
     "core_thesis": "one clear thesis",
     "stance": "the creator's judgment or belief",
     "audience_filter_turn": "how the topic narrows back to the target audience after the public entry",
@@ -87,7 +89,9 @@ The review payload must include only:
       {
         "section": "short section label",
         "claim": "the section's main claim",
-        "points": ["supporting point"]
+        "points": ["supporting point"],
+        "bridge_to_next": "why the next section logically follows",
+        "evidence_role": "none | example | analogy | supporting_evidence | direct_proof"
       }
     ],
     "fact_boundary": ["what must be softened or verified later"]
@@ -101,6 +105,8 @@ Required `longform_plan` fields:
 - `target_duration_sec`
 - `topic`
 - `public_entry`
+- `topic_reveal`
+- `viewer_promise`
 - `core_thesis`
 - `stance`
 - `audience_filter_turn`
@@ -116,6 +122,15 @@ cases. Material has not been collected yet, so the plan may name evidence needs 
 strangers who just swiped into the video, not for target users who already know they need AI or
 customer acquisition help. Avoid entries that depend on the viewer being a boss, owning customers,
 buying tools, knowing AI, or running a store.
+
+`topic_reveal` must immediately follow the hook in the spoken script, normally within the first
+10 seconds. A viewer cannot see the internal title or plan, so this sentence must name the actual
+subject in plain language. `viewer_promise` states why staying is worthwhile.
+
+Every outline item except the last must include `bridge_to_next`. The bridge must explain the
+argument, question, or contrast that makes the next section necessary. `evidence_role` prevents an
+analogy or product example from being presented as proof. For example, CRM scoring can illustrate
+signal-based prioritization, but it does not directly prove a custom red/yellow/green framework.
 
 Submit the plan:
 
@@ -197,6 +212,8 @@ luma-cli content search image ...
 ```
 
 Use `--query "<single query>"` for one query that may contain commas. Use `--queries` only for an intentional comma-separated query list.
+For `content.search.websearch`, `--date-range` accepts only `24h` or `7d`. Default to `7d`; never
+invent a longer window.
 
 The collector:
 
@@ -312,6 +329,9 @@ Image-search results are auxiliary unless their source is official. Never use an
 ## Rules
 
 - Never let material collection choose a new topic.
+- Do not proceed to script writing with an empty material result. Each chapter must have either a
+  verified ready asset or an explicit generated-component spec. Search failures and rejected assets
+  must remain visible in `05_material_assets_<topic_id>.json`.
 - Keep evidence assets and generated components separate.
 - Preserve every JSON artifact for `script.write` and `storyboard.plan`.
 - Do not invent benchmarks, prices, dates, or capabilities.

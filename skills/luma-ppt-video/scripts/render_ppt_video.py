@@ -73,7 +73,7 @@ async def capture_slides(config: dict, schedule: list[dict], temp_dir: Path) -> 
         await page.wait_for_load_state("networkidle")
         await page.wait_for_timeout(300)
         for index, item in enumerate(schedule):
-            await page.evaluate("window.showSlide && window.showSlide(arguments[0])", int(item["slide"]))
+            await page.evaluate("(slide) => window.showSlide && window.showSlide(slide)", int(item["slide"]))
             await page.wait_for_timeout(120)
             shot = temp_dir / f"slide_{index:04d}.jpg"
             await page.screenshot(path=str(shot), type="jpeg", quality=94)

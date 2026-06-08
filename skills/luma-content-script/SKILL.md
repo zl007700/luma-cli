@@ -141,7 +141,18 @@ project directory.
 
 6. Write the script directly as the agent. Mark this local step as `script.write.local`. Preserve
    `longform_plan.public_entry` as the opening direction unless reviewer feedback explicitly requires
-   changing it.
+   changing it. The opening sequence must be `public_entry` -> `topic_reveal` -> `viewer_promise`
+   before the script narrows to the target audience.
+
+   Before review, run a local continuity pass:
+
+   - The actual topic is spoken explicitly within the first 10 seconds; do not rely on a title card.
+   - Every adjacent section has a spoken bridge explaining why the next section follows.
+   - Every cited source has a declared argument role: example, analogy, supporting evidence, or
+     direct proof.
+   - Analogies are introduced as analogies. Never let an official product screenshot appear to prove
+     a framework that the source itself does not describe.
+   - `material_asset_ids` contains only ready assets from `05_material_assets_<topic_id>.json`.
 
 7. Submit script review:
 
@@ -164,6 +175,12 @@ project directory.
 ## Quality Gates
 
 - Public entry must make ordinary strangers want to stay before narrowing to the target audience.
+- The hook is not the topic. The next sentence must explicitly reveal the topic and the viewer
+  promise; otherwise the script fails before backend review.
+- Adjacent sections must pass a "why now?" check. If the relationship is not obvious from the spoken
+  copy, add a bridge or reorder/remove the section.
 - Plan/script review gates are not averages; opening survival caps the decision.
 - Material evidence constrains facts. Unsupported claims must be softened or removed.
+- A backend `pass` does not override these local gates. Reviewers may miss topic omission, weak
+  transitions, or evidence-role inflation.
 - Final script must be complete spoken copy, not an outline.

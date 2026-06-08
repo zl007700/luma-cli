@@ -354,19 +354,36 @@ func cmdContentSearchWebsearch(raw []string) error {
 	if err != nil {
 		return output.ErrValidation("%v", err)
 	}
+	dateRange, err := validateWebsearchDateRange(args.String("date-range", "7d"))
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
 	cfg, err := requireConfig()
 	if err != nil {
 		return output.ErrAuth("%v", err)
 	}
 	result, err := cloud.SearchWebsearch(cloud.WebSearchRequest{
 		Queries:   queries,
-		DateRange: strings.TrimSpace(args.String("date-range", "7d")),
+		DateRange: dateRange,
 		Num:       num,
 	}, cfg.CardKey)
 	if err != nil {
 		return output.ErrNetwork("websearch failed: %v", err)
 	}
 	return saveContentSearchResult(result, strings.TrimSpace(args.String("output", "content_websearch_signals.json")), "content.search.websearch", contentProfileID(args, ""))
+}
+
+func validateWebsearchDateRange(value string) (string, error) {
+	dateRange := strings.TrimSpace(strings.ToLower(value))
+	if dateRange == "" {
+		dateRange = "7d"
+	}
+	switch dateRange {
+	case "24h", "7d":
+		return dateRange, nil
+	default:
+		return "", fmt.Errorf("--date-range must be 24h or 7d for websearch, got %q", value)
+	}
 }
 
 func cmdContentSearchImage(raw []string) error {
@@ -501,6 +518,12 @@ func cmdContentTopicMine(raw []string) error {
 	}
 	if len(socialKeywords) == 0 && len(webQueries) == 0 && len(benchmarkAccounts) == 0 {
 		return output.ErrValidation("pass --social-keywords, --web-queries, or have a profile benchmark account pool")
+	}
+	if len(webQueries) > 0 {
+		dateRange, err = validateWebsearchDateRange(dateRange)
+		if err != nil {
+			return output.ErrValidation("%v", err)
+		}
 	}
 
 	var searchResults []map[string]any

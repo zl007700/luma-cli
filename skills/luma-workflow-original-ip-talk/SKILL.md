@@ -107,17 +107,14 @@ that more complex scene treatment.
    Prefer the available subtitle/ASR alignment atom used elsewhere in the project. The output must
    include timed `sentence_units[]` or compatible `segments[]`.
 
-6. Build the PPT demo from align.
+6. Design and build the production PPT from align, script sections, and material assets.
 
-   ```bash
-   python <luma-ppt-video>/scripts/build_demo_ppt.py \
-     --align 11_align.json \
-     --output-dir 12_ppt \
-     --title "<video title>"
-   ```
+   Use `luma-ppt-video` production flow. First create a storyboard that maps logical claims,
+   `material_asset_ids`, slide layout types, and timed sentence IDs. Then author a custom
+   `12_ppt/index.html` and valid `12_ppt/config.json`.
 
-   The agent may replace the generated `12_ppt/index.html` with a custom slide design, but must keep
-   the generated `12_ppt/config.json` timing contract valid.
+   Do not use `build_demo_ppt.py` for final output. It is a smoke-test utility with a deliberately
+   uniform layout and is not a production presentation generator.
 
 7. Render PPT video locally.
 
@@ -156,6 +153,12 @@ that more complex scene treatment.
 
 - The script must be original to the profile; do not quietly imitate a viral source.
 - PPT slides should explain claims visually, not repeat the entire script as dense paragraphs.
+- Use collected source screenshots and generated explanatory components from `06_material_assets.json`.
+  Do not silently replace missing materials with text-only slides.
+- Reserve the bottom-left avatar zone before layout. For a 380px circular avatar at 60px margins,
+  keep core text, evidence, labels, and progress UI out of `x=0..500, y=560..1080`.
+- Use at least four layout types in a normal multi-slide video, and never repeat the same layout more
+  than twice consecutively.
 - Use large typography for phone readability. For 1920x1080, body text should usually be at least
   38px.
 - The digital human is the narrator, not the main canvas. Keep it bottom-left by default.
