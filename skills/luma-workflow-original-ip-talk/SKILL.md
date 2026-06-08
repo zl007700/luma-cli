@@ -25,6 +25,7 @@ Do not use this workflow when:
 
 This workflow may call:
 
+- `luma-profile-onboarding` when no usable profile exists.
 - `luma-content-script` for original topic, plan, material, script, and script review.
 - `luma-digital-human` for TTS, voice, avatar, and lip-sync.
 - `luma-ppt-video` for PPT-style knowledge video and optional digital-human PiP.
@@ -72,8 +73,8 @@ that more complex scene treatment.
    luma-cli --json profile get <profile_id>
    ```
 
-   If the profile does not exist, create it first with `luma-cli profile create`. The profile is the
-   creative source of this workflow.
+   If the profile does not exist, use `luma-profile-onboarding` first. The profile is the creative
+   source of this workflow.
 
 2. Run the original content script workflow.
 

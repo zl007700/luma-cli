@@ -2,7 +2,7 @@
 name: luma-content-script
 description: Create one original Luma spoken-video script from profile memory: choose a fresh topic, review the plan, find materials, write locally, and submit script review.
 metadata:
-  relatedSkills: ["luma-shared", "luma-find-material", "luma-workflow-original-ip-talk"]
+  relatedSkills: ["luma-shared", "luma-profile-onboarding", "luma-find-material", "luma-workflow-original-ip-talk"]
 ---
 
 # Luma Content Script
@@ -37,6 +37,9 @@ CLI owns thin operations only:
 - call search and reviewer atoms
 - save local project artifact copies
 - never become the long-term authority for profile/content memory
+
+If no current profile exists, use `../luma-profile-onboarding/SKILL.md` first and save a usable
+profile before topic discovery.
 
 ## Standard Chain
 

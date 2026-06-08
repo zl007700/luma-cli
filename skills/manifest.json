@@ -16,6 +16,12 @@
       "path": "luma-maintenance/SKILL.md"
     },
     {
+      "name": "luma-profile-onboarding",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-profile-onboarding/SKILL.md"
+    },
+    {
       "name": "luma-benchmark-discovery",
       "category": "capability",
       "entrypoint": true,

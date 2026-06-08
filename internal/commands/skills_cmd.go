@@ -48,6 +48,7 @@ func cmdSkillsList() error {
 	items := []map[string]string{
 		{"name": "luma-shared", "layer": "shared", "description": "Common Luma agent rules"},
 		{"name": "luma-maintenance", "layer": "maintenance", "description": "Update Luma CLI and sync agent skills"},
+		{"name": "luma-profile-onboarding", "layer": "capability", "description": "Guide users to create and save a usable profile"},
 		{"name": "luma-benchmark-discovery", "layer": "capability", "description": "Discover and score benchmark accounts"},
 		{"name": "luma-material", "layer": "capability", "description": "Local material groups, search, and PIP matching"},
 		{"name": "luma-find-material", "layer": "capability", "description": "Find evidence and visual materials for an approved content plan"},

@@ -16,6 +16,7 @@ Current core skills:
 | --- | --- | --- |
 | `luma-shared` | shared | Common rules every Luma agent should know |
 | `luma-maintenance` | maintenance | Update Luma CLI and sync agent skills |
+| `luma-profile-onboarding` | capability | Guide users to create and save a usable profile |
 | `luma-content-script` | workflow | Original profile-to-script workflow: topic, plan, material, script, review |
 | `luma-benchmark-discovery` | capability | Discover and score benchmark accounts |
 | `luma-find-material` | capability | Find evidence and visual materials for an approved content plan |
