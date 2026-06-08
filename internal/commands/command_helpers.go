@@ -58,6 +58,18 @@ func writeJSONFile(path string, value any) error {
 	return os.WriteFile(path, data, 0644)
 }
 
+func structToMap(value any) (map[string]any, error) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	var out map[string]any
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func anyListFromPayload(payload map[string]any, key string) []any {
 	value := payload[key]
 	if items, ok := value.([]any); ok {

@@ -8,7 +8,7 @@ metadata:
   cliHelp: "luma-cli tools list"
   category: "workflow"
   entrypoint: true
-  relatedSkills: ["luma-shared", "luma-content-research", "luma-digital-human", "luma-material", "luma-subtitle"]
+  relatedSkills: ["luma-shared", "luma-content-script", "luma-digital-human", "luma-material", "luma-subtitle"]
   aliases: ["拾光", "拾光智能体", "拾光工具", "拾光运营套装", "Luma", "Luma CLI", "luma-cli", "爆款复刻", "爆款仿写"]
 ---
 
@@ -19,10 +19,23 @@ Use this skill when the user wants an agent to turn a topic, account role, or vi
 Read these first when needed:
 
 - `../luma-shared/SKILL.md` for common project, artifact, auth, and failure rules.
-- `../luma-content-research/SKILL.md` for topic search and keyword tables.
+- Use `luma-cli research ...` atoms directly for topic search and keyword tables.
 - `../luma-material/SKILL.md` for local material groups and PIP matching.
 - `../luma-digital-human/SKILL.md` for voice, TTS, avatar, and lip-sync.
 - `../luma-subtitle/SKILL.md` for subtitle rendering.
+
+## Boundary
+
+This is a full viral-reference remix workflow. It owns the path from reference discovery to produced
+video:
+
+```text
+viral reference/research -> transcript/structure -> rewritten script -> TTS -> digital human -> PIP -> subtitles -> BGM -> cover
+```
+
+Use `luma-digital-human` instead when the script is already approved and the user only needs a
+digital-human spoken video. Use `luma-content-script` instead when the user wants an original script
+from profile memory rather than remixing a viral reference.
 
 ## When To Use
 

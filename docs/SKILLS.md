@@ -16,7 +16,9 @@ Current core skills:
 | --- | --- | --- |
 | `luma-shared` | shared | Common rules every Luma agent should know |
 | `luma-maintenance` | maintenance | Update Luma CLI and sync agent skills |
-| `luma-content-research` | capability | Research, keyword tables, persona-based search |
+| `luma-content-script` | workflow | Original profile-to-script workflow: topic, plan, material, script, review |
+| `luma-benchmark-discovery` | capability | Discover and score benchmark accounts |
+| `luma-find-material` | capability | Find evidence and visual materials for an approved content plan |
 | `luma-material` | capability | Local material groups, material search, PIP matching |
 | `luma-digital-human` | capability | Voice clone, TTS, avatar, lip-sync |
 | `luma-subtitle` | capability | Text segmentation and subtitle rendering |

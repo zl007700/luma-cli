@@ -48,8 +48,10 @@ func cmdSkillsList() error {
 	items := []map[string]string{
 		{"name": "luma-shared", "layer": "shared", "description": "Common Luma agent rules"},
 		{"name": "luma-maintenance", "layer": "maintenance", "description": "Update Luma CLI and sync agent skills"},
-		{"name": "luma-content-research", "layer": "capability", "description": "Research, keyword tables, and topic planning"},
+		{"name": "luma-benchmark-discovery", "layer": "capability", "description": "Discover and score benchmark accounts"},
 		{"name": "luma-material", "layer": "capability", "description": "Local material groups, search, and PIP matching"},
+		{"name": "luma-find-material", "layer": "capability", "description": "Find evidence and visual materials for an approved content plan"},
+		{"name": "luma-content-script", "layer": "workflow", "description": "Create one original script from profile, topic discovery, materials, and reviews"},
 		{"name": "luma-assets", "layer": "capability", "description": "Cloud assets and reusable resources"},
 		{"name": "luma-digital-human", "layer": "capability", "description": "Voice clone, TTS, avatar, and lip-sync"},
 		{"name": "luma-subtitle", "layer": "capability", "description": "Subtitle generation and rendering"},
@@ -84,9 +86,16 @@ func cmdSkillsSync(args []string) error {
 	if err := skillsync.RunSkillsAdd(opts); err != nil {
 		return output.ErrSystem("failed to sync skills: %v\n", err)
 	}
+	removed, cleanupErr := skillsync.CleanupDeprecatedSkills()
+	if cleanupErr != nil {
+		fmt.Printf("Warning: failed to clean deprecated skills: %v\n", cleanupErr)
+	}
 	if err := skillsync.WriteStamp(version, opts.Source); err != nil {
 		fmt.Printf("Warning: synced skills, but failed to write stamp: %v\n", err)
 		return nil
+	}
+	if len(removed) > 0 {
+		fmt.Printf("Removed deprecated skills: %s\n", strings.Join(removed, ", "))
 	}
 	fmt.Println("Done. Luma skills are synced.")
 	return nil

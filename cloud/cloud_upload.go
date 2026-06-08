@@ -70,6 +70,12 @@ func UploadFile(filePath, cardKey, groupName string) (string, error) {
 
 // UploadFileWithName uploads a local file with an optional resource filename.
 func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (string, error) {
+	return UploadFileWithNameAndMeta(filePath, cardKey, groupName, resourceName, nil)
+}
+
+// UploadFileWithNameAndMeta uploads a local file with an optional resource filename
+// and caller-provided resource metadata.
+func UploadFileWithNameAndMeta(filePath, cardKey, groupName, resourceName string, meta map[string]any) (string, error) {
 	stat, err := os.Stat(filePath)
 	if err != nil {
 		return "", err
@@ -87,6 +93,10 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 		}
 		displayName = strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
 	}
+	uploadMeta := uploadMeta(displayName)
+	for key, value := range meta {
+		uploadMeta[key] = value
+	}
 
 	// Append content hash to the filename so re-uploading a different file
 	// with the same basename never hits a stale server-side cache.
@@ -97,7 +107,7 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 	}
 
 	if fileSize >= multipartThreshold {
-		return uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey, uploadMeta(displayName))
+		return uploadMultipart(filePath, filename, groupName, resourceType, mimeType, cardKey, uploadMeta)
 	}
 
 	asciiFilename := filename
@@ -108,7 +118,7 @@ func UploadFileWithName(filePath, cardKey, groupName, resourceName string) (stri
 		}
 	}
 
-	return uploadSinglePart(filePath, asciiFilename, groupName, resourceType, mimeType, cardKey, uploadMeta(displayName))
+	return uploadSinglePart(filePath, asciiFilename, groupName, resourceType, mimeType, cardKey, uploadMeta)
 }
 
 func uploadMeta(displayName string) map[string]any {

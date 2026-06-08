@@ -31,6 +31,8 @@ func cmdProject(args []string) error {
 		cmdProjectManifest(args[1:])
 	case "artifact":
 		cmdProjectArtifact(args[1:])
+	case "context":
+		cmdProjectContext(args[1:])
 	default:
 		fmt.Printf("unknown project subcommand: %s\n\n", args[0])
 		printProjectUsage()
@@ -51,6 +53,7 @@ func printProjectUsage() {
 	fmt.Println("  artifact list                  List project artifacts")
 	fmt.Println("  artifact schema                Print artifact schema")
 	fmt.Println("  artifact add <path> --type <t> Add an artifact to project manifest")
+	fmt.Println("  context snapshot-profile [id]  Snapshot active/cloud profile into this project")
 	fmt.Println("")
 	fmt.Println("Examples:")
 	fmt.Println("  luma-cli project create my-video")

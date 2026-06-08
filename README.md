@@ -161,11 +161,13 @@ luma-cli asset list roles
 | Skill | 说明 |
 | --- | --- |
 | `luma-shared` | 通用认证、项目、产物和失败处理规则 |
-| `luma-content-research` | 内容研究、关键词表和选题整理 |
+| `luma-content-script` | 原创内容脚本工作流：选题、计划、找素材、写稿、审核 |
+| `luma-benchmark-discovery` | 发现和评估对标账号 |
+| `luma-find-material` | 为已通过的内容计划查找证据和视觉素材 |
 | `luma-workflow-viral-remix` | 爆款仿写完整流程 |
-| `luma-digital-human` | 数字人、TTS、声音克隆相关流程 |
+| `luma-digital-human` | 把已定稿脚本制作成数字人口播视频 |
 | `luma-subtitle` | 字幕生成、切分、样式和烧录 |
-| `luma-material` | 本地素材库、素材组、素材检索和 PIP 匹配 |
+| `luma-material` | 本地可复用素材库、素材检索和 PIP 匹配 |
 | `luma-assets` | 素材上传、选择和复用 |
 
 本地素材库默认放在 `~/.luma/material-library`。可以把常用素材组导入到默认库，之后 Agent 只需要按素材组名称引用：

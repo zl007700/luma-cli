@@ -68,6 +68,10 @@ func cmdUpdate(args []string) error {
 		fmt.Println("Try: luma-cli skills sync")
 		return nil
 	}
+	removed, cleanupErr := skillsync.CleanupDeprecatedSkills()
+	if cleanupErr != nil {
+		fmt.Printf("Warning: failed to clean deprecated skills: %v\n", cleanupErr)
+	}
 	stampVersion := version
 	if target != "" && target != "latest" {
 		stampVersion = target
@@ -78,6 +82,9 @@ func cmdUpdate(args []string) error {
 	if err := skillsync.WriteStamp(stampVersion, syncOpts.Source); err != nil {
 		fmt.Printf("Warning: synced skills, but failed to write stamp: %v\n", err)
 		return nil
+	}
+	if len(removed) > 0 {
+		fmt.Printf("Removed deprecated skills: %s\n", strings.Join(removed, ", "))
 	}
 	fmt.Println("Done. luma-cli and Luma skills are updated.")
 	return nil

@@ -16,16 +16,28 @@
       "path": "luma-maintenance/SKILL.md"
     },
     {
-      "name": "luma-content-research",
+      "name": "luma-benchmark-discovery",
       "category": "capability",
       "entrypoint": true,
-      "path": "luma-content-research/SKILL.md"
+      "path": "luma-benchmark-discovery/SKILL.md"
     },
     {
       "name": "luma-material",
       "category": "capability",
       "entrypoint": true,
       "path": "luma-material/SKILL.md"
+    },
+    {
+      "name": "luma-find-material",
+      "category": "capability",
+      "entrypoint": true,
+      "path": "luma-find-material/SKILL.md"
+    },
+    {
+      "name": "luma-content-script",
+      "category": "workflow",
+      "entrypoint": true,
+      "path": "luma-content-script/SKILL.md"
     },
     {
       "name": "luma-assets",

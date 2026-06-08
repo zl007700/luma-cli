@@ -1,7 +1,10 @@
 package skillsync
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -14,8 +17,8 @@ func TestBuildSkillsAddArgsDefaultGlobal(t *testing.T) {
 }
 
 func TestBuildSkillsAddArgsSelective(t *testing.T) {
-	got := BuildSkillsAddArgs("zl007700/luma-cli", "luma-content-research", true, true)
-	want := []string{"-y", "skills", "add", "zl007700/luma-cli", "-s", "luma-content-research", "-g", "-y"}
+	got := BuildSkillsAddArgs("zl007700/luma-cli", "luma-content-script", true, true)
+	want := []string{"-y", "skills", "add", "zl007700/luma-cli", "-s", "luma-content-script", "-g", "-y"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args mismatch\nwant: %#v\n got: %#v", want, got)
 	}
@@ -48,6 +51,43 @@ func TestCompareSemver(t *testing.T) {
 		got := CompareSemver(tc.a, tc.b)
 		if got != tc.want {
 			t.Fatalf("CompareSemver(%q, %q) = %d, want %d", tc.a, tc.b, got, tc.want)
+		}
+	}
+}
+
+func TestCleanupDeprecatedSkills(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("CODEX_HOME", "")
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	codexSkills := filepath.Join(home, ".codex", "skills")
+	agentsSkills := filepath.Join(home, ".agents", "skills")
+	for _, root := range []string{codexSkills, agentsSkills} {
+		if err := os.MkdirAll(filepath.Join(root, "luma-content-research"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(root, "custom-skill"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	removed, err := CleanupDeprecatedSkills()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(removed) != 2 {
+		t.Fatalf("removed %d deprecated skill dirs, want 2: %#v", len(removed), removed)
+	}
+	for _, root := range []string{codexSkills, agentsSkills} {
+		if _, err := os.Stat(filepath.Join(root, "luma-content-research")); !os.IsNotExist(err) {
+			t.Fatalf("deprecated skill still exists under %s", root)
+		}
+		if _, err := os.Stat(filepath.Join(root, "custom-skill")); err != nil {
+			t.Fatalf("custom skill should remain under %s: %v", root, err)
+		}
+		if !slices.Contains(removed, filepath.Join(root, "luma-content-research")) {
+			t.Fatalf("removed paths missing %s: %#v", root, removed)
 		}
 	}
 }

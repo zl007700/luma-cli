@@ -72,3 +72,18 @@ func TestSanitizeDouyinFilename(t *testing.T) {
 		t.Fatalf("unexpected sanitized name: %q", got)
 	}
 }
+
+func TestIsCompleteDownload(t *testing.T) {
+	if !isCompleteDownload(1024, 1024) {
+		t.Fatal("expected exact content length to be complete")
+	}
+	if !isCompleteDownload(2048, 1024) {
+		t.Fatal("expected larger written size to be complete")
+	}
+	if isCompleteDownload(512, 1024) {
+		t.Fatal("partial download should not be complete")
+	}
+	if isCompleteDownload(1024, -1) {
+		t.Fatal("unknown content length should not be treated as complete")
+	}
+}

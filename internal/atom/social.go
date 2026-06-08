@@ -50,10 +50,10 @@ type SocialDownloadResult struct {
 
 // DownloadSocialVideo downloads a Douyin video from a share link.
 func DownloadSocialVideo(shareLink, outputPath, cardKey string) (*SocialDownloadResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	client := &http.Client{Timeout: 35 * time.Second}
+	client := &http.Client{}
 	resolver := douyinResolver{
 		client: client,
 		headers: douyinHeaders{
@@ -86,7 +86,7 @@ func DownloadSocialVideo(shareLink, outputPath, cardKey string) (*SocialDownload
 	if err := os.MkdirAll(filepath.Dir(absOut), 0755); err != nil {
 		return nil, fmt.Errorf("create output dir: %w", err)
 	}
-	if err := resolver.downloadFile(ctx, videoURL, absOut); err != nil {
+	if err := resolver.downloadFileWithRetry(ctx, videoURL, absOut); err != nil {
 		return nil, fmt.Errorf("download video: %w", err)
 	}
 
@@ -281,6 +281,22 @@ func (r douyinResolver) fetchPage(ctx context.Context, pageURL, userAgent string
 	return string(data), nil
 }
 
+func (r douyinResolver) downloadFileWithRetry(ctx context.Context, srcURL, dstPath string) error {
+	var errs []string
+	for attempt := 1; attempt <= 3; attempt++ {
+		if err := r.downloadFile(ctx, srcURL, dstPath); err != nil {
+			errs = append(errs, fmt.Sprintf("attempt %d: %v", attempt, err))
+			if ctx.Err() != nil {
+				break
+			}
+			time.Sleep(time.Duration(attempt) * time.Second)
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf(strings.Join(errs, " | "))
+}
+
 func (r douyinResolver) downloadFile(ctx context.Context, srcURL, dstPath string) error {
 	srcURL = strings.TrimSpace(strings.NewReplacer("\r", "", "\n", "", "\t", "").Replace(srcURL))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srcURL, nil)
@@ -306,20 +322,46 @@ func (r douyinResolver) downloadFile(ctx context.Context, srcURL, dstPath string
 		}
 	}
 
-	f, err := os.Create(dstPath)
+	partPath := dstPath + ".part"
+	_ = os.Remove(partPath)
+	f, err := os.Create(partPath)
 	if err != nil {
-		return fmt.Errorf("create %s: %w", dstPath, err)
+		return fmt.Errorf("create %s: %w", partPath, err)
 	}
-	defer f.Close()
 
 	n, err := io.Copy(f, resp.Body)
+	closeErr := f.Close()
+	if err == nil {
+		err = closeErr
+	}
 	if err != nil {
-		return fmt.Errorf("write %s: %w", dstPath, err)
+		if isCompleteDownload(n, resp.ContentLength) {
+			if renameErr := replaceFile(partPath, dstPath); renameErr != nil {
+				return fmt.Errorf("finalize %s: %w", dstPath, renameErr)
+			}
+			return nil
+		}
+		_ = os.Remove(partPath)
+		return fmt.Errorf("write %s: %w (downloaded %d bytes, expected %d)", dstPath, err, n, resp.ContentLength)
 	}
 	if n == 0 {
+		_ = os.Remove(partPath)
 		return fmt.Errorf("downloaded empty file")
 	}
+	if err := replaceFile(partPath, dstPath); err != nil {
+		_ = os.Remove(partPath)
+		return fmt.Errorf("finalize %s: %w", dstPath, err)
+	}
 	return nil
+}
+
+func replaceFile(source, target string) error {
+	_ = os.Remove(target)
+	return os.Rename(source, target)
+}
+
+func isCompleteDownload(written, contentLength int64) bool {
+	return contentLength > 0 && written >= contentLength
 }
 
 func parseJingxuanVideoDetail(pageHTML string) (map[string]any, error) {
@@ -446,4 +488,3 @@ func bestIESPlayURL(videoDetail map[string]any) (string, error) {
 	}
 	return "", errors.New("iesdouyin data did not include play_addr.url_list")
 }
-

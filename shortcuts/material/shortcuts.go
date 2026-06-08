@@ -64,6 +64,23 @@ func Shortcuts() []common.Shortcut {
 			Skills:   []string{"luma-material"},
 		},
 		{
+			ID:          "material.review",
+			Service:     "material",
+			Command:     "review",
+			Description: "Review one local image against a topic, claim, and intended use with cloud VLM and deterministic thresholds.",
+			Risk:        "network",
+			Flags: []common.Flag{
+				{Name: "file", Description: "Local image material file.", Required: true},
+				{Name: "topic", Description: "Selected topic title or thesis.", Required: true},
+				{Name: "claim", Description: "Claim the image should support.", Required: true},
+				{Name: "purpose", Description: "Intended use: evidence, auxiliary, or background.", Default: "auxiliary"},
+				{Name: "output", Description: "Review JSON path.", Default: "material_review.json"},
+			},
+			Outputs:  []string{"usable", "decision", "output_path"},
+			Examples: []string{"luma-cli material review evidence.png --topic \"AI落地\" --claim \"关键在业务流程\" --purpose evidence --output evidence.review.json"},
+			Skills:   []string{"luma-material", "luma-find-material"},
+		},
+		{
 			ID:          "material.search",
 			Service:     "material",
 			Command:     "search",

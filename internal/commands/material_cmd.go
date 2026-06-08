@@ -55,6 +55,8 @@ func cmdMaterial(args []string) error {
 		cmdMaterialLibrary(args[1:])
 	case "understand":
 		cmdMaterialUnderstand(args[1:])
+	case "review":
+		cmdMaterialReview(args[1:])
 	case "merge":
 		cmdMaterialMerge(args[1:])
 	case "search":
@@ -73,6 +75,7 @@ func printMaterialUsage() {
 	fmt.Println("  library path")
 	fmt.Println("  library import <group_dir> [--name <group_name>] [--replace]")
 	fmt.Println("  understand <file> [--group pip_materials] [--output material_meta.json] [--descriptor-output material.json]")
+	fmt.Println("  review <file> --topic <text> --claim <text> [--purpose evidence|auxiliary|background] [--output material_review.json]")
 	fmt.Println("  merge --materials materials.json --meta material_meta.json_or_dir [--output materials_enriched.json]")
 	fmt.Println("  search --materials materials.json --query <text> [--limit 10] [--output material_matches.json]")
 }
@@ -196,6 +199,61 @@ func cmdMaterialUnderstand(raw []string) error {
 		"output_path":            meta["output_path"],
 		"descriptor_output_path": meta["descriptor_output_path"],
 	})
+	return nil
+}
+
+func cmdMaterialReview(raw []string) error {
+	args := cmdutil.Parse(raw)
+	inputPath := strings.TrimSpace(args.Pos(0))
+	if inputPath == "" {
+		inputPath = strings.TrimSpace(args.String("input", ""))
+	}
+	topic := strings.TrimSpace(args.String("topic", ""))
+	claim := strings.TrimSpace(args.String("claim", ""))
+	purpose := strings.ToLower(strings.TrimSpace(args.String("purpose", "auxiliary")))
+	if inputPath == "" || topic == "" || claim == "" {
+		fmt.Println("usage: luma-cli material review <file> --topic <text> --claim <text> [--purpose evidence|auxiliary|background] [--output material_review.json]")
+		return nil
+	}
+	if purpose != "evidence" && purpose != "auxiliary" && purpose != "background" {
+		return output.ErrValidation("purpose must be evidence, auxiliary, or background")
+	}
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
+	}
+	group := strings.TrimSpace(args.String("group", "material_reviews"))
+	objectKey, err := cloud.UploadFileWithName(inputPath, cfg.CardKey, group, "")
+	if err != nil {
+		return output.ErrNetwork("upload failed: %v\n", err)
+	}
+	objectName := filepath.Base(objectKey)
+	result, err := cloud.ReviewResource(group, objectName, topic, claim, purpose, cfg.CardKey)
+	if err != nil {
+		return output.ErrNetwork("review failed: %v\n", err)
+	}
+	review := normalizeMaterialReview(result, purpose)
+	review["group"] = group
+	review["object_key"] = objectKey
+	review["object_name"] = objectName
+	outputPath := strings.TrimSpace(args.String("output", "material_review.json"))
+	abs, err := absoluteOutputPath(outputPath)
+	if err != nil {
+		return output.ErrValidation("bad output path: %v\n", err)
+	}
+	if err := writeJSONFile(abs, review); err != nil {
+		return output.ErrSystem("write review failed: %v\n", err)
+	}
+	recordProjectArtifact("material_review", abs, "material.review")
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{
+			"usable": review["usable"], "decision": review["decision"], "output_path": abs,
+		}})
+		return nil
+	}
+	fmt.Printf("Usable: %v\n", review["usable"])
+	fmt.Printf("Decision: %v\n", review["decision"])
+	fmt.Printf("Output: %s\n", abs)
 	return nil
 }
 

@@ -31,7 +31,9 @@ func init() {
 	// Resource commands
 	addMaterial()
 	addAsset()
+	addContent()
 	addResearch()
+	addProfile()
 	addProject()
 	addAuth()
 	addVoice()
@@ -208,7 +210,9 @@ func addCover()    { rootCmd.AddCommand(nativeCmd("cover", "Cover frame and imag
 func addPIP()      { rootCmd.AddCommand(nativeCmd("pip", "Picture-in-picture", cmdPIP)) }
 func addMaterial() { rootCmd.AddCommand(nativeCmd("material", "Material management", cmdMaterial)) }
 func addAsset()    { rootCmd.AddCommand(nativeCmd("asset", "Asset upload and listing", cmdAsset)) }
+func addContent()  { rootCmd.AddCommand(nativeCmd("content", "Content planning", cmdContent)) }
 func addResearch() { rootCmd.AddCommand(nativeCmd("research", "Content research", cmdResearch)) }
+func addProfile()  { rootCmd.AddCommand(nativeCmd("profile", "Global content profiles", cmdProfile)) }
 func addProject()  { rootCmd.AddCommand(nativeCmd("project", "Project management", cmdProject)) }
 func addAuth()     { rootCmd.AddCommand(nativeCmd("auth", "Authentication", cmdAuth)) }
 func addVoice()    { rootCmd.AddCommand(nativeCmd("voice", "Voice management", cmdVoice)) }

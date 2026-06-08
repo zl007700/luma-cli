@@ -65,6 +65,13 @@ npm-debug.log
 .coverage
 htmlcov/
 
+# Local live probes and generated benchmark/material collection artifacts
+benchmark_discovery_test/
+live_*_probe.json
+*_probe.json
+collector_*/
+materials/
+
 # Viral remix working directories (generated artifacts)
 viral-remix-*/
 

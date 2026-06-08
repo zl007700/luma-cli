@@ -18,6 +18,19 @@ Use this skill when an agent needs to create a digital-human spoken video from s
 
 Read `../luma-shared/SKILL.md` first for common auth, project, output, and artifact rules.
 
+## Boundary
+
+This is an execution skill, not a content strategy workflow. Use it when the script is already
+approved and the task is to produce a digital-human spoken video:
+
+```text
+approved script -> TTS -> avatar/lip-sync -> subtitles -> optional enhancement
+```
+
+Do not use this skill to choose a topic, imitate a viral reference, decide the writing angle, or
+rewrite the content strategy. Use `luma-content-script` for original script creation, and
+`luma-workflow-viral-remix` for viral-reference remix workflows.
+
 ## Asset First
 
 Inspect available voices and avatars:

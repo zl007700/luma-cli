@@ -134,6 +134,63 @@ func flattenMaterialMeta(meta map[string]any) map[string]any {
 	return out
 }
 
+func normalizeMaterialReview(payload map[string]any, purpose string) map[string]any {
+	review := flattenMaterialMeta(payload)
+	if nested, ok := payload["review"].(map[string]any); ok {
+		review = flattenMaterialMeta(nested)
+	}
+	score := func(key string) float64 {
+		switch value := review[key].(type) {
+		case float64:
+			return value
+		case int:
+			return float64(value)
+		case json.Number:
+			number, _ := value.Float64()
+			return number
+		default:
+			return 0
+		}
+	}
+	issues := stringListFromKeys(review, "issues")
+	blocking := map[string]bool{
+		"irrelevant": true, "unreadable_text": true, "blurred": true,
+		"obstruction": true, "placeholder": true, "bad_crop": true,
+		"distorted": true, "low_resolution": true,
+	}
+	hasBlockingIssue := false
+	for _, issue := range issues {
+		if blocking[issue] {
+			hasBlockingIssue = true
+			break
+		}
+	}
+	minRelevance, minReadability, minQuality, minCredibility := 6.0, 5.0, 5.0, 0.0
+	if purpose == "evidence" {
+		minRelevance, minReadability, minQuality, minCredibility = 7.0, 7.0, 6.0, 6.0
+	}
+	usable := !hasBlockingIssue &&
+		score("relevance_score") >= minRelevance &&
+		score("readability_score") >= minReadability &&
+		score("visual_quality_score") >= minQuality &&
+		score("credibility_score") >= minCredibility
+	review["usable"] = usable
+	if usable {
+		review["decision"] = "accept"
+	} else {
+		review["decision"] = "reject"
+	}
+	review["purpose"] = purpose
+	review["thresholds"] = map[string]float64{
+		"relevance_score": minRelevance, "readability_score": minReadability,
+		"visual_quality_score": minQuality, "credibility_score": minCredibility,
+	}
+	if !usable && firstString(review, "reject_reason") == "" {
+		review["reject_reason"] = "Material did not pass deterministic review thresholds."
+	}
+	return review
+}
+
 func stringListFromKeys(m map[string]any, keys ...string) []string {
 	for _, key := range keys {
 		switch value := m[key].(type) {

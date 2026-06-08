@@ -31,6 +31,8 @@ func cmdProjectArtifact(args []string) error {
 		cmdProjectArtifactAdd(args[1:])
 	case "list", "ls":
 		cmdProjectArtifactList(args[1:])
+	case "latest":
+		cmdProjectArtifactLatest(args[1:])
 	case "schema":
 		cmdProjectArtifactSchema()
 	default:
@@ -43,6 +45,7 @@ func printProjectArtifactUsage() {
 	fmt.Println("luma-cli project artifact <subcommand>")
 	fmt.Println("  add <path> --type <type> [--id <id>] [--step <step>]")
 	fmt.Println("  list [--type <type>]")
+	fmt.Println("  latest --type <type>")
 	fmt.Println("  schema")
 }
 
@@ -112,6 +115,43 @@ func cmdProjectArtifactList(args []string) error {
 			step = artifact.Ability
 		}
 		fmt.Printf("%-20s %-28s %-12s %s\n", artifact.Type, step, status, artifact.Path)
+	}
+	return nil
+}
+
+func cmdProjectArtifactLatest(args []string) error {
+	parsed := parseProjectKV(args)
+	filterType := parsed["type"]
+	if filterType == "" {
+		return output.ErrValidation("--type is required")
+	}
+	p, err := resolveProject(args)
+	if err != nil {
+		return output.ErrSystem("%v\n", err)
+	}
+	var latest *project.Artifact
+	for i := range p.Artifacts {
+		artifact := p.Artifacts[i]
+		if artifact.Type != filterType {
+			continue
+		}
+		if latest == nil || artifact.CreatedAt.After(latest.CreatedAt) || (artifact.CreatedAt.Equal(latest.CreatedAt) && i > 0) {
+			copy := artifact
+			latest = &copy
+		}
+	}
+	if latest == nil {
+		return output.ErrValidation("artifact not found: %s", filterType)
+	}
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"project": p.Name, "artifact": latest}})
+		return nil
+	}
+	fmt.Printf("Latest artifact for project: %s\n", p.Name)
+	fmt.Printf("Type: %s\n", latest.Type)
+	fmt.Printf("Path: %s\n", latest.Path)
+	if latest.ID != "" {
+		fmt.Printf("ID: %s\n", latest.ID)
 	}
 	return nil
 }

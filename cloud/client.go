@@ -100,7 +100,37 @@ type AgentAbilityResponse struct {
 
 type ResearchResponse = AgentAbilityResponse
 
+type SocialSearchRequest struct {
+	Platform        string   `json:"platform,omitempty"`
+	Keywords        []string `json:"keywords"`
+	DateRange       string   `json:"date_range,omitempty"`
+	LimitPerKeyword int      `json:"limit_per_keyword,omitempty"`
+}
+
+type SocialAccountSearchRequest struct {
+	Platform   string   `json:"platform,omitempty"`
+	Accounts   []string `json:"accounts"`
+	MaxPages   int      `json:"max_pages,omitempty"`
+	Count      int      `json:"count,omitempty"`
+	IncludeRaw bool     `json:"include_raw,omitempty"`
+}
+
+type WebSearchRequest struct {
+	Queries   []string `json:"queries"`
+	DateRange string   `json:"date_range,omitempty"`
+	Num       int      `json:"num,omitempty"`
+}
+
+type ImageSearchRequest struct {
+	Queries []string `json:"queries"`
+	Count   int      `json:"count,omitempty"`
+}
+
 func apiRequest(method string, path string, body any, cardKey string) (map[string]any, error) {
+	return apiRequestWithTimeout(method, path, body, cardKey, 60*time.Second)
+}
+
+func apiRequestWithTimeout(method string, path string, body any, cardKey string, timeout time.Duration) (map[string]any, error) {
 	url := BaseURL() + path
 
 	var bodyBytes []byte
@@ -126,7 +156,10 @@ func apiRequest(method string, path string, body any, cardKey string) (map[strin
 	req.Header.Set("X-Client-Version", "v1.0.0")
 	req.Header.Set("X-Client-Mode", "cloud")
 
-	client := &http.Client{Timeout: 60 * time.Second}
+	if timeout <= 0 {
+		timeout = 60 * time.Second
+	}
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
@@ -201,6 +234,16 @@ func UnderstandResource(groupName, objectName, cardKey string) (map[string]any, 
 	return apiRequest("POST", "/v1/resources/understand", map[string]any{
 		"group_name":  groupName,
 		"object_name": objectName,
+	}, cardKey)
+}
+
+func ReviewResource(groupName, objectName, topic, claim, purpose, cardKey string) (map[string]any, error) {
+	return apiRequest("POST", "/v1/resources/review", map[string]any{
+		"group_name":  groupName,
+		"object_name": objectName,
+		"topic":       topic,
+		"claim":       claim,
+		"purpose":     purpose,
 	}, cardKey)
 }
 
@@ -306,13 +349,17 @@ func RewriteScript(text, length, model, cardKey string) (*ScriptRewriteResponse,
 }
 
 func RunAgentAbility(path string, input map[string]any, options map[string]any, cardKey string) (*AgentAbilityResponse, error) {
+	return RunAgentAbilityWithTimeout(path, input, options, cardKey, 60*time.Second)
+}
+
+func RunAgentAbilityWithTimeout(path string, input map[string]any, options map[string]any, cardKey string, timeout time.Duration) (*AgentAbilityResponse, error) {
 	payload := map[string]any{
 		"input": input,
 	}
 	if options != nil {
 		payload["options"] = options
 	}
-	result, err := apiRequest("POST", path, payload, cardKey)
+	result, err := apiRequestWithTimeout("POST", path, payload, cardKey, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -343,6 +390,28 @@ func RunResearch(roleDescription, mode, dateRange, cardKey string) (*ResearchRes
 		Result:  result,
 		Usage:   map[string]any{},
 	}, nil
+}
+
+func SearchSocial(req SocialSearchRequest, cardKey string) (map[string]any, error) {
+	if strings.TrimSpace(req.Platform) == "" {
+		req.Platform = "douyin"
+	}
+	return apiRequest("POST", "/v1/search/social", req, cardKey)
+}
+
+func SearchSocialAccount(req SocialAccountSearchRequest, cardKey string) (map[string]any, error) {
+	if strings.TrimSpace(req.Platform) == "" {
+		req.Platform = "douyin"
+	}
+	return apiRequest("POST", "/v1/search/social-account", req, cardKey)
+}
+
+func SearchWebsearch(req WebSearchRequest, cardKey string) (map[string]any, error) {
+	return apiRequest("POST", "/v1/search/websearch", req, cardKey)
+}
+
+func SearchImage(req ImageSearchRequest, cardKey string) (map[string]any, error) {
+	return apiRequest("POST", "/v1/search/image", req, cardKey)
 }
 
 func DouyinDownloadCookie(cardKey string) (string, error) {

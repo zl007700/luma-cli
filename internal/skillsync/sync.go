@@ -45,6 +45,13 @@ type NpmInstallOptions struct {
 	Stderr   io.Writer
 }
 
+var DeprecatedSkillNames = []string{
+	"luma-content-research",
+	"luma-material-planning",
+	"luma-script-writing",
+	"luma-content-script-workflow",
+}
+
 func SourceFromEnv() string {
 	if source := strings.TrimSpace(os.Getenv(envSource)); source != "" {
 		return source
@@ -114,6 +121,63 @@ func RunSkillsAdd(opts SyncOptions) error {
 	}
 	args := BuildSkillsAddArgs(source, opts.Skill, opts.Global, opts.Yes)
 	return runCommand(npxCommand(), args, opts.Stdout, opts.Stderr)
+}
+
+func CleanupDeprecatedSkills() ([]string, error) {
+	var removed []string
+	var firstErr error
+	for _, root := range skillsRoots() {
+		for _, name := range DeprecatedSkillNames {
+			path := filepath.Join(root, name)
+			info, err := os.Stat(path)
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			if !info.IsDir() {
+				continue
+			}
+			if err := os.RemoveAll(path); err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			removed = append(removed, path)
+		}
+	}
+	return removed, firstErr
+}
+
+func skillsRoots() []string {
+	seen := map[string]bool{}
+	var roots []string
+	add := func(path string) {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			return
+		}
+		if abs, err := filepath.Abs(path); err == nil {
+			path = abs
+		}
+		if !seen[path] {
+			seen[path] = true
+			roots = append(roots, path)
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		add(filepath.Join(home, ".codex", "skills"))
+		add(filepath.Join(home, ".agents", "skills"))
+	}
+	if codexHome := os.Getenv("CODEX_HOME"); strings.TrimSpace(codexHome) != "" {
+		add(filepath.Join(codexHome, "skills"))
+	}
+	return roots
 }
 
 func RunNpmInstall(opts NpmInstallOptions) error {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/luma-cli/lumer-cli/cloud"
 	"github.com/luma-cli/lumer-cli/internal/cmdutil"
@@ -79,6 +80,13 @@ func cmdAgentReview(raw []string, ability string, defaultOutput string) error {
 	} else if maxTokens > 0 {
 		options["max_tokens"] = maxTokens
 	}
+	timeoutSec, err := args.Int("timeout", 240)
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
+	if timeoutSec <= 0 {
+		timeoutSec = 240
+	}
 
 	cfg := loadConfig()
 	if cfg == nil {
@@ -88,7 +96,7 @@ func cmdAgentReview(raw []string, ability string, defaultOutput string) error {
 	if path == "" {
 		return output.ErrValidation("unknown agent ability: %s", ability)
 	}
-	resp, err := cloud.RunAgentAbility(path, input, options, cfg.CardKey)
+	resp, err := cloud.RunAgentAbilityWithTimeout(path, input, options, cfg.CardKey, time.Duration(timeoutSec)*time.Second)
 	if err != nil {
 		return output.ErrNetwork("agent review failed: %v", err)
 	}
@@ -154,7 +162,14 @@ func cmdAgentRun(raw []string) error {
 		input = payload
 	}
 	options, _ := payload["options"].(map[string]any)
-	resp, err := cloud.RunAgentAbility(path, input, options, cfg.CardKey)
+	timeoutSec, err := args.Int("timeout", 240)
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
+	if timeoutSec <= 0 {
+		timeoutSec = 240
+	}
+	resp, err := cloud.RunAgentAbilityWithTimeout(path, input, options, cfg.CardKey, time.Duration(timeoutSec)*time.Second)
 	if err != nil {
 		return output.ErrNetwork("agent ability failed: %v", err)
 	}
@@ -210,9 +225,9 @@ func printAgentUsage() {
 	fmt.Println("luma-cli agent <subcommand>")
 	fmt.Println("")
 	fmt.Println("Subcommands:")
-	fmt.Println("  run <ability> --input payload.json [--output result.json]")
-	fmt.Println("  plan-review --input payload.json [--model basic_model|pro_model] [--output plan_review.json]")
-	fmt.Println("  script-review --input payload.json [--model basic_model|pro_model] [--output script_review.json]")
+	fmt.Println("  run <ability> --input payload.json [--output result.json] [--timeout seconds]")
+	fmt.Println("  plan-review --input payload.json [--model basic_model|pro_model] [--output plan_review.json] [--timeout seconds]")
+	fmt.Println("  script-review --input payload.json [--model basic_model|pro_model] [--output script_review.json] [--timeout seconds]")
 	fmt.Println("")
 	fmt.Println("Abilities:")
 	for ability := range agentAbilityPaths {
