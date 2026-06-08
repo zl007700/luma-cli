@@ -169,7 +169,7 @@ function estimateTokens(text) {
 
 function main() {
   const profilePath = arg("profile");
-  const topicReviewPath = arg("topic-selection") || arg("topic-review") || arg("review");
+  const topicSelectionPath = arg("topic-selection") || arg("topic-review") || arg("review");
   const longformPlanPath = arg("longform-plan") || arg("longform");
   const planReviewPath = arg("plan-review");
   const materialPlanPath = arg("material-plan") || arg("plan");
@@ -181,14 +181,14 @@ function main() {
   const platform = arg("platform", "short_video");
 
   if (!profilePath) throw new Error("--profile is required");
-  if (!topicReviewPath) throw new Error("--topic-selection is required");
+  if (!topicSelectionPath) throw new Error("--topic-selection is required");
   if (!materialPlanPath) throw new Error("--material-plan is required");
   if (!materialAssetsPath) throw new Error("--material-assets is required");
   if (!deliverablesPath) throw new Error("--deliverables is required");
 
   const profile = normalizeProfile(readJSON(profilePath), readText(arg("profile-extra")));
-  const topicReview = readJSON(topicReviewPath);
-  const selectedTopic = selectTopic(topicReview, topicID);
+  const topicSelection = readJSON(topicSelectionPath);
+  const selectedTopic = selectTopic(topicSelection, topicID);
   if (!selectedTopic) throw new Error(`topic not found: ${topicID || "(default)"}`);
   const longformPlanPayload = readJSON(longformPlanPath, {});
   const longformPlan = normalizeLongformPlan(longformPlanPayload, selectedTopic);
@@ -252,7 +252,7 @@ function main() {
     source_files: {
       profile: path.resolve(profilePath),
       profile_extra: arg("profile-extra") ? path.resolve(arg("profile-extra")) : "",
-      topic_selection: path.resolve(topicReviewPath),
+      topic_selection: path.resolve(topicSelectionPath),
       longform_plan: longformPlanPath ? path.resolve(longformPlanPath) : "",
       plan_review: planReviewPath ? path.resolve(planReviewPath) : "",
       material_plan: path.resolve(materialPlanPath),

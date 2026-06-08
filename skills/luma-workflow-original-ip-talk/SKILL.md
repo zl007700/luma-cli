@@ -1,173 +1,146 @@
 ---
 name: luma-workflow-original-ip-talk
-description: Create an original IP spoken-video workflow from profile memory: original topic/script, digital-human narration, PPT-style knowledge visuals, subtitle, and final MP4.
+description: "Orchestrate a complete original Luma IP spoken video as pure glue: call the profile-to-script workflow, generate TTS and a digital human, align narration, render a production PPT, overlay the avatar, add subtitles, and create a cover."
 ---
 
-# Luma Original IP Talk
+# Luma Original IP Talk Workflow
 
-Read `../luma-shared/SKILL.md` first. This workflow creates one original knowledge/IP spoken video
-from a profile. It is not a viral-remix workflow.
+This skill is glue only. Delegate content reasoning to `luma-content-script`, digital-human work to
+`luma-digital-human`, PPT design/rendering to `luma-ppt-video`, and subtitles to `luma-subtitle`.
 
-```text
-profile -> original content script -> digital human -> align.json -> PPT video -> avatar PiP -> subtitles -> final video
+## Inputs
+
+- `<profile_id>`
+- target duration
+- selected voice and role, or permission to choose existing assets
+
+## Flow
+
+### Step 1: Create Reviewed Script And Materials
+
+Call `luma-content-script`.
+
+Required outputs:
+
+- accepted `07_script_<topic_id>.json`
+- accepted `09_script_review_<topic_id>.json`
+- `05_material_assets_<topic_id>.json`
+- `materials/<topic_id>/final_assets/deliverables_manifest.json`
+- selected topic ID and title
+
+Stop if any output is missing.
+
+### Step 2: Create Transcript
+
+Write the exact `full_script` from the accepted script to:
+
+- `transcript.txt`
+
+Do not paraphrase or edit after review.
+
+### Step 3: Select Voice And Role
+
+Run:
+
+```bash
+luma-cli asset list voice
+luma-cli asset list roles
 ```
 
-## Boundary
+Choose returned asset names. Do not invent or generate a role.
 
-Use this workflow when the user wants an original account/IP video based on the creator profile,
-stance, audience, and history.
+### Step 4: Generate TTS
 
-Do not use this workflow when:
+Run:
 
-- the video should imitate a viral reference or competitor structure. Use `luma-workflow-viral-remix`.
-- the user only has a finished script and wants a digital-human video. Use `luma-digital-human`.
-- the user only wants `align.json` rendered into PPT MP4. Use `luma-ppt-video`.
-
-This workflow may call:
-
-- `luma-profile-onboarding` when no usable profile exists.
-- `luma-content-script` for original topic, plan, material, script, and script review.
-- `luma-digital-human` for TTS, voice, avatar, and lip-sync.
-- `luma-ppt-video` for PPT-style knowledge video and optional digital-human PiP.
-- `luma-subtitle` for subtitles.
-- `luma-assets` to select voice/avatar assets.
-
-## Default Output Mode
-
-Default mode is:
-
-```text
-PPT main canvas + circular digital human at bottom-left
+```bash
+luma-cli --json tts \
+  --file transcript.txt \
+  --voice <voice_name> \
+  --output 09_tts.wav
 ```
 
-This keeps information density high and makes the video feel like a knowledge presentation with an
-IP narrator. Do not default to full-screen avatar plus occasional PPT inserts until the user asks for
-that more complex scene treatment.
+Save the returned `audio_object_key`.
 
-## Standard Files
+### Step 5: Generate Digital Human
 
-- `01_profile.json`
-- `02_content_history.json`
-- `03_topic_selection.json`
-- `04_longform_plan.json`
-- `05_plan_review.json`
-- `06_material_assets.json`
-- `07_script.json`
-- `08_script_review.json`
+Call `luma-digital-human`, or run:
+
+```bash
+luma-cli lipsync \
+  --avatar <role_name> \
+  --audio-key <audio_object_key> \
+  --output 10_digital_human.mp4
+```
+
+Required output:
+
+- `10_digital_human.mp4`
+
+### Step 6: Align Narration
+
+Run:
+
+```bash
+luma-cli asr 09_tts.wav \
+  --language zh \
+  --output 11_align.json
+```
+
+Required output:
+
+- `11_align.json` with timed sentences or segments
+
+### Step 7: Build Production PPT
+
+Call `luma-ppt-video`.
+
+Inputs:
+
+- `11_align.json`
+- accepted script JSON
+- material assets JSON
+- deliverables manifest
 - `09_tts.wav`
 - `10_digital_human.mp4`
-- `11_align.json`
+
+Required outputs:
+
 - `12_ppt/index.html`
 - `12_ppt/config.json`
 - `13_ppt.mp4`
 - `14_ppt_with_avatar.mp4`
+
+Do not use the demo PPT generator for final output.
+
+### Step 8: Add Subtitles
+
+Call `luma-subtitle`, or run:
+
+```bash
+luma-cli subtitle \
+  14_ppt_with_avatar.mp4 \
+  --transcript transcript.txt \
+  --output 15_subtitle.mp4
+```
+
+If no role was used, subtitle `13_ppt.mp4`.
+
+### Step 9: Create Cover
+
+Run:
+
+```bash
+luma-cli cover frame \
+  15_subtitle.mp4 \
+  --output 16_cover.jpg
+```
+
+### Step 10: Verify
+
+Confirm these final files exist and are non-empty:
+
 - `15_subtitle.mp4`
 - `16_cover.jpg`
 
-## Procedure
-
-1. Load or create the profile.
-
-   ```bash
-   luma-cli --json profile current
-   luma-cli --json profile get <profile_id>
-   ```
-
-   If the profile does not exist, use `luma-profile-onboarding` first. The profile is the creative
-   source of this workflow.
-
-2. Run the original content script workflow.
-
-   Open `../luma-content-script/SKILL.md` and execute Checkpoints 0-12 without skipping or replacing
-   named commands. This workflow delegates the entire profile-to-reviewed-script phase to that SOP;
-   it must not improvise a shorter topic or writing path.
-
-   Do not start voice or video work until the SOP handoff contains an accepted script, script review,
-   material assets, deliverables manifest, and selected topic ID/title.
-
-3. Select voice and avatar.
-
-   ```bash
-   luma-cli asset list voice
-   luma-cli asset list roles
-   ```
-
-   Use existing profile/default assets when possible. Do not invent an avatar. If no avatar exists,
-   stop and ask the user to select/upload one, or continue with PPT-only mode.
-
-4. Generate TTS and digital-human narration.
-
-   ```bash
-   luma-cli --json tts --file transcript.txt --voice <voice_name> --output 09_tts.wav
-   luma-cli lipsync --avatar <role_name> --audio-key <audio_object_key> --output 10_digital_human.mp4
-   ```
-
-   Keep `transcript.txt` exactly aligned to the final spoken script.
-
-5. Create `11_align.json`.
-
-   Prefer the available subtitle/ASR alignment atom used elsewhere in the project. The output must
-   include timed `sentence_units[]` or compatible `segments[]`.
-
-6. Design and build the production PPT from align, script sections, and material assets.
-
-   Use `luma-ppt-video` production flow. First create a storyboard that maps logical claims,
-   `material_asset_ids`, slide layout types, and timed sentence IDs. Then author a custom
-   `12_ppt/index.html` and valid `12_ppt/config.json`.
-
-   Do not use `build_demo_ppt.py` for final output. It is a smoke-test utility with a deliberately
-   uniform layout and is not a production presentation generator.
-
-7. Render PPT video locally.
-
-   ```bash
-   python <luma-ppt-video>/scripts/render_ppt_video.py \
-     --config 12_ppt/config.json \
-     --ffmpeg "$(luma-cli runtime path ffmpeg)" \
-     --output 13_ppt.mp4
-   ```
-
-   If local Chromium/Playwright is missing, install local dependencies or pause with clear setup
-   instructions. Cloud PPT render is not the default for this free/local-first workflow.
-
-8. Overlay the digital human.
-
-   ```bash
-   python <luma-ppt-video>/scripts/overlay_avatar.py \
-     --slide 13_ppt.mp4 \
-     --avatar 10_digital_human.mp4 \
-     --output 14_ppt_with_avatar.mp4 \
-     --ffmpeg "$(luma-cli runtime path ffmpeg)"
-   ```
-
-   If face framing is poor, extract a thumbnail and adjust `--bbox`.
-
-9. Add subtitles and cover.
-
-   ```bash
-   luma-cli subtitle 14_ppt_with_avatar.mp4 --transcript transcript.txt --output 15_subtitle.mp4
-   luma-cli cover frame 15_subtitle.mp4 --output 16_cover.jpg
-   ```
-
-   If the avatar was skipped, use `13_ppt.mp4` as the subtitle input.
-
-## Quality Rules
-
-- The script must be original to the profile; do not quietly imitate a viral source.
-- PPT slides should explain claims visually, not repeat the entire script as dense paragraphs.
-- Use collected source screenshots and generated explanatory components from `06_material_assets.json`.
-  Do not silently replace missing materials with text-only slides.
-- Reserve the bottom-left avatar zone before layout. For a 380px circular avatar at 60px margins,
-  keep core text, evidence, labels, and progress UI out of `x=0..500, y=560..1080`.
-- Use at least four layout types in a normal multi-slide video, and never repeat the same layout more
-  than twice consecutively.
-- Use large typography for phone readability. For 1920x1080, body text should usually be at least
-  38px.
-- The digital human is the narrator, not the main canvas. Keep it bottom-left by default.
-- Preserve topic selection and script review outputs. Do not let PPT design rewrite the approved viewpoint.
-
-## Cost Boundary
-
-- Content/script review and digital-human generation use existing backend costs.
-- PPT rendering is local-first and free from backend worker cost in this version.
-- Do not promise cloud PPT render unless a future paid/limited worker is explicitly available.
+Report their absolute paths and the selected topic title.

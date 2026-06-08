@@ -276,16 +276,16 @@ function visualForSection(section, idx) {
 }
 
 function main() {
-  const reviewPath = arg("review") || arg("input");
+  const selectionPath = arg("selection") || arg("review") || arg("input");
   const longformPlanPath = arg("longform-plan");
   const topicID = arg("topic-id");
   const output = arg("output", "04_material_plan.json");
   const maxWebQueries = Math.max(0, intArg("max-web-queries", 2));
   const maxImageQueries = Math.max(0, intArg("max-image-queries", 1));
-  if (!reviewPath) throw new Error("--review is required");
+  if (!selectionPath) throw new Error("--selection is required");
 
-  const review = readJSON(reviewPath);
-  let topic = selectTopic(review, topicID);
+  const selection = readJSON(selectionPath);
+  let topic = selectTopic(selection, topicID);
   if (!topic) throw new Error("no topic card found");
   if (longformPlanPath) {
     topic = applyApprovedPlan(topic, approvedLongformPlan(readJSON(longformPlanPath)));

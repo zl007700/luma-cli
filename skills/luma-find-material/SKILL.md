@@ -19,15 +19,10 @@ and it must not change the topic.
   -> 05_material_assets_<topic_id>.json
 ```
 
-Before finding materials, the agent must write a minimal `longform_plan` and submit it to backend
-`plan.review`. Only proceed to material collection after the review gate passes or the user explicitly
-accepts the risk.
-
 `material.plan` decides what must be proved and what may be generated. `material.collect` executes cheap searches, prepares browser tasks, and records claim coverage. Do not rewrite the topic or script here.
 
 Use the shared workflow step names:
 
-- `plan.review`: backend gate before material work.
 - `material.plan`: local skill plan file from the approved topic/plan.
 - `material.collect`: bounded collection, capture preparation, local filtering, and coverage accounting.
 - `content.search.websearch` / `content.search.image`: cloud search atoms invoked by collection.
@@ -35,8 +30,7 @@ Use the shared workflow step names:
 
 Credit estimates for planning only: `content.search.websearch` is 5 credits per query,
 `content.search.image` is 8 credits per query, `material.review` is 5 credits per reviewed asset,
-and `plan.review` is 5 credits with `basic_model` or 80 credits with `pro_model`. Actual backend
-usage/metering is authoritative.
+and actual backend usage/metering is authoritative.
 
 ## Ownership
 
@@ -64,92 +58,19 @@ Agent capabilities:
 
 Keep browser screenshots client-side because access, IP, cookies, and rendering vary by environment.
 
-## 0. Plan Review Gate
+## Inputs
 
-After selecting one local topic card and before collecting materials, write a compact
-`03a_longform_plan_<topic_id>.json` for backend review.
+- `03_topic_selection.json`
+- accepted `03a_longform_plan_<topic_id>.json`
+- accepted `03b_plan_review_<topic_id>.json`
 
-The review payload must include only:
-
-```json
-{
-  "profile": {},
-  "topic_card": {},
-  "longform_plan": {
-    "plan_id": "longplan_<topic_id>",
-    "target_duration_sec": 240,
-    "topic": "selected topic title",
-    "public_entry": "the first spoken entry sentence for ordinary strangers",
-    "topic_reveal": "the next spoken sentence that explicitly says what this video is about",
-    "viewer_promise": "what the viewer will understand or be able to do after watching",
-    "core_thesis": "one clear thesis",
-    "stance": "the creator's judgment or belief",
-    "audience_filter_turn": "how the topic narrows back to the target audience after the public entry",
-    "outline": [
-      {
-        "section": "short section label",
-        "claim": "the section's main claim",
-        "points": ["supporting point"],
-        "bridge_to_next": "why the next section logically follows",
-        "evidence_role": "none | example | analogy | supporting_evidence | direct_proof"
-      }
-    ],
-    "fact_boundary": ["what must be softened or verified later"]
-  }
-}
-```
-
-Required `longform_plan` fields:
-
-- `plan_id`
-- `target_duration_sec`
-- `topic`
-- `public_entry`
-- `topic_reveal`
-- `viewer_promise`
-- `core_thesis`
-- `stance`
-- `audience_filter_turn`
-- `outline[]`
-- `fact_boundary[]`
-
-Do not include `opening_sentence`, `opening_scene`, `primary_case`, `material_requirements`,
-`visual_plan`, `script_sections`, `pip`, screenshots, image ideas, or invented examples as fixed
-cases. Material has not been collected yet, so the plan may name evidence needs only inside
-`fact_boundary`.
-
-`public_entry` is the first spoken sentence and the reviewer gate. It must be judged for ordinary
-strangers who just swiped into the video, not for target users who already know they need AI or
-customer acquisition help. Avoid entries that depend on the viewer being a boss, owning customers,
-buying tools, knowing AI, or running a store.
-
-`topic_reveal` must immediately follow the hook in the spoken script, normally within the first
-10 seconds. A viewer cannot see the internal title or plan, so this sentence must name the actual
-subject in plain language. `viewer_promise` states why staying is worthwhile.
-
-Every outline item except the last must include `bridge_to_next`. The bridge must explain the
-argument, question, or contrast that makes the next section necessary. `evidence_role` prevents an
-analogy or product example from being presented as proof. For example, CRM scoring can illustrate
-signal-based prioritization, but it does not directly prove a custom red/yellow/green framework.
-
-Submit the plan:
-
-```bash
-luma-cli agent plan-review \
-  --input 03a_longform_plan_topic_002.json \
-  --output 03b_plan_review_topic_002.json \
-  --model basic_model
-```
-
-Use `--model pro_model` when the user asks for the stronger reviewer or when repeated basic reviews
-are too lenient. If `decision` is not `pass`, revise only the minimal `longform_plan` fields and
-resubmit. Do not start `material.plan` until the plan gate is accepted.
+Do not create or revise the longform plan in this skill.
 
 ## 1. Build The `material.plan`
 
 ```bash
-node <skill_dir>/scripts/plan_from_topic_review.js \
-  --review 03_topic_selection.json \
+node <skill_dir>/scripts/plan_from_topic_selection.js \
+  --selection 03_topic_selection.json \
   --topic-id topic_002 \
   --longform-plan 03a_longform_plan_topic_002.json \
   --max-web-queries 2 \

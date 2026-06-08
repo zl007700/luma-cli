@@ -161,7 +161,11 @@ luma-cli asset list roles
 | Skill | 说明 |
 | --- | --- |
 | `luma-shared` | 通用认证、项目、产物和失败处理规则 |
-| `luma-content-script` | 原创内容脚本工作流：选题、计划、找素材、写稿、审核 |
+| `luma-core-topic-discovery` | 生成检索矩阵并调用 topic mine |
+| `luma-core-topic-selection` | 基于 profile、历史和 signals 本地选题 |
+| `luma-core-longform-plan` | 起草或按审核意见修改 longform plan |
+| `luma-core-script-writing` | 起草或修改口播稿与审核 payload |
+| `luma-content-script` | 纯胶水：串联选题、计划、素材、写稿和审核 |
 | `luma-benchmark-discovery` | 发现和评估对标账号 |
 | `luma-find-material` | 为已通过的内容计划查找证据和视觉素材 |
 | `luma-workflow-viral-remix` | 爆款仿写完整流程 |

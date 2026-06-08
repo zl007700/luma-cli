@@ -4,11 +4,12 @@ Luma skills are agent-facing instructions for composing `luma-cli` atoms into pr
 
 ## Design
 
-Skills are split into three layers:
+Skills are split into four layers:
 
 1. `luma-shared`: common rules for auth, projects, artifacts, runtime, and failures.
-2. Capability skills: focused instructions for one capability domain.
-3. Workflow skills: user-goal workflows that compose capability skills.
+2. Core skills: one agent-authored reasoning or writing operation with a stable file contract.
+3. Capability skills: focused instructions for one CLI/media domain.
+4. Workflow skills: pure glue that composes core skills, capability skills, and CLI atoms.
 
 Current core skills:
 
@@ -17,7 +18,11 @@ Current core skills:
 | `luma-shared` | shared | Common rules every Luma agent should know |
 | `luma-maintenance` | maintenance | Update Luma CLI and sync agent skills |
 | `luma-profile-onboarding` | capability | Guide users to create and save a usable profile |
-| `luma-content-script` | workflow | Original profile-to-script workflow: topic, plan, material, script, review |
+| `luma-core-topic-discovery` | core | Build search matrix and mine canonical social/web signals |
+| `luma-core-topic-selection` | core | Select one topic locally from signals, profile, and history |
+| `luma-core-longform-plan` | core | Draft or revise the reviewed longform plan |
+| `luma-core-script-writing` | core | Draft or revise the local spoken script and review payload |
+| `luma-content-script` | workflow | Pure glue for discovery, selection, plan, materials, script, and reviews |
 | `luma-benchmark-discovery` | capability | Discover and score benchmark accounts |
 | `luma-find-material` | capability | Find evidence and visual materials for an approved content plan |
 | `luma-material` | capability | Local material groups, material search, PIP matching |
@@ -77,8 +82,12 @@ Skills are independently packageable and platform-friendly.
 
 ## Authoring Rules
 
-- Keep `SKILL.md` concise and goal-oriented.
-- Put long examples or domain details into `references/`.
+- Keep workflow `SKILL.md` files concise and limited to step order, invoked command/skill, input,
+  output, and failure routing.
+- Put agent-authored schemas and quality rules in core skills, not workflow skills.
+- Keep every required contract in `SKILL.md`; agents must not depend on proactively loading a
+  separate reference file.
+- Put deterministic repeated transformations in bundled scripts.
 - Use stable intermediate file names so agents can resume work.
 - Reference `luma-cli tools describe <tool_id>` instead of duplicating every flag.
 - Use Luma cloud services for advanced material understanding and semantic matching.
