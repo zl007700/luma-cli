@@ -349,7 +349,9 @@ func RewriteScript(text, length, model, cardKey string) (*ScriptRewriteResponse,
 }
 
 func RunAgentAbility(path string, input map[string]any, options map[string]any, cardKey string) (*AgentAbilityResponse, error) {
-	return RunAgentAbilityWithTimeout(path, input, options, cardKey, 60*time.Second)
+	// 240s 默认与 RunAgentAbilityWithTimeout 调用方（agent run / plan-review / script-review）保持一致。
+	// 涵盖 glm-5.1 thinking 模式 + max_tokens=12000 的 topic.review 场景。
+	return RunAgentAbilityWithTimeout(path, input, options, cardKey, 240*time.Second)
 }
 
 func RunAgentAbilityWithTimeout(path string, input map[string]any, options map[string]any, cardKey string, timeout time.Duration) (*AgentAbilityResponse, error) {
