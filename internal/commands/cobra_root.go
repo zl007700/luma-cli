@@ -13,7 +13,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:     "luma-cli",
 	Short:   "Luma CLI — AI-powered video creation toolkit",
-	Version: version,
+	Version: version + versionSuffix(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if jsonFlag, _ := cmd.Flags().GetBool("json"); jsonFlag {
 			runtimeOpts.JSON = true

@@ -4,6 +4,16 @@ setlocal
 cd /d "%~dp0\.."
 
 set "VERSION=local"
+
+REM Auto-derive version from the most recent git tag (e.g. "0.0.19-11-g654a5b7")
+REM so the output reflects how far this build is from the last release. The
+REM leading "v" is stripped to match the package.json convention. Falls back
+REM silently to "local" when not in a git checkout or no annotated tags exist;
+REM any positional argument below overrides this.
+for /f "usebackq delims=" %%i in (`git describe --tags --long 2^>nul`) do set "VERSION=%%i"
+if "%VERSION%"=="" set "VERSION=local"
+if "%VERSION:~0,1%"=="v" set "VERSION=%VERSION:~1%"
+
 set "INSTALL=0"
 
 :parse
@@ -23,13 +33,21 @@ shift
 goto parse
 
 :parsed
+
+REM Capture build metadata. Fall back to "unknown" when git is unavailable
+REM or the working tree is not a checkout.
+for /f "usebackq delims=" %%i in (`git rev-parse --short HEAD 2^>nul`) do set "COMMIT=%%i"
+if "%COMMIT%"=="" set "COMMIT=unknown"
+for /f "usebackq tokens=*" %%i in (`powershell -NoProfile -Command "(Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')"`) do set "BUILD_DATE=%%i"
+if "%BUILD_DATE%"=="" set "BUILD_DATE=unknown"
+
 set "OUT_DIR=build\local"
 set "OUT=%OUT_DIR%\luma-cli.exe"
-set "LDFLAGS=-X github.com/luma-cli/lumer-cli/internal/commands.version=%VERSION%"
+set "LDFLAGS=-X github.com/luma-cli/lumer-cli/internal/commands.version=%VERSION% -X github.com/luma-cli/lumer-cli/internal/commands.commit=%COMMIT% -X github.com/luma-cli/lumer-cli/internal/commands.buildDate=%BUILD_DATE%"
 
 if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 
-echo Building luma-cli %VERSION%...
+echo Building luma-cli %VERSION% (commit %COMMIT%, built %BUILD_DATE%)...
 go build -ldflags "%LDFLAGS%" -o "%OUT%" .
 if errorlevel 1 exit /b %errorlevel%
 

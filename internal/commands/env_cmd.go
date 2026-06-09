@@ -16,7 +16,9 @@ const (
 func printVersion() {
 	apiURL := cloud.BaseURL()
 	envName := activeEnvironmentName(apiURL)
-	fmt.Printf("luma-cli version %s\n", version)
+
+	fmt.Printf("luma-cli version %s%s\n", version, versionSuffix())
+
 	if envName == "test" {
 		fmt.Printf("backend: custom (%s)\n", apiURL)
 		return

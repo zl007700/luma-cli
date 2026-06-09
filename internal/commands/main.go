@@ -10,6 +10,26 @@ import (
 
 var version = "dev"
 
+// Build metadata, overridden via -ldflags at build time.
+// commit / buildDate stay "unknown" when the binary was not built with
+// scripts/build.sh(.bat) or .goreleaser.yml injecting them.
+var commit = "unknown"
+var buildDate = "unknown"
+
+// versionSuffix returns the human-readable suffix appended to the raw
+// `version` in user-facing output (e.g. "(commit 654a5b7, built 2026-06-09)").
+// Returns an empty string when build metadata is missing, so release binaries
+// without the ldflag still print a clean single-line version.
+func versionSuffix() string {
+	if commit == "" || commit == "unknown" {
+		return ""
+	}
+	if buildDate == "" || buildDate == "unknown" {
+		return fmt.Sprintf(" (commit %s)", commit)
+	}
+	return fmt.Sprintf(" (commit %s, built %s)", commit, buildDate)
+}
+
 func printUsage() {
 	fmt.Println("luma-cli - Luma CLI tool")
 	fmt.Println("")
