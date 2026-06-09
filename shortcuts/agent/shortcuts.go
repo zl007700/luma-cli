@@ -50,7 +50,7 @@ func Shortcuts() []common.Shortcut {
 			Flags:       []common.Flag{{Name: "input", Description: "Script writer payload JSON path.", Required: true}, {Name: "output", Description: "Output script JSON path."}},
 			Outputs:     []string{"title", "hook", "sections", "full_script", "evidence_notes", "risk_notes", "estimated_duration_sec", "usage", "output_path"},
 			Examples:    []string{"luma-cli agent run script.write --input 06_script_writer_payload_topic_002.json --output 07_script_topic_002.json"},
-			Skills:      []string{"luma-content-script"},
+			Skills:      []string{"luma-content-ip-writing"},
 		},
 		{
 			ID:          "title.generate",

@@ -40,10 +40,10 @@
       "path": "luma-find-material/SKILL.md"
     },
     {
-      "name": "luma-content-script",
+      "name": "luma-content-ip-writing",
       "category": "workflow",
       "entrypoint": true,
-      "path": "luma-content-script/SKILL.md"
+      "path": "luma-content-ip-writing/SKILL.md"
     },
     {
       "name": "luma-assets",

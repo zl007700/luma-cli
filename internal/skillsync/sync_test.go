@@ -17,8 +17,8 @@ func TestBuildSkillsAddArgsDefaultGlobal(t *testing.T) {
 }
 
 func TestBuildSkillsAddArgsSelective(t *testing.T) {
-	got := BuildSkillsAddArgs("zl007700/luma-cli", "luma-content-script", true, true)
-	want := []string{"-y", "skills", "add", "zl007700/luma-cli", "-s", "luma-content-script", "-g", "-y"}
+	got := BuildSkillsAddArgs("zl007700/luma-cli", "luma-content-ip-writing", true, true)
+	want := []string{"-y", "skills", "add", "zl007700/luma-cli", "-s", "luma-content-ip-writing", "-g", "-y"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("args mismatch\nwant: %#v\n got: %#v", want, got)
 	}

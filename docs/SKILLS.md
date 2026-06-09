@@ -18,11 +18,7 @@ Current core skills:
 | `luma-shared` | shared | Common rules every Luma agent should know |
 | `luma-maintenance` | maintenance | Update Luma CLI and sync agent skills |
 | `luma-profile-onboarding` | capability | Guide users to create and save a usable profile |
-| `luma-core-topic-discovery` | core | Build search matrix and mine canonical social/web signals |
-| `luma-core-topic-selection` | core | Select one topic locally from signals, profile, and history |
-| `luma-core-longform-plan` | core | Draft or revise the reviewed longform plan |
-| `luma-core-script-writing` | core | Draft or revise the local spoken script and review payload |
-| `luma-content-script` | workflow | Pure glue for discovery, selection, plan, materials, script, and reviews |
+| `luma-content-ip-writing` | workflow | Profile-based IP content research and writing with dual review gates |
 | `luma-benchmark-discovery` | capability | Discover and score benchmark accounts |
 | `luma-find-material` | capability | Find evidence and visual materials for an approved content plan |
 | `luma-material` | capability | Local material groups, material search, PIP matching |

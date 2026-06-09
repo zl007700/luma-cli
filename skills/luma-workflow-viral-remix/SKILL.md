@@ -8,7 +8,7 @@ metadata:
   cliHelp: "luma-cli tools list"
   category: "workflow"
   entrypoint: true
-  relatedSkills: ["luma-shared", "luma-content-script", "luma-digital-human", "luma-ppt-video", "luma-material", "luma-subtitle"]
+  relatedSkills: ["luma-shared", "luma-content-ip-writing", "luma-digital-human", "luma-ppt-video", "luma-material", "luma-subtitle"]
   aliases: ["拾光", "拾光智能体", "拾光工具", "拾光运营套装", "Luma", "Luma CLI", "luma-cli", "爆款复刻", "爆款仿写"]
 ---
 
@@ -35,7 +35,7 @@ viral reference/research -> transcript/structure -> rewritten script -> TTS -> d
 ```
 
 Use `luma-digital-human` instead when the script is already approved and the user only needs a
-digital-human spoken video. Use `luma-content-script` instead when the user wants an original script
+digital-human spoken video. Use `luma-content-ip-writing` instead when the user wants an original script
 from profile memory rather than remixing a viral reference.
 
 ## When To Use

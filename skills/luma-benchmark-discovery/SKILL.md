@@ -9,7 +9,7 @@ metadata:
   category: "capability"
   entrypoint: true
   aliases: ["对标账号", "找对标账号", "竞品账号", "benchmark accounts", "competitor accounts", "账号挖掘"]
-  relatedSkills: ["luma-shared", "luma-content-script"]
+  relatedSkills: ["luma-shared", "luma-content-ip-writing"]
 ---
 
 # Luma Benchmark Discovery

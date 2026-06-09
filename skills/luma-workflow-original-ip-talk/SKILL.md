@@ -5,7 +5,7 @@ description: "Orchestrate a complete original Luma IP spoken video as pure glue:
 
 # Luma Original IP Talk Workflow
 
-This skill is glue only. Delegate content reasoning to `luma-content-script`, digital-human work to
+This skill is glue only. Delegate content reasoning to `luma-content-ip-writing`, digital-human work to
 `luma-digital-human`, PPT design/rendering to `luma-ppt-video`, and subtitles to `luma-subtitle`.
 
 ## Inputs
@@ -18,7 +18,7 @@ This skill is glue only. Delegate content reasoning to `luma-content-script`, di
 
 ### Step 1: Create Reviewed Script And Materials
 
-Call `luma-content-script`.
+Call `luma-content-ip-writing`.
 
 Required outputs:
 
