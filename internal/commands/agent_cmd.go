@@ -21,8 +21,6 @@ var agentAbilityPaths = map[string]string{
 	"script.rewrite":     "/v1/agent/script/rewrite",
 	"script.write":       "/v1/agent/script/write",
 	"topic.review":       "/v1/agent/topic/review",
-	"plan.review":        "/v1/agent/plan/review",
-	"script.review":      "/v1/agent/script/review",
 	"title.generate":     "/v1/agent/title/generate",
 	"storyboard.scene":   "/v1/agent/storyboard/scene",
 	"storyboard.shot":    "/v1/agent/storyboard/shot",
@@ -38,10 +36,6 @@ func cmdAgent(args []string) error {
 	switch args[0] {
 	case "run":
 		return cmdAgentRun(args[1:])
-	case "plan-review":
-		return cmdAgentReview(args[1:], "plan.review", "plan_review.json")
-	case "script-review":
-		return cmdAgentReview(args[1:], "script.review", "script_review.json")
 	default:
 		fmt.Printf("unknown agent subcommand: %s\n\n", args[0])
 		printAgentUsage()
@@ -226,11 +220,13 @@ func printAgentUsage() {
 	fmt.Println("")
 	fmt.Println("Subcommands:")
 	fmt.Println("  run <ability> --input payload.json [--output result.json] [--timeout seconds]")
-	fmt.Println("  plan-review --input payload.json [--model basic_model|pro_model] [--output plan_review.json] [--timeout seconds]")
-	fmt.Println("  script-review --input payload.json [--model basic_model|pro_model] [--output script_review.json] [--timeout seconds]")
 	fmt.Println("")
 	fmt.Println("Abilities:")
 	for ability := range agentAbilityPaths {
 		fmt.Printf("  %s\n", ability)
 	}
+	fmt.Println("")
+	fmt.Println("Note: plan-review and script-review are deprecated. Use:")
+	fmt.Println("  luma-cli content reviewer --gate process --input payload.json  (for Process Review)")
+	fmt.Println("  luma-cli content reviewer --gate final --input payload.json   (for Final Review)")
 }

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -184,6 +186,8 @@ func cmdContent(args []string) error {
 		return cmdContentHistory(args[1:])
 	case "artifact":
 		return cmdContentArtifact(args[1:])
+	case "reviewer":
+		return cmdContentReviewer(args[1:])
 	default:
 		printContentUsage()
 		return nil
@@ -461,6 +465,476 @@ func cmdContentHistory(raw []string) error {
 		fmt.Printf("%-28s %-28s %s\n", firstNonEmpty(strAny(meta["artifact_type"]), strAny(meta["luma_resource_kind"])), strAny(item["filename"]), strAny(item["object_key"]))
 	}
 	return nil
+}
+
+// ── Content Reviewer (calls backend /v1/content-review/{gate}) ──
+
+func cmdContentReviewer(raw []string) error {
+	args := cmdutil.Parse(raw)
+	gate := strings.TrimSpace(args.String("gate", args.Pos(0)))
+	if gate == "" {
+		return output.ErrValidation("--gate process|final is required")
+	}
+	if gate != "process" && gate != "final" {
+		return output.ErrValidation("--gate must be 'process' or 'final'")
+	}
+	inputPath := strings.TrimSpace(args.String("input", ""))
+	if inputPath == "" {
+		return output.ErrValidation("--input payload.json is required")
+	}
+	profileID := contentProfileID(args, "")
+
+	// Read input payload
+	payload, err := readAgentPayload(inputPath)
+	if err != nil {
+		return output.ErrSystem("read input failed: %v", err)
+	}
+	input, _ := payload["input"].(map[string]any)
+	if input == nil {
+		input = payload
+	}
+	// Inject profile_id into input so backend can echo it back
+	if profileID != "" {
+		input["profile_id"] = profileID
+	}
+	options, _ := payload["options"].(map[string]any)
+	if options == nil {
+		options = map[string]any{}
+	}
+	if model := strings.TrimSpace(args.String("model", args.String("model-tier", ""))); model != "" {
+		options["model_tier"] = model
+	}
+	if temperature, err := args.Float("temperature", -1); err != nil {
+		return output.ErrValidation("%v", err)
+	} else if temperature >= 0 {
+		options["temperature"] = temperature
+	}
+	if maxTokens, err := args.Int("max-tokens", 0); err != nil {
+		return output.ErrValidation("%v", err)
+	} else if maxTokens > 0 {
+		options["max_tokens"] = maxTokens
+	}
+	timeoutSec, err := args.Int("timeout", 240)
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
+	if timeoutSec <= 0 {
+		timeoutSec = 240
+	}
+	saveHistory, err := args.Bool("save-history", false)
+		if err != nil {
+			return output.ErrValidation("%v", err)
+		}
+
+	cfg, err := requireConfig()
+	if err != nil {
+		return output.ErrAuth("%v", err)
+	}
+
+	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
+	fmt.Printf("📝 %s REVIEW\n", strings.ToUpper(gate))
+	fmt.Printf("%s\n\n", strings.Repeat("=", 60))
+
+	resp, err := cloud.ContentReview(gate, input, options, cfg.CardKey, time.Duration(timeoutSec)*time.Second)
+	if err != nil {
+		return output.ErrNetwork("content review failed: %v", err)
+	}
+
+	// Save output
+	outputPath := strings.TrimSpace(args.String("output", gate+"_review.txt"))
+	outputAbs := ""
+	if outputPath != "" {
+		outputAbs, err = absoluteOutputPath(outputPath)
+		if err != nil {
+			return output.ErrValidation("bad output path: %v", err)
+		}
+		if err := os.MkdirAll(filepath.Dir(outputAbs), 0755); err != nil {
+			return output.ErrSystem("create output dir failed: %v", err)
+		}
+	}
+
+	// Extract review result
+	result := resp.Result
+	reviewText, _ := result["review_text"].(string)
+	decision, _ := result["decision"].(string)
+	totalScore := floatFromAny(result["total_score"])
+	dimensions, _ := result["scores"].(map[string]any)
+
+	// Write review text (plain markdown)
+	if outputAbs != "" && reviewText != "" {
+		if err := os.WriteFile(outputAbs, []byte(reviewText), 0644); err != nil {
+			return output.ErrSystem("write review text failed: %v", err)
+		}
+	}
+
+	// Write structured summary alongside review text
+	summaryAbs := ""
+	if outputAbs != "" {
+		summaryAbs = strings.TrimSuffix(outputAbs, filepath.Ext(outputAbs)) + ".summary.json"
+		summaryData, _ := json.MarshalIndent(map[string]any{
+			"gate":       gate,
+			"decision":   decision,
+			"score":      totalScore,
+			"passed":     totalScore >= 7,
+			"dimensions": dimensions,
+			"review_text": reviewText,
+		}, "", "  ")
+		if err := os.WriteFile(summaryAbs, summaryData, 0644); err != nil {
+			return output.ErrSystem("write summary failed: %v", err)
+		}
+	}
+
+	// ── History save (only on pass/revise) ──────────────────────
+	historySaved := false
+	if saveHistory && (decision == "pass" || decision == "revise") && profileID != "" {
+		historySaved, err = saveContentReviewHistory(gate, decision, totalScore, dimensions, input, profileID, cfg, outputAbs)
+		if err != nil {
+			fmt.Printf("⚠️  History save failed (non-blocking): %v\n", err)
+		}
+	} else if saveHistory {
+		fmt.Printf("⏭️  decision=%s, history not saved\n", decision)
+	}
+
+	// ── Output ──────────────────────────────────────────────────
+	if runtimeOpts.JSON {
+		envelope := map[string]any{
+			"ability":      resp.Ability,
+			"request_id":   resp.RequestID,
+			"result":       result,
+			"usage":        resp.Usage,
+			"output_path":  outputAbs,
+			"history_saved": historySaved,
+		}
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: envelope})
+		return nil
+	}
+
+	// Plain text output
+	fmt.Printf("\n📝 Decision: %s\n", decision)
+	if totalScore > 0 {
+		fmt.Printf("📊 Score: %.1f/10\n", totalScore)
+	}
+	if len(dimensions) > 0 {
+		fmt.Printf("📊 Dimensions:\n")
+		for dim, val := range dimensions {
+			scoreMap, _ := val.(map[string]any)
+			if score, ok := scoreMap["score"]; ok {
+				fmt.Printf("   %-22s %.1f\n", dim, floatFromAny(score))
+			} else {
+				fmt.Printf("   %-22s %v\n", dim, val)
+			}
+		}
+	}
+	if outputAbs != "" {
+		fmt.Printf("📝 Review text saved to: %s\n", outputAbs)
+		fmt.Printf("📋 Structured summary saved to: %s\n", summaryAbs)
+	}
+	if historySaved {
+		fmt.Printf("💾 History checkpoint saved to cloud\n")
+	}
+	return nil
+}
+
+// floatFromAny extracts a float from an any value (int, float64, string).
+func floatFromAny(val any) float64 {
+	switch v := val.(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case string:
+		f, _ := strconv.ParseFloat(v, 64)
+		return f
+	default:
+		return 0
+	}
+}
+
+// saveContentReviewHistory builds a history entry, merges into cumulative summary,
+// and uploads both to cloud. Returns true on success.
+func saveContentReviewHistory(gate, decision string, score float64, dimensions map[string]any, input map[string]any, profileID string, cfg *config, outputDir string) (bool, error) {
+	entry := buildContentHistoryEntry(gate, decision, score, dimensions, input)
+	history := loadOrInitContentHistory(profileID, cfg)
+	history = mergeContentHistoryEntry(history, entry)
+
+	group := contentGroupName(profileID)
+
+	// Save individual entry
+	entryName := fmt.Sprintf("history_entry_%s.json", entry["entry_id"])
+	entryData, _ := json.MarshalIndent(entry, "", "  ")
+	entryLocal := filepath.Join(filepath.Dir(outputDir), "content_history_entry.json")
+	if outputDir != "" {
+		if err := os.MkdirAll(filepath.Dir(entryLocal), 0755); err != nil {
+			return false, err
+		}
+		if err := os.WriteFile(entryLocal, entryData, 0644); err != nil {
+			return false, err
+		}
+		fmt.Printf("📝 单条记录已保存到: %s\n", entryLocal)
+	}
+	_, err := uploadContentJSONArtifact(entryLocal, entry, profileID, "content_history_entry", entryName, "content.reviewer.history", nil)
+	if err != nil {
+		fmt.Printf("⚠️  Entry cloud upload failed: %v\n", err)
+	}
+
+	// Save cumulative summary
+	cumName := "content_history.current.json"
+	cumData, _ := json.MarshalIndent(history, "", "  ")
+	cumLocal := filepath.Join(filepath.Dir(outputDir), "content_history.current.json")
+	if outputDir != "" {
+		if err := os.MkdirAll(filepath.Dir(cumLocal), 0755); err != nil {
+			return false, err
+		}
+		if err := os.WriteFile(cumLocal, cumData, 0644); err != nil {
+			return false, err
+		}
+		fmt.Printf("📝 累积摘要已保存到: %s\n", cumLocal)
+	}
+	_, err = uploadContentJSONArtifact(cumLocal, history, profileID, "content_history", cumName, "content.reviewer.history", nil)
+	if err != nil {
+		fmt.Printf("⚠️  Cumulative cloud upload failed: %v\n", err)
+	}
+
+	fmt.Printf("☁️  History uploaded to group: %s\n", group)
+	return true, nil
+}
+
+// buildContentHistoryEntry constructs a history entry dict from review result + input payload.
+func buildContentHistoryEntry(gate, decision string, score float64, dimensions map[string]any, input map[string]any) map[string]any {
+	entryID := fmt.Sprintf("entry_%03d", 1) // Will be re-assigned during merge
+	nowUTC := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+
+	entry := map[string]any{
+		"entry_id":   entryID,
+		"created_at": nowUTC,
+		"gate":       gate,
+		"decision":   decision,
+		"score":      score,
+	}
+
+	if gate == "process" {
+		mr, _ := input["memory_review"].(map[string]any)
+		if mr == nil {
+			mr = map[string]any{}
+		}
+		candidates, _ := input["valuable_topic_candidates"].([]any)
+		topics := []map[string]any{}
+		for _, c := range candidates {
+			cm, _ := c.(map[string]any)
+			if cm == nil {
+				continue
+			}
+			topics = append(topics, map[string]any{
+				"topic_id":      strAny(cm["topic_id"]),
+				"topic_title":   strAny(cm["topic"]),
+				"content_angle": strAny(cm["content_angle"]),
+			})
+		}
+		avoidList, _ := mr["avoid_list"].([]any)
+		oppList, _ := mr["opportunity_list"].([]any)
+		entry["research_goal"] = strAny(input["research_goal"])
+		entry["selected_topics"] = topics
+		entry["avoid_next_time"] = avoidList
+		entry["opportunity_next_time"] = oppList
+	} else {
+		article := strAny(input["article"])
+		if article == "" {
+			article = strAny(input["script"])
+		}
+		hook := ""
+		for _, line := range strings.Split(article, "\n") {
+			s := strings.TrimSpace(line)
+			if s != "" && !strings.HasPrefix(s, "#") {
+				hook = s
+				break
+			}
+		}
+		entry["dimensions"] = dimensions
+		entry["topic_id"] = strAny(input["topic_id"])
+		entry["topic_title"] = strAny(input["topic_title"])
+		entry["content_angle"] = strAny(input["content_angle"])
+		entry["opening_hook"] = hook
+		entry["thesis"] = strAny(input["thesis"])
+		avoidNext, _ := input["avoid_next_time"].([]any)
+		oppNext, _ := input["opportunity_next_time"].([]any)
+		entry["avoid_next_time"] = avoidNext
+		entry["opportunity_next_time"] = oppNext
+	}
+	return entry
+}
+
+// loadOrInitContentHistory downloads existing content_history.current.json from cloud,
+// or returns an empty template.
+func loadOrInitContentHistory(profileID string, cfg *config) map[string]any {
+	group := contentGroupName(profileID)
+	items, err := cloud.AssetList(group, cfg.CardKey)
+	if err != nil {
+		fmt.Printf("⚠️  History list failed: %v\n", err)
+		return emptyContentHistory(profileID)
+	}
+	// Find content_history.current by display_name or filename stem
+	for _, rawItem := range items {
+		item := mapFromAny(rawItem)
+		meta := mapFromAny(item["meta"])
+		filename := strAny(item["filename"])
+		stem := strings.TrimSuffix(filename, filepath.Ext(filename))
+		dn := strAny(meta["display_name"])
+		if dn == "content_history.current" || stem == "content_history.current" || strings.HasPrefix(stem, "content_history.current_") {
+			url := strAny(item["resource_url"])
+			if url == "" {
+				continue
+			}
+			// Download and parse
+			data, err := cloud.DownloadJSON(url)
+			if err != nil {
+				fmt.Printf("⚠️  History download failed: %v\n", err)
+				continue
+			}
+			if sv, ok := data["schema_version"]; ok && sv != "" {
+				return data
+			}
+		}
+	}
+	fmt.Printf("📋 云端无历史记录，从零开始\n")
+	return emptyContentHistory(profileID)
+}
+
+func emptyContentHistory(profileID string) map[string]any {
+	return map[string]any{
+		"schema_version":        "1",
+		"profile_id":           profileID,
+		"updated_at":           "",
+		"total_entries":        0,
+		"entries":              []any{},
+		"cumulative_avoid":     []any{},
+		"cumulative_opportunity": []any{},
+		"used_topic_ids":       []any{},
+		"used_angles":          []any{},
+		"used_hooks":           []any{},
+	}
+}
+
+// mergeContentHistoryEntry appends entry and updates cumulative fields (dedup).
+func mergeContentHistoryEntry(history map[string]any, entry map[string]any) map[string]any {
+	idx := intFromAny(history["total_entries"]) + 1
+	entry["entry_id"] = fmt.Sprintf("entry_%03d", idx)
+	entries, _ := history["entries"].([]any)
+	entries = append(entries, entry)
+	history["entries"] = entries
+	history["total_entries"] = len(entries)
+	history["updated_at"] = strAny(entry["created_at"])
+
+	// Dedup cumulative fields
+	for _, key := range []string{"cumulative_avoid", "cumulative_opportunity", "used_topic_ids", "used_angles", "used_hooks"} {
+		srcKey := key
+		if srcKey == "cumulative_avoid" {
+			srcKey = "avoid_next_time"
+		} else if srcKey == "cumulative_opportunity" {
+			srcKey = "opportunity_next_time"
+		}
+		src, _ := entry[srcKey].([]any)
+		dst, _ := history[key].([]any)
+		for _, v := range src {
+			s := strAny(v)
+			if s == "" {
+				continue
+			}
+			found := false
+			for _, d := range dst {
+				if strAny(d) == s {
+					found = true
+					break
+				}
+			}
+			if !found {
+				dst = append(dst, s)
+			}
+		}
+		history[key] = dst
+	}
+
+	// Also capture topic_id, content_angle, opening_hook from final entries
+	for _, field := range []string{"topic_id", "content_angle", "opening_hook"} {
+		val := strAny(entry[field])
+		if val == "" {
+			continue
+		}
+		cumKey := "used_" + field
+		if field == "topic_id" {
+			cumKey = "used_topic_ids"
+		} else if field == "content_angle" {
+			cumKey = "used_angles"
+		} else if field == "opening_hook" {
+			cumKey = "used_hooks"
+		}
+		dst, _ := history[cumKey].([]any)
+		found := false
+		for _, d := range dst {
+			if strAny(d) == val {
+				found = true
+				break
+			}
+		}
+		if !found {
+			dst = append(dst, val)
+		}
+		history[cumKey] = dst
+	}
+
+	// selected_topics from process entries
+	topics, _ := entry["selected_topics"].([]any)
+	for _, t := range topics {
+		tm, _ := t.(map[string]any)
+		if tm == nil {
+			continue
+		}
+		tid := strAny(tm["topic_id"])
+		angle := strAny(tm["content_angle"])
+		if tid != "" {
+			dst, _ := history["used_topic_ids"].([]any)
+			found := false
+			for _, d := range dst {
+				if strAny(d) == tid {
+					found = true
+					break
+				}
+			}
+			if !found {
+				dst = append(dst, tid)
+				history["used_topic_ids"] = dst
+			}
+		}
+		if angle != "" {
+			dst, _ := history["used_angles"].([]any)
+			found := false
+			for _, d := range dst {
+				if strAny(d) == angle {
+					found = true
+					break
+				}
+			}
+			if !found {
+				dst = append(dst, angle)
+				history["used_angles"] = dst
+			}
+		}
+	}
+
+	return history
+}
+
+func intFromAny(val any) int {
+	switch v := val.(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	case string:
+		i, _ := strconv.Atoi(v)
+		return i
+	default:
+		return 0
+	}
 }
 
 func cmdContentTopicMine(raw []string) error {
@@ -2125,6 +2599,7 @@ func printContentUsage() {
 	fmt.Println("luma-cli content <subcommand>")
 	fmt.Println("  search       Search social or web sources")
 	fmt.Println("  topic        Mine topic raw signals")
+	fmt.Println("  reviewer     Call backend content review API (process/final)")
 	fmt.Println("  history      List cloud-stored content artifacts for one profile")
 }
 

@@ -100,6 +100,17 @@ type AgentAbilityResponse struct {
 
 type ResearchResponse = AgentAbilityResponse
 
+// ContentReview calls the new /v1/content-review/{gate} endpoint.
+// gate must be "process" or "final".
+func ContentReview(gate string, input map[string]any, options map[string]any, cardKey string, timeout time.Duration) (*AgentAbilityResponse, error) {
+	path := "/v1/content-review/" + gate
+	payload := map[string]any{"input": input}
+	if options != nil {
+		payload["options"] = options
+	}
+	return RunAgentAbilityWithTimeout(path, input, options, cardKey, timeout)
+}
+
 type SocialSearchRequest struct {
 	Platform        string   `json:"platform,omitempty"`
 	Keywords        []string `json:"keywords"`
@@ -190,6 +201,25 @@ func mapToStruct[T any](payload map[string]any) (T, error) {
 	}
 	err = json.Unmarshal(data, &out)
 	return out, err
+}
+
+// DownloadJSON fetches a URL and parses the response as JSON.
+func DownloadJSON(url string) (map[string]any, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("download failed: HTTP %d: %s", resp.StatusCode, string(body))
+	}
+	var result map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode failed: %v", err)
+	}
+	return result, nil
 }
 
 // SubmitTask submits a cloud task (asr, tts, lipsync, enhance, etc.)
