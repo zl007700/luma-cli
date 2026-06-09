@@ -718,7 +718,7 @@ func buildContentHistoryEntry(gate, decision string, score float64, dimensions m
 			mr = map[string]any{}
 		}
 		candidates, _ := input["valuable_topic_candidates"].([]any)
-		topics := []map[string]any{}
+		topics := []any{}
 		for _, c := range candidates {
 			cm, _ := c.(map[string]any)
 			if cm == nil {
@@ -811,11 +811,20 @@ func emptyContentHistory(profileID string) map[string]any {
 		"used_topic_ids":       []any{},
 		"used_angles":          []any{},
 		"used_hooks":           []any{},
+		"researched_topics":    []any{},
+		"published_articles":   []any{},
 	}
 }
 
 // mergeContentHistoryEntry appends entry and updates cumulative fields (dedup).
 func mergeContentHistoryEntry(history map[string]any, entry map[string]any) map[string]any {
+	// Ensure list fields exist (may be missing when loading old history from cloud)
+	for _, key := range []string{"cumulative_avoid", "cumulative_opportunity", "used_topic_ids", "used_angles", "used_hooks", "researched_topics", "published_articles"} {
+		if _, ok := history[key]; !ok {
+			history[key] = []any{}
+		}
+	}
+
 	idx := intFromAny(history["total_entries"]) + 1
 	entry["entry_id"] = fmt.Sprintf("entry_%03d", idx)
 	entries, _ := history["entries"].([]any)
@@ -917,6 +926,76 @@ func mergeContentHistoryEntry(history map[string]any, entry map[string]any) map[
 				dst = append(dst, angle)
 				history["used_angles"] = dst
 			}
+		}
+	}
+
+	// ── Archive researched_topics (from process) and published_articles (from final) ──
+	gate := strAny(entry["gate"])
+	if gate == "process" {
+		// Each selected_topic's topic_title → researched_topics
+		for _, t := range topics {
+			tm, _ := t.(map[string]any)
+			if tm == nil {
+				continue
+			}
+			title := strAny(tm["topic_title"])
+			if title == "" {
+				continue
+			}
+			dst, _ := history["researched_topics"].([]any)
+			found := false
+			for _, d := range dst {
+				if strAny(d) == title {
+					found = true
+					break
+				}
+			}
+			if !found {
+				dst = append(dst, title)
+				history["researched_topics"] = dst
+			}
+		}
+	} else if gate == "final" {
+		// topic_title + opening_hook → published_articles
+		topicTitle := strAny(entry["topic_title"])
+		hook := strAny(entry["opening_hook"])
+		if topicTitle != "" || hook != "" {
+			// Build summary: "<topic_title>: <first 30 chars of hook>"
+			label := topicTitle
+			if hook != "" {
+				hookShort := hook
+				if len(hookShort) > 30 {
+					hookShort = hookShort[:30]
+				}
+				if label != "" {
+					label = label + ": " + hookShort
+				} else {
+					label = hookShort
+				}
+			}
+			if label != "" {
+				dst, _ := history["published_articles"].([]any)
+				found := false
+				for _, d := range dst {
+					if strAny(d) == label {
+						found = true
+						break
+					}
+				}
+				if !found {
+					dst = append(dst, label)
+					history["published_articles"] = dst
+				}
+			}
+		}
+	}
+
+	// ── Cap researched_topics and published_articles to last 30 entries ──
+	const maxHistoryItems = 30
+	for _, key := range []string{"researched_topics", "published_articles"} {
+		list, _ := history[key].([]any)
+		if len(list) > maxHistoryItems {
+			history[key] = list[len(list)-maxHistoryItems:]
 		}
 	}
 
