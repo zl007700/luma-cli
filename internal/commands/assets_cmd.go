@@ -114,9 +114,9 @@ func cmdAssetsSearch(raw []string) error {
 		fmt.Println("No assets found.")
 		return nil
 	}
-	fmt.Printf("%-28s %-16s %-8s %-16s %s\n", "ASSET_ID", "KIND", "SCOPE", "GROUP", "NAME")
+	fmt.Printf("%-28s %-16s %-16s %-20s %s\n", "ID", "KIND", "GROUP", "NAME", "CAPTION")
 	for _, item := range result.Items {
-		fmt.Printf("%-28s %-16s %-8s %-16s %s\n", item.AssetID, item.Kind, item.Scope, item.GroupName, item.DisplayName)
+		fmt.Printf("%-28s %-16s %-16s %-20s %s\n", item.AssetID, item.Kind, item.GroupName, registryAssetDisplayName(item), oneLineAssetCaption(item))
 	}
 	return nil
 }
@@ -139,7 +139,7 @@ func cmdAssetsResolve(raw []string) error {
 		return nil
 	}
 	for _, item := range result.Items {
-		fmt.Printf("%s\t%s\t%s\n", item.AssetID, item.Kind, item.ObjectKey)
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", item.AssetID, item.Kind, item.ObjectKey, registryAssetDisplayName(item), oneLineAssetCaption(item))
 	}
 	return nil
 }
@@ -265,6 +265,42 @@ func writeAssetCacheCurrent(cached cachedAsset) error {
 		return err
 	}
 	return os.WriteFile(target, data, 0644)
+}
+
+func registryAssetDisplayName(item cloud.AssetItem) string {
+	if strings.TrimSpace(item.DisplayName) != "" {
+		return strings.TrimSpace(item.DisplayName)
+	}
+	semantic, _ := item.Metadata["semantic"].(map[string]any)
+	if semantic == nil {
+		return ""
+	}
+	for _, key := range []string{"name", "title"} {
+		if text := strings.TrimSpace(fmt.Sprint(semantic[key])); text != "" && text != "<nil>" {
+			return text
+		}
+	}
+	return ""
+}
+
+func oneLineAssetCaption(item cloud.AssetItem) string {
+	semantic, _ := item.Metadata["semantic"].(map[string]any)
+	if semantic == nil {
+		return ""
+	}
+	text := ""
+	for _, key := range []string{"caption", "summary", "description", "short_des"} {
+		text = strings.TrimSpace(fmt.Sprint(semantic[key]))
+		if text != "" && text != "<nil>" {
+			break
+		}
+	}
+	text = strings.Join(strings.Fields(text), " ")
+	if len([]rune(text)) > 240 {
+		runes := []rune(text)
+		text = string(runes[:240]) + "..."
+	}
+	return text
 }
 
 func printAssetsUsage() {
