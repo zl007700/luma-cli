@@ -228,6 +228,12 @@ func TestValidateWebsearchDateRange(t *testing.T) {
 	}
 }
 
+func TestContentURLReadRequiresURL(t *testing.T) {
+	if err := cmdContentURLRead(nil); err == nil {
+		t.Fatal("expected missing URL to be rejected")
+	}
+}
+
 func TestValidateTopicMineForReviewRejectsWrongOrSparseArtifact(t *testing.T) {
 	if err := validateTopicMineForReview(contentTopicMineResult{}, 15); err == nil {
 		t.Fatal("expected empty research-style artifact to be rejected")

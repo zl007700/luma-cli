@@ -180,6 +180,8 @@ func cmdContent(args []string) error {
 	switch args[0] {
 	case "search":
 		return cmdContentSearch(args[1:])
+	case "url-read":
+		return cmdContentURLRead(args[1:])
 	case "topic":
 		return cmdContentTopic(args[1:])
 	case "history":
@@ -414,6 +416,58 @@ func cmdContentSearchImage(raw []string) error {
 	return saveContentSearchResult(result, strings.TrimSpace(args.String("output", "content_image_signals.json")), "content.search.image", contentProfileID(args, ""))
 }
 
+func cmdURLRead(raw []string) error {
+	return cmdContentURLRead(raw)
+}
+
+func cmdContentURLRead(raw []string) error {
+	args := cmdutil.Parse(raw)
+	url := strings.TrimSpace(args.String("url", args.Pos(0)))
+	if url == "" {
+		return output.ErrValidation("--url is required")
+	}
+	maxChars, err := args.Int("max-chars", 6000)
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
+	outputPath := strings.TrimSpace(args.String("output", "content_url_read.json"))
+	cfg, err := requireConfig()
+	if err != nil {
+		return output.ErrAuth("%v", err)
+	}
+	result, err := cloud.URLRead(cloud.URLReadRequest{
+		URL:      url,
+		MaxChars: maxChars,
+	}, cfg.CardKey)
+	if err != nil {
+		return output.ErrNetwork("url-read failed: %v", err)
+	}
+	savedPath := ""
+	if outputPath != "" {
+		abs, err := absoluteOutputPath(outputPath)
+		if err != nil {
+			return output.ErrValidation("bad output path: %v", err)
+		}
+		if err := writeJSONFile(abs, result); err != nil {
+			return output.ErrSystem("write output failed: %v", err)
+		}
+		savedPath = abs
+		recordProjectArtifact("url_content", abs, "content.url-read")
+	}
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: map[string]any{"result": result, "output_path": savedPath}})
+		return nil
+	}
+	fmt.Println("URL content read completed.")
+	if chars, ok := result["content_chars"]; ok {
+		fmt.Printf("Content chars: %v\n", chars)
+	}
+	if savedPath != "" {
+		fmt.Printf("Saved to: %s\n", savedPath)
+	}
+	return nil
+}
+
 func contentSearchQueries(args cmdutil.Args) []string {
 	if args.Has("query") {
 		query := strings.TrimSpace(args.String("query", ""))
@@ -522,9 +576,9 @@ func cmdContentReviewer(raw []string) error {
 		timeoutSec = 240
 	}
 	saveHistory, err := args.Bool("save-history", false)
-		if err != nil {
-			return output.ErrValidation("%v", err)
-		}
+	if err != nil {
+		return output.ErrValidation("%v", err)
+	}
 
 	cfg, err := requireConfig()
 	if err != nil {
@@ -572,11 +626,11 @@ func cmdContentReviewer(raw []string) error {
 	if outputAbs != "" {
 		summaryAbs = strings.TrimSuffix(outputAbs, filepath.Ext(outputAbs)) + ".summary.json"
 		summaryData, _ := json.MarshalIndent(map[string]any{
-			"gate":       gate,
-			"decision":   decision,
-			"score":      totalScore,
-			"passed":     totalScore >= 7,
-			"dimensions": dimensions,
+			"gate":        gate,
+			"decision":    decision,
+			"score":       totalScore,
+			"passed":      totalScore >= 7,
+			"dimensions":  dimensions,
 			"review_text": reviewText,
 		}, "", "  ")
 		if err := os.WriteFile(summaryAbs, summaryData, 0644); err != nil {
@@ -598,11 +652,11 @@ func cmdContentReviewer(raw []string) error {
 	// ── Output ──────────────────────────────────────────────────
 	if runtimeOpts.JSON {
 		envelope := map[string]any{
-			"ability":      resp.Ability,
-			"request_id":   resp.RequestID,
-			"result":       result,
-			"usage":        resp.Usage,
-			"output_path":  outputAbs,
+			"ability":       resp.Ability,
+			"request_id":    resp.RequestID,
+			"result":        result,
+			"usage":         resp.Usage,
+			"output_path":   outputAbs,
 			"history_saved": historySaved,
 		}
 		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: envelope})
@@ -801,18 +855,18 @@ func loadOrInitContentHistory(profileID string, cfg *config) map[string]any {
 
 func emptyContentHistory(profileID string) map[string]any {
 	return map[string]any{
-		"schema_version":        "1",
-		"profile_id":           profileID,
-		"updated_at":           "",
-		"total_entries":        0,
-		"entries":              []any{},
-		"cumulative_avoid":     []any{},
+		"schema_version":         "1",
+		"profile_id":             profileID,
+		"updated_at":             "",
+		"total_entries":          0,
+		"entries":                []any{},
+		"cumulative_avoid":       []any{},
 		"cumulative_opportunity": []any{},
-		"used_topic_ids":       []any{},
-		"used_angles":          []any{},
-		"used_hooks":           []any{},
-		"researched_topics":    []any{},
-		"published_articles":   []any{},
+		"used_topic_ids":         []any{},
+		"used_angles":            []any{},
+		"used_hooks":             []any{},
+		"researched_topics":      []any{},
+		"published_articles":     []any{},
 	}
 }
 
@@ -2677,6 +2731,7 @@ func splitContentList(value string) []string {
 func printContentUsage() {
 	fmt.Println("luma-cli content <subcommand>")
 	fmt.Println("  search       Search social or web sources")
+	fmt.Println("  url-read     Read one URL into markdown/text through cloud Jina Reader")
 	fmt.Println("  topic        Mine topic raw signals")
 	fmt.Println("  reviewer     Call backend content review API (process/final)")
 	fmt.Println("  history      List cloud-stored content artifacts for one profile")

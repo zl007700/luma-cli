@@ -13,6 +13,28 @@ func TestCommandRegistryIncludesAgentTools(t *testing.T) {
 	}
 }
 
+func TestCommandRegistryIncludesURLRead(t *testing.T) {
+	registry := commandRegistry()
+	spec, ok := registry["url-read"]
+	if !ok {
+		t.Fatal("expected url-read command to be registered")
+	}
+	if spec.Handler == nil {
+		t.Fatal("expected url-read command handler")
+	}
+}
+
+func TestCommandRegistryIncludesAvatarPersona(t *testing.T) {
+	registry := commandRegistry()
+	spec, ok := registry["avatar-persona"]
+	if !ok {
+		t.Fatal("expected avatar-persona command to be registered")
+	}
+	if spec.Handler == nil {
+		t.Fatal("expected avatar-persona command handler")
+	}
+}
+
 func TestCommandNamesSorted(t *testing.T) {
 	names := commandNames()
 	if len(names) == 0 {

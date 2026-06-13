@@ -137,6 +137,11 @@ type ImageSearchRequest struct {
 	Count   int      `json:"count,omitempty"`
 }
 
+type URLReadRequest struct {
+	URL      string `json:"url"`
+	MaxChars int    `json:"max_chars,omitempty"`
+}
+
 func apiRequest(method string, path string, body any, cardKey string) (map[string]any, error) {
 	return apiRequestWithTimeout(method, path, body, cardKey, 60*time.Second)
 }
@@ -444,6 +449,10 @@ func SearchWebsearch(req WebSearchRequest, cardKey string) (map[string]any, erro
 
 func SearchImage(req ImageSearchRequest, cardKey string) (map[string]any, error) {
 	return apiRequest("POST", "/v1/search/image", req, cardKey)
+}
+
+func URLRead(req URLReadRequest, cardKey string) (map[string]any, error) {
+	return apiRequest("POST", "/v1/search/url-content", req, cardKey)
 }
 
 func DouyinDownloadCookie(cardKey string) (string, error) {

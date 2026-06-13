@@ -32,8 +32,10 @@ func init() {
 	addMaterial()
 	addAsset()
 	addAssets()
+	addAvatarPersona()
 	addContent()
 	addResearch()
+	addURLRead()
 	addProfile()
 	addProject()
 	addAuth()
@@ -212,17 +214,23 @@ func addPIP()      { rootCmd.AddCommand(nativeCmd("pip", "Picture-in-picture", c
 func addMaterial() { rootCmd.AddCommand(nativeCmd("material", "Material management", cmdMaterial)) }
 func addAsset()    { rootCmd.AddCommand(nativeCmd("asset", "Asset upload and listing", cmdAsset)) }
 func addAssets()   { rootCmd.AddCommand(nativeCmd("assets", "Asset Registry V2 commands", cmdAssets)) }
+func addAvatarPersona() {
+	rootCmd.AddCommand(nativeCmd("avatar-persona", "Avatar persona management", cmdAvatarPersona))
+}
 func addContent()  { rootCmd.AddCommand(nativeCmd("content", "Content planning", cmdContent)) }
 func addResearch() { rootCmd.AddCommand(nativeCmd("research", "Content research", cmdResearch)) }
-func addProfile()  { rootCmd.AddCommand(nativeCmd("profile", "Global content profiles", cmdProfile)) }
-func addProject()  { rootCmd.AddCommand(nativeCmd("project", "Project management", cmdProject)) }
-func addAuth()     { rootCmd.AddCommand(nativeCmd("auth", "Authentication", cmdAuth)) }
-func addVoice()    { rootCmd.AddCommand(nativeCmd("voice", "Voice management", cmdVoice)) }
-func addAgent()    { rootCmd.AddCommand(nativeCmd("agent", "Run agent abilities", cmdAgent)) }
-func addTools()    { rootCmd.AddCommand(nativeCmd("tools", "Tool discovery", cmdTools)) }
-func addSkills()   { rootCmd.AddCommand(nativeCmd("skills", "Skills management", cmdSkills)) }
-func addUpdate()   { rootCmd.AddCommand(nativeCmd("update", "Update CLI", cmdUpdate)) }
-func addSocial()   { rootCmd.AddCommand(nativeCmd("social", "Social media download", cmdSocial)) }
+func addURLRead() {
+	rootCmd.AddCommand(nativeCmd("url-read", "Read URL content through cloud Jina Reader", cmdURLRead))
+}
+func addProfile() { rootCmd.AddCommand(nativeCmd("profile", "Global content profiles", cmdProfile)) }
+func addProject() { rootCmd.AddCommand(nativeCmd("project", "Project management", cmdProject)) }
+func addAuth()    { rootCmd.AddCommand(nativeCmd("auth", "Authentication", cmdAuth)) }
+func addVoice()   { rootCmd.AddCommand(nativeCmd("voice", "Voice management", cmdVoice)) }
+func addAgent()   { rootCmd.AddCommand(nativeCmd("agent", "Run agent abilities", cmdAgent)) }
+func addTools()   { rootCmd.AddCommand(nativeCmd("tools", "Tool discovery", cmdTools)) }
+func addSkills()  { rootCmd.AddCommand(nativeCmd("skills", "Skills management", cmdSkills)) }
+func addUpdate()  { rootCmd.AddCommand(nativeCmd("update", "Update CLI", cmdUpdate)) }
+func addSocial()  { rootCmd.AddCommand(nativeCmd("social", "Social media download", cmdSocial)) }
 func addDownload() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use: "download <url> [output_file]", Short: "Download files",
