@@ -114,9 +114,9 @@ func cmdAssetsSearch(raw []string) error {
 		fmt.Println("No assets found.")
 		return nil
 	}
-	fmt.Printf("%-28s %-16s %-16s %-20s %s\n", "ID", "KIND", "GROUP", "NAME", "CAPTION")
+	fmt.Printf("%-28s %-16s %-16s %-20s %-32s %s\n", "ID", "KIND", "GROUP", "NAME", "PROBE", "CAPTION")
 	for _, item := range result.Items {
-		fmt.Printf("%-28s %-16s %-16s %-20s %s\n", item.AssetID, item.Kind, item.GroupName, registryAssetDisplayName(item), oneLineAssetCaption(item))
+		fmt.Printf("%-28s %-16s %-16s %-20s %-32s %s\n", item.AssetID, item.Kind, item.GroupName, registryAssetDisplayName(item), oneLineAssetProbe(item), oneLineAssetCaption(item))
 	}
 	return nil
 }
@@ -139,7 +139,7 @@ func cmdAssetsResolve(raw []string) error {
 		return nil
 	}
 	for _, item := range result.Items {
-		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", item.AssetID, item.Kind, item.ObjectKey, registryAssetDisplayName(item), oneLineAssetCaption(item))
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", item.AssetID, item.Kind, item.ObjectKey, registryAssetDisplayName(item), oneLineAssetProbe(item), oneLineAssetCaption(item))
 	}
 	return nil
 }
@@ -299,6 +299,61 @@ func oneLineAssetCaption(item cloud.AssetItem) string {
 	if len([]rune(text)) > 240 {
 		runes := []rune(text)
 		text = string(runes[:240]) + "..."
+	}
+	return text
+}
+
+func oneLineAssetProbe(item cloud.AssetItem) string {
+	probe := registryAssetMap(item.Metadata, "probe")
+	if len(probe) == 0 {
+		probe = registryAssetMap(item.Metadata, "technical")
+	}
+	parts := []string{}
+	resolution := strings.TrimSpace(fmt.Sprint(probe["resolution"]))
+	if resolution == "" || resolution == "<nil>" {
+		width := registryAssetNumber(probe["width"], item.Width)
+		height := registryAssetNumber(probe["height"], item.Height)
+		if width != "" && height != "" {
+			resolution = width + "x" + height
+		}
+	}
+	if resolution != "" && resolution != "<nil>" {
+		parts = append(parts, resolution)
+	}
+	if fps := registryAssetNumber(probe["fps"], nil); fps != "" && fps != "0" {
+		parts = append(parts, fps+"fps")
+	}
+	if duration := registryAssetNumber(probe["duration_sec"], item.Duration); duration != "" && duration != "0" {
+		parts = append(parts, duration+"s")
+	}
+	for _, key := range []string{"video_codec", "audio_codec", "format", "format_name"} {
+		value := strings.TrimSpace(fmt.Sprint(probe[key]))
+		if value != "" && value != "<nil>" {
+			parts = append(parts, value)
+			break
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func registryAssetMap(parent map[string]any, key string) map[string]any {
+	if parent == nil {
+		return nil
+	}
+	value, _ := parent[key].(map[string]any)
+	return value
+}
+
+func registryAssetNumber(value any, fallback any) string {
+	if value == nil {
+		value = fallback
+	}
+	text := strings.TrimSpace(fmt.Sprint(value))
+	if text == "" || text == "<nil>" {
+		return ""
+	}
+	if strings.HasSuffix(text, ".000") {
+		text = strings.TrimSuffix(text, ".000")
 	}
 	return text
 }
