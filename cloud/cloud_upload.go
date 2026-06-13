@@ -45,6 +45,8 @@ func guessMimeType(filePath string) string {
 		return "image/jpeg"
 	case ".png":
 		return "image/png"
+	case ".zip":
+		return "application/zip"
 	default:
 		return "application/octet-stream"
 	}
