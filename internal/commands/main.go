@@ -48,6 +48,7 @@ func printUsage() {
 	fmt.Println("  luma-cli asset upload <file>     Upload an asset")
 	fmt.Println("  luma-cli asset list [group]      List assets")
 	fmt.Println("  luma-cli asset understand <name> Understand uploaded asset")
+	fmt.Println("  luma-cli assets upload <file> --kind <kind>  Upload to Asset Registry")
 	fmt.Println("  luma-cli bgm mix <video> --bgm <file_or_resource_id>")
 	fmt.Println("  luma-cli cover frame <video>     Extract a cover frame")
 	fmt.Println("  luma-cli defaults show           Show product default settings")

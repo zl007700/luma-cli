@@ -17,6 +17,7 @@ func commandRegistry() map[string]commandSpec {
 		{Name: "auth", Description: "Authentication commands", Handler: cmdAuth},
 		{Name: "asr", Description: "Speech recognition", Handler: cmdASR},
 		{Name: "asset", Description: "Asset upload and listing", Handler: cmdAsset},
+		{Name: "assets", Description: "Asset Registry V2 commands", Handler: cmdAssets},
 		{Name: "bgm", Description: "Background music mixing", Handler: cmdBGM},
 		{Name: "content", Description: "Content planning and topic mining", Handler: cmdContent},
 		{Name: "cover", Description: "Cover frame and image rendering", Handler: cmdCover},

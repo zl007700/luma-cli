@@ -31,6 +31,7 @@ func init() {
 	// Resource commands
 	addMaterial()
 	addAsset()
+	addAssets()
 	addContent()
 	addResearch()
 	addProfile()
@@ -210,6 +211,7 @@ func addCover()    { rootCmd.AddCommand(nativeCmd("cover", "Cover frame and imag
 func addPIP()      { rootCmd.AddCommand(nativeCmd("pip", "Picture-in-picture", cmdPIP)) }
 func addMaterial() { rootCmd.AddCommand(nativeCmd("material", "Material management", cmdMaterial)) }
 func addAsset()    { rootCmd.AddCommand(nativeCmd("asset", "Asset upload and listing", cmdAsset)) }
+func addAssets()   { rootCmd.AddCommand(nativeCmd("assets", "Asset Registry V2 commands", cmdAssets)) }
 func addContent()  { rootCmd.AddCommand(nativeCmd("content", "Content planning", cmdContent)) }
 func addResearch() { rootCmd.AddCommand(nativeCmd("research", "Content research", cmdResearch)) }
 func addProfile()  { rootCmd.AddCommand(nativeCmd("profile", "Global content profiles", cmdProfile)) }
