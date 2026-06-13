@@ -10,27 +10,29 @@ import (
 )
 
 type AssetItem struct {
-	AssetID       string         `json:"asset_id"`
-	Kind          string         `json:"kind"`
-	Scope         string         `json:"scope"`
-	DisplayName   string         `json:"display_name"`
-	Filename      string         `json:"filename"`
-	GroupName     string         `json:"group_name"`
-	ContentType   string         `json:"content_type"`
-	Status        string         `json:"status"`
-	Score         *float64       `json:"score"`
-	MatchType     string         `json:"match_type"`
-	Duration      *float64       `json:"duration"`
-	Width         *int           `json:"width"`
-	Height        *int           `json:"height"`
-	SHA256        string         `json:"sha256"`
-	SizeBytes     *int64         `json:"size_bytes"`
-	Tags          []string       `json:"tags"`
-	Metadata      map[string]any `json:"metadata"`
-	Bucket        string         `json:"bucket,omitempty"`
-	ObjectKey     string         `json:"object_key,omitempty"`
-	DownloadURL   string         `json:"download_url,omitempty"`
-	ExpireSeconds int            `json:"expire_seconds,omitempty"`
+	AssetID              string         `json:"asset_id"`
+	Kind                 string         `json:"kind"`
+	Scope                string         `json:"scope"`
+	DisplayName          string         `json:"display_name"`
+	Filename             string         `json:"filename"`
+	GroupName            string         `json:"group_name"`
+	ContentType          string         `json:"content_type"`
+	Status               string         `json:"status"`
+	Score                *float64       `json:"score"`
+	MatchType            string         `json:"match_type"`
+	Duration             *float64       `json:"duration"`
+	Width                *int           `json:"width"`
+	Height               *int           `json:"height"`
+	SHA256               string         `json:"sha256"`
+	SizeBytes            *int64         `json:"size_bytes"`
+	Tags                 []string       `json:"tags"`
+	Metadata             map[string]any `json:"metadata"`
+	Bucket               string         `json:"bucket,omitempty"`
+	ObjectKey            string         `json:"object_key,omitempty"`
+	DownloadURL          string         `json:"download_url,omitempty"`
+	ExpireSeconds        int            `json:"expire_seconds,omitempty"`
+	PreviewURL           string         `json:"preview_url,omitempty"`
+	PreviewExpireSeconds int            `json:"preview_expire_seconds,omitempty"`
 }
 
 type AssetsSearchResponse struct {
