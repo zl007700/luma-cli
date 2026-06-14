@@ -27,6 +27,7 @@ type originalScriptRunState struct {
 	CloudAssets  map[string]any `json:"cloud_assets,omitempty"`
 	StageUsage   map[string]any `json:"stage_usage,omitempty"`
 	ReviewRounds int            `json:"review_rounds"`
+	Promotion    map[string]any `json:"promotion,omitempty"`
 }
 
 func cmdContentOriginalScript(raw []string) error {
@@ -175,11 +176,8 @@ func cmdContentOriginalScriptRun(raw []string) error {
 		writableTopic = resolvedOriginalScriptTopic(topicResult)
 	}
 	if writableTopic == nil {
-		state.Status = "needs_topic"
-		state.CurrentStep = "topic_refine"
-		state.Warnings = append(state.Warnings, "topic_refine did not produce a writable selected_topic; article_write was blocked")
-		saveOriginalScriptState(outputAbs, state)
-		return output.ErrSystem("topic refine did not produce a writable selected_topic")
+		writableTopic = fallbackOriginalScriptTopic(topicResult, topicHint)
+		state.Warnings = append(state.Warnings, "topic_refine did not produce selected_topic after retry; continued with fallback topic")
 	}
 
 	state.CurrentStep = "article_write"
@@ -253,13 +251,14 @@ func cmdContentOriginalScriptRun(raw []string) error {
 	if passed {
 		saveOriginalScriptCloudArtifacts(profileID, runID, writableTopic, finalArticle, finalReview, cfg.CardKey, &state)
 		updateOriginalScriptHistory(profileID, runID, topicHint, writableTopic, finalArticle, finalReview, cfg.CardKey, &state)
-		state.Status = "done"
+		state.Promotion = map[string]any{"status": "promoted", "reason": "final review passed promotion gate"}
 	} else {
 		saveOriginalScriptReviewArtifact(profileID, runID, "needs_revision_article", finalArticle, cfg.CardKey, &state)
 		saveOriginalScriptReviewArtifact(profileID, runID, "needs_revision_review", finalReview, cfg.CardKey, &state)
-		state.Status = "needs_revision"
-		state.Warnings = append(state.Warnings, fmt.Sprintf("final review did not pass promotion gate: %s; final was saved locally but not promoted to content_history", blockReason))
+		state.Promotion = map[string]any{"status": "blocked", "reason": blockReason}
+		state.Warnings = append(state.Warnings, fmt.Sprintf("final review did not pass promotion gate: %s; final was produced but not promoted to content_history", blockReason))
 	}
+	state.Status = "done"
 	state.CurrentStep = "done"
 	state.FinishedAt = time.Now()
 	saveOriginalScriptState(outputAbs, state)
@@ -684,6 +683,27 @@ func resolvedOriginalScriptTopic(result map[string]any) map[string]any {
 		return result
 	}
 	return nil
+}
+
+func fallbackOriginalScriptTopic(result map[string]any, topicHint string) map[string]any {
+	publicEntry := firstNonEmpty(strAny(result["public_entry"]), strAny(result["revision_direction"]), topicHint)
+	thesis := firstNonEmpty(strAny(result["thesis"]), strAny(result["revision_direction"]), strAny(result["reason"]), topicHint)
+	scene := firstNonEmpty(strAny(result["concrete_scene"]), strAny(result["scene"]), topicHint)
+	title := firstNonEmpty(strAny(result["title"]), topicHint, firstRunes(publicEntry, 40))
+	return map[string]any{
+		"title":           title,
+		"public_entry":    publicEntry,
+		"concrete_scene":  scene,
+		"thesis":          thesis,
+		"fallback_topic":  true,
+		"fallback_reason": "topic_refine did not return selected_topic",
+		"source_decision": result["decision"],
+		"source_reason":   result["reason"],
+		"research_gap":    result["research_gap"],
+		"audience_reward": firstNonEmpty(strAny(result["audience_reward"]), "给观众一个可落地的新视角或业务动作"),
+		"evidence_to_use": firstNonEmpty(strAny(result["evidence_to_use"]), "Use only provided research and expanded details; avoid inventing unsupported facts."),
+		"duplicate_risk":  result["duplicate_risk"],
+	}
 }
 
 func originalScriptDefaultExpansionAction(source map[string]any) string {

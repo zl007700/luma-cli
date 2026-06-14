@@ -126,6 +126,20 @@ func TestResolvedOriginalScriptTopicUsesSelectedTopic(t *testing.T) {
 	}
 }
 
+func TestFallbackOriginalScriptTopicProducesWritableTopic(t *testing.T) {
+	got := fallbackOriginalScriptTopic(map[string]any{
+		"decision":           "rerun_research",
+		"revision_direction": "换一个角度讲老板把AI当玩具，而不是系统",
+		"reason":             "原选题重复",
+	}, "AI Agent自动跟进客户")
+	if got["fallback_topic"] != true {
+		t.Fatalf("fallback flag missing: %#v", got)
+	}
+	if strAny(got["thesis"]) == "" || strAny(got["public_entry"]) == "" {
+		t.Fatalf("topic is not writable: %#v", got)
+	}
+}
+
 func TestOriginalScriptFinalReviewGateBlocksResearchRoute(t *testing.T) {
 	ok, reason := originalScriptFinalReviewPassed(map[string]any{
 		"decision":    "pass",
