@@ -63,6 +63,25 @@ If the generated name is uncertain, ask:
 我先把它叫「老板在家里」，可以吗？
 ```
 
+## Asset Registry V2
+
+Use Asset Registry V2 for reusable cloud assets that an Agent chooses semantically: templates, fonts, BGM, SFX, avatars, voices, persona images, material images, and material videos.
+
+Prefer system assets when selecting platform defaults:
+
+```bash
+luma-cli assets groups --kind template --scope system
+luma-cli assets search --kind template --group hook_portrait --scope system --limit 8
+luma-cli assets search --kind bgm --scope system --limit 8
+luma-cli assets search --kind sfx --scope system --limit 8
+luma-cli assets search --kind font --scope system --limit 8
+luma-cli assets resolve <asset_id>
+```
+
+Use the returned `asset_id` as the stable reference. Read `GROUP`, `NAME`, `PROBE`, and `CAPTION` before choosing. For templates, inspect `metadata.manifest.format_support`, `metadata.manifest.agent_should_fill`, `metadata.semantic.use_when`, and `metadata.semantic.avoid_when`.
+
+Do not sign or cache Remotion template assets as a normal client. Template source is private and only render workers can request it.
+
 ## Common Groups
 
 - `voice`: voice samples or generated voice assets
@@ -74,20 +93,21 @@ If the generated name is uncertain, ask:
 
 Default assets:
 
-- Users should have common/default assets for voices and digital-human roles.
-- `luma-cli asset list roles` is the correct way to inspect available digital-human avatars and should include default/common roles.
-- Do not assume default roles are missing because `asset list avatar` fails or returns nothing. Use `asset list roles`.
-- Do not create avatar assets from generated images. A digital-human role must be a video asset in `roles`.
+- Registry V2 system assets use `scope=system`; user uploads use `scope=user`.
+- Template groups include shape and purpose, for example `hook_portrait`, `hook_landscape`, `metrics_landscape`, `subtitles_portrait`.
+- For the legacy digital-human lip-sync path, `luma-cli asset list roles` is still the compatibility command for available avatar videos.
+- Do not create digital-human avatar assets from generated images. A digital-human role must be a video asset in `roles`.
 
 ## Commands
 
 ```bash
-luma-cli asset list voice
-luma-cli asset list roles
-luma-cli asset upload avatar.mp4 --group roles --name 老板在家里
-luma-cli asset upload voice.wav --group voice --name 女声装修讲解
-luma-cli asset delete upload8393 --group voice
+luma-cli assets groups --kind template --scope system
+luma-cli assets search --kind template --group hook_portrait --scope system --limit 8
+luma-cli assets search --kind bgm --scope system --limit 8
+luma-cli assets upload image.png --kind material_image --group references --name 门店外景
+luma-cli assets delete <asset_id>
 luma-cli voice clone ./sample.wav --name my_voice
+luma-cli asset list roles
 luma-cli material group list --output material_groups.json
 luma-cli material group describe vlm_ai --output materials.json
 luma-cli material search --materials materials.json --query "AI assistant" --limit 5 --output material_matches.json
@@ -95,15 +115,16 @@ luma-cli material search --materials materials.json --query "AI assistant" --lim
 
 ## Agent Rules
 
-- Prefer friendly names from `asset list` when available.
-- Prefer stable asset names or IDs returned by CLI commands.
-- For digital-human avatars, always inspect `asset list roles`; do not use `asset list avatar`.
+- Prefer Asset Registry V2 (`luma-cli assets ...`) for cloud assets that will be chosen by an Agent.
+- Prefer stable `asset_id` values returned by `assets search` or `assets resolve`.
+- Use `--scope system` when selecting platform default assets so user uploads and smoke-test leftovers do not affect the choice.
+- For digital-human avatars in the legacy lip-sync path, inspect `asset list roles`; do not use `asset list avatar`.
 - For uploaded videos, confirm intent before choosing voice clone, avatar, material, ASR, or video-processing workflows.
 - Do not treat uploaded videos as digital-human avatar/source-role assets unless the user explicitly asks for the visual person to appear.
 - Do not upload a user-provided video with only a hash-like name. If no friendly name is available, generate one from understanding or ask the user to confirm a proposed name.
 - When uploading reusable assets, pass `--name <display_name>` and report that display name first.
 - Use a short display name for reusable assets; do not ask the user to remember hash-like object keys.
-- Ask for confirmation before deleting user assets, then use `luma-cli asset delete <name_or_stem> --group <group>`.
+- Ask for confirmation before deleting user assets, then use `luma-cli assets delete <asset_id>` for Registry V2 assets.
 - True in-place rename is not available yet. To change a name, re-upload or recreate the asset with `--name <display_name>` and delete the old one after user confirmation.
 - Upload local files before referencing them in cloud-only workflows.
 - Keep asset upload separate from creative workflow planning.

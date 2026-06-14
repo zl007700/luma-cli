@@ -6,6 +6,52 @@ import "github.com/luma-cli/lumer-cli/shortcuts/common"
 func Shortcuts() []common.Shortcut {
 	return []common.Shortcut{
 		{
+			ID:          "assets.search",
+			Service:     "assets",
+			Command:     "search",
+			Description: "Search Asset Registry V2 assets by kind, group, and scope. Use --scope system when choosing platform defaults for an Agent so user uploads do not affect selection. Read NAME, PROBE, and CAPTION before choosing an asset_id.",
+			Risk:        "read",
+			Flags: []common.Flag{
+				{Name: "kind", Description: "Asset kind, for example template, font, bgm, sfx, avatar, voice, persona_image, material_image, or material_video."},
+				{Name: "group", Description: "Optional group_name, for example hook_portrait or common."},
+				{Name: "scope", Description: "Optional scope filter: system, user, or job. Use system for platform defaults."},
+				{Name: "limit", Description: "Maximum number of assets to return.", Default: "30"},
+			},
+			Outputs:  []string{"asset_id", "kind", "scope", "group_name", "display_name", "probe", "semantic.caption", "metadata"},
+			Examples: []string{"luma-cli assets search --kind template --group hook_portrait --scope system --limit 8", "luma-cli assets search --kind bgm --scope system --limit 8"},
+			Skills:   []string{"luma-assets"},
+		},
+		{
+			ID:          "assets.groups",
+			Service:     "assets",
+			Command:     "groups",
+			Description: "List Asset Registry V2 group names visible to the current user. Use --scope system for platform default groups.",
+			Risk:        "read",
+			Flags: []common.Flag{
+				{Name: "kind", Description: "Optional asset kind filter, for example template or bgm."},
+				{Name: "scope", Description: "Optional scope filter: system, user, or job. Use system for platform defaults."},
+			},
+			Outputs:  []string{"group_name", "display_name"},
+			Examples: []string{"luma-cli assets groups --kind template --scope system"},
+			Skills:   []string{"luma-assets"},
+		},
+		{
+			ID:          "assets.upload",
+			Service:     "assets",
+			Command:     "upload",
+			Description: "Upload a user asset into Asset Registry V2 and enqueue backend intake/preprocessing. Provide --kind and a friendly --name.",
+			Risk:        "write",
+			Flags: []common.Flag{
+				{Name: "file", Description: "Local file path.", Required: true},
+				{Name: "kind", Description: "Asset kind, for example material_image, material_video, voice, bgm, or sfx.", Required: true},
+				{Name: "group", Description: "Reusable group_name for this asset."},
+				{Name: "name", Description: "Short friendly Chinese display name."},
+			},
+			Outputs:  []string{"asset_id", "status", "job_id", "group_name"},
+			Examples: []string{"luma-cli assets upload image.png --kind material_image --group references --name 门店外景"},
+			Skills:   []string{"luma-assets"},
+		},
+		{
 			ID:          "asset.upload",
 			Service:     "asset",
 			Command:     "upload",
