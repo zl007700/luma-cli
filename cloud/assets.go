@@ -67,10 +67,13 @@ func AssetsSearch(kind, groupName, scope string, limit int, cardKey string) (*As
 	if limit <= 0 {
 		limit = 30
 	}
+	cleanKind := strings.TrimSpace(kind)
+	cleanGroup := strings.TrimSpace(groupName)
+	cleanScope := strings.TrimSpace(scope)
 	result, err := apiRequest("POST", "/v1/assets/search", map[string]any{
-		"kind":       kind,
-		"group_name": groupName,
-		"scope":      scope,
+		"kind":       cleanKind,
+		"group_name": cleanGroup,
+		"scope":      cleanScope,
 		"limit":      limit,
 	}, cardKey)
 	if err != nil {
@@ -80,17 +83,37 @@ func AssetsSearch(kind, groupName, scope string, limit int, cardKey string) (*As
 	if err != nil {
 		return nil, fmt.Errorf("parse assets search response failed: %w", err)
 	}
+	item.Items = filterAssetItems(item.Items, cleanKind, cleanGroup, cleanScope)
+	if len(item.Items) > limit {
+		item.Items = item.Items[:limit]
+	}
 	return &item, nil
 }
 
 func AssetsGroups(kind, scope, cardKey string) (*AssetsGroupsResponse, error) {
+	cleanKind := strings.TrimSpace(kind)
+	cleanScope := strings.TrimSpace(scope)
+	if cleanScope != "" {
+		search, err := AssetsSearch(cleanKind, "", cleanScope, 80, cardKey)
+		if err != nil {
+			return nil, err
+		}
+		seen := map[string]bool{}
+		items := []AssetGroupItem{}
+		for _, asset := range search.Items {
+			group := strings.TrimSpace(asset.GroupName)
+			if group == "" || seen[group] {
+				continue
+			}
+			seen[group] = true
+			items = append(items, AssetGroupItem{GroupName: group, DisplayName: group})
+		}
+		return &AssetsGroupsResponse{Items: items}, nil
+	}
 	path := "/v1/assets/groups"
 	params := []string{}
-	if kind != "" {
-		params = append(params, "kind="+url.QueryEscape(kind))
-	}
-	if scope != "" {
-		params = append(params, "scope="+url.QueryEscape(scope))
+	if cleanKind != "" {
+		params = append(params, "kind="+url.QueryEscape(cleanKind))
 	}
 	if len(params) > 0 {
 		path += "?" + strings.Join(params, "&")
@@ -104,6 +127,26 @@ func AssetsGroups(kind, scope, cardKey string) (*AssetsGroupsResponse, error) {
 		return nil, fmt.Errorf("parse assets groups response failed: %w", err)
 	}
 	return &item, nil
+}
+
+func filterAssetItems(items []AssetItem, kind, groupName, scope string) []AssetItem {
+	if kind == "" && groupName == "" && scope == "" {
+		return items
+	}
+	filtered := make([]AssetItem, 0, len(items))
+	for _, item := range items {
+		if kind != "" && item.Kind != kind {
+			continue
+		}
+		if groupName != "" && item.GroupName != groupName {
+			continue
+		}
+		if scope != "" && item.Scope != scope {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
 }
 
 func AssetsResolve(assetIDs []string, cardKey string) (*AssetsResolveResponse, error) {
