@@ -182,6 +182,8 @@ func cmdContent(args []string) error {
 		return cmdContentSearch(args[1:])
 	case "url-read":
 		return cmdContentURLRead(args[1:])
+	case "original-script":
+		return cmdContentOriginalScript(args[1:])
 	case "topic":
 		return cmdContentTopic(args[1:])
 	case "history":
@@ -2732,6 +2734,8 @@ func printContentUsage() {
 	fmt.Println("luma-cli content <subcommand>")
 	fmt.Println("  search       Search social or web sources")
 	fmt.Println("  url-read     Read one URL into markdown/text through cloud Jina Reader")
+	fmt.Println("  original-script")
+	fmt.Println("               Generate an original video script from profile, memory, and backend content stages")
 	fmt.Println("  topic        Mine topic raw signals")
 	fmt.Println("  reviewer     Call backend content review API (process/final)")
 	fmt.Println("  history      List cloud-stored content artifacts for one profile")

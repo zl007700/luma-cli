@@ -96,7 +96,17 @@ func ContentMemorySave(profileID, artifactType string, value any, cardKey string
 		"schema_version": 1,
 		"created_by":     "luma-cli",
 	}
-	return uploadContentValue(ContentMemoryKind, profileID, "", artifactType, true, value, cardKey, metadata)
+	item, err := uploadContentValue(ContentMemoryKind, profileID, "", artifactType, true, value, cardKey, metadata)
+	if err != nil {
+		return nil, err
+	}
+	if err := WaitContentMemoryCurrentActive(profileID, artifactType, item.AssetID, cardKey, 30*time.Second); err != nil {
+		return item, err
+	}
+	if err := PruneContentMemoryCurrent(profileID, artifactType, item.AssetID, cardKey); err != nil {
+		return item, err
+	}
+	return item, nil
 }
 
 func ContentArtifactSave(profileID, runID, artifactType string, value any, cardKey string) (*AssetItem, error) {
@@ -138,6 +148,74 @@ func contentLatestAsset(kind, profileID, runID, artifactType string, isCurrent b
 		return nil, fmt.Errorf("content asset not found: kind=%s profile_id=%s run_id=%s artifact_type=%s", kind, profileID, runID, artifactType)
 	}
 	return &result.Items[0], nil
+}
+
+func WaitContentMemoryCurrentActive(profileID, artifactType, assetID, cardKey string, timeout time.Duration) error {
+	assetID = strings.TrimSpace(assetID)
+	if assetID == "" {
+		return fmt.Errorf("asset_id is required")
+	}
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	deadline := time.Now().Add(timeout)
+	for {
+		items, err := contentCurrentMemoryAssets(profileID, artifactType, cardKey)
+		if err != nil {
+			return err
+		}
+		for _, item := range items {
+			if item.AssetID == assetID {
+				return nil
+			}
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("content memory asset did not become active before timeout: %s", assetID)
+		}
+		time.Sleep(750 * time.Millisecond)
+	}
+}
+
+func PruneContentMemoryCurrent(profileID, artifactType, keepAssetID, cardKey string) error {
+	keepAssetID = strings.TrimSpace(keepAssetID)
+	if keepAssetID == "" {
+		return fmt.Errorf("keep asset_id is required")
+	}
+	items, err := contentCurrentMemoryAssets(profileID, artifactType, cardKey)
+	if err != nil {
+		return err
+	}
+	var errs []string
+	for _, item := range items {
+		if item.AssetID == "" || item.AssetID == keepAssetID {
+			continue
+		}
+		if _, err := AssetsDelete(item.AssetID, cardKey); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", item.AssetID, err))
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("prune content memory current failed: %s", strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+func contentCurrentMemoryAssets(profileID, artifactType, cardKey string) ([]AssetItem, error) {
+	result, err := AssetsSearchWithRequest(AssetsSearchRequest{
+		Kind:      ContentMemoryKind,
+		GroupName: ContentGroupName(profileID),
+		Scope:     "user",
+		Limit:     80,
+		Metadata: map[string]any{
+			"profile_id":    strings.TrimSpace(profileID),
+			"artifact_type": strings.TrimSpace(artifactType),
+			"is_current":    true,
+		},
+	}, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	return result.Items, nil
 }
 
 func uploadContentValue(kind, profileID, runID, artifactType string, current bool, value any, cardKey string, metadata map[string]any) (*AssetItem, error) {
