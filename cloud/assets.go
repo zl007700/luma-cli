@@ -11,6 +11,14 @@ import (
 	"time"
 )
 
+type AssetsSearchRequest struct {
+	Kind      string         `json:"kind,omitempty"`
+	GroupName string         `json:"group_name,omitempty"`
+	Scope     string         `json:"scope,omitempty"`
+	Limit     int            `json:"limit,omitempty"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
+}
+
 type AssetItem struct {
 	AssetID              string         `json:"asset_id"`
 	Kind                 string         `json:"kind"`
@@ -64,18 +72,32 @@ type AssetUploadResult struct {
 }
 
 func AssetsSearch(kind, groupName, scope string, limit int, cardKey string) (*AssetsSearchResponse, error) {
+	return AssetsSearchWithRequest(AssetsSearchRequest{
+		Kind:      kind,
+		GroupName: groupName,
+		Scope:     scope,
+		Limit:     limit,
+	}, cardKey)
+}
+
+func AssetsSearchWithRequest(req AssetsSearchRequest, cardKey string) (*AssetsSearchResponse, error) {
+	limit := req.Limit
 	if limit <= 0 {
 		limit = 30
 	}
-	cleanKind := strings.TrimSpace(kind)
-	cleanGroup := strings.TrimSpace(groupName)
-	cleanScope := strings.TrimSpace(scope)
-	result, err := apiRequest("POST", "/v1/assets/search", map[string]any{
+	cleanKind := strings.TrimSpace(req.Kind)
+	cleanGroup := strings.TrimSpace(req.GroupName)
+	cleanScope := strings.TrimSpace(req.Scope)
+	body := map[string]any{
 		"kind":       cleanKind,
 		"group_name": cleanGroup,
 		"scope":      cleanScope,
 		"limit":      limit,
-	}, cardKey)
+	}
+	if len(req.Metadata) > 0 {
+		body["metadata"] = req.Metadata
+	}
+	result, err := apiRequest("POST", "/v1/assets/search", body, cardKey)
 	if err != nil {
 		return nil, err
 	}
@@ -173,11 +195,36 @@ func AssetsSign(assetID, cardKey string) (*AssetItem, error) {
 	return &item, nil
 }
 
+func AssetReadText(assetID, cardKey string) ([]byte, error) {
+	item, err := AssetsSign(assetID, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	downloadURL := strings.TrimSpace(item.DownloadURL)
+	if downloadURL == "" {
+		return nil, fmt.Errorf("asset sign response missing download_url")
+	}
+	resp, err := http.Get(downloadURL)
+	if err != nil {
+		return nil, fmt.Errorf("asset download failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("asset download returned HTTP %d: %s", resp.StatusCode, string(body))
+	}
+	return io.ReadAll(resp.Body)
+}
+
 func AssetsDelete(assetID, cardKey string) (map[string]any, error) {
 	return apiRequest("DELETE", "/v1/assets/"+assetID, nil, cardKey)
 }
 
 func AssetsUploadFile(filePath, kind, groupName, displayName, cardKey string, metadata map[string]any) (*AssetItem, error) {
+	return AssetsUploadFileWithName(filePath, kind, groupName, displayName, filepath.Base(filePath), cardKey, metadata)
+}
+
+func AssetsUploadFileWithName(filePath, kind, groupName, displayName, filename, cardKey string, metadata map[string]any) (*AssetItem, error) {
 	stat, err := os.Stat(filePath)
 	if err != nil {
 		return nil, err
@@ -185,8 +232,18 @@ func AssetsUploadFile(filePath, kind, groupName, displayName, cardKey string, me
 	if stat.IsDir() {
 		return nil, fmt.Errorf("asset upload path is a directory: %s", filePath)
 	}
-	filename := filepath.Base(filePath)
+	filename = strings.TrimSpace(filename)
+	if filename == "" {
+		filename = filepath.Base(filePath)
+	}
 	contentType := guessMimeType(filePath)
+	if ext := strings.ToLower(filepath.Ext(filename)); ext == ".json" {
+		contentType = "application/json"
+	} else if ext == ".md" || ext == ".markdown" {
+		contentType = "text/markdown"
+	} else if ext == ".txt" {
+		contentType = "text/plain"
+	}
 	signResult, err := apiRequest("POST", "/v1/assets/upload-sign", map[string]any{
 		"kind":         kind,
 		"filename":     filename,
