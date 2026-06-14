@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -44,6 +46,15 @@ type AssetsResolveResponse struct {
 	Items []AssetItem `json:"items"`
 }
 
+type AssetGroupItem struct {
+	GroupName   string `json:"group_name"`
+	DisplayName string `json:"display_name"`
+}
+
+type AssetsGroupsResponse struct {
+	Items []AssetGroupItem `json:"items"`
+}
+
 type AssetUploadResult struct {
 	AssetID       string `json:"asset_id"`
 	Bucket        string `json:"bucket"`
@@ -52,13 +63,14 @@ type AssetUploadResult struct {
 	ExpireSeconds int    `json:"expire_seconds"`
 }
 
-func AssetsSearch(kind, groupName string, limit int, cardKey string) (*AssetsSearchResponse, error) {
+func AssetsSearch(kind, groupName, scope string, limit int, cardKey string) (*AssetsSearchResponse, error) {
 	if limit <= 0 {
 		limit = 30
 	}
 	result, err := apiRequest("POST", "/v1/assets/search", map[string]any{
 		"kind":       kind,
 		"group_name": groupName,
+		"scope":      scope,
 		"limit":      limit,
 	}, cardKey)
 	if err != nil {
@@ -67,6 +79,29 @@ func AssetsSearch(kind, groupName string, limit int, cardKey string) (*AssetsSea
 	item, err := mapToStruct[AssetsSearchResponse](result)
 	if err != nil {
 		return nil, fmt.Errorf("parse assets search response failed: %w", err)
+	}
+	return &item, nil
+}
+
+func AssetsGroups(kind, scope, cardKey string) (*AssetsGroupsResponse, error) {
+	path := "/v1/assets/groups"
+	params := []string{}
+	if kind != "" {
+		params = append(params, "kind="+url.QueryEscape(kind))
+	}
+	if scope != "" {
+		params = append(params, "scope="+url.QueryEscape(scope))
+	}
+	if len(params) > 0 {
+		path += "?" + strings.Join(params, "&")
+	}
+	result, err := apiRequest("GET", path, nil, cardKey)
+	if err != nil {
+		return nil, err
+	}
+	item, err := mapToStruct[AssetsGroupsResponse](result)
+	if err != nil {
+		return nil, fmt.Errorf("parse assets groups response failed: %w", err)
 	}
 	return &item, nil
 }

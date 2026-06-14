@@ -33,6 +33,8 @@ func cmdAssets(args []string) error {
 		return cmdAssetsUpload(args[1:])
 	case "search", "list":
 		return cmdAssetsSearch(args[1:])
+	case "groups", "group-list":
+		return cmdAssetsGroups(args[1:])
 	case "resolve":
 		return cmdAssetsResolve(args[1:])
 	case "sign":
@@ -102,7 +104,8 @@ func cmdAssetsSearch(raw []string) error {
 	}
 	kind := strings.TrimSpace(parsed.String("kind", parsed.Pos(0)))
 	group := normalizeAssetGroupName(parsed.String("group", parsed.String("group-name", "")))
-	result, err := cloud.AssetsSearch(kind, group, limit, cfg.CardKey)
+	scope := strings.TrimSpace(parsed.String("scope", ""))
+	result, err := cloud.AssetsSearch(kind, group, scope, limit, cfg.CardKey)
 	if err != nil {
 		return output.ErrNetwork("assets search failed: %v", err)
 	}
@@ -117,6 +120,33 @@ func cmdAssetsSearch(raw []string) error {
 	fmt.Printf("%-28s %-16s %-16s %-20s %-32s %s\n", "ID", "KIND", "GROUP", "NAME", "PROBE", "CAPTION")
 	for _, item := range result.Items {
 		fmt.Printf("%-28s %-16s %-16s %-20s %-32s %s\n", item.AssetID, item.Kind, item.GroupName, registryAssetDisplayName(item), oneLineAssetProbe(item), oneLineAssetCaption(item))
+	}
+	return nil
+}
+
+func cmdAssetsGroups(raw []string) error {
+	parsed := cmdutil.Parse(raw)
+	cfg, err := requireConfig()
+	if err != nil {
+		return err
+	}
+	kind := strings.TrimSpace(parsed.String("kind", parsed.Pos(0)))
+	scope := strings.TrimSpace(parsed.String("scope", ""))
+	result, err := cloud.AssetsGroups(kind, scope, cfg.CardKey)
+	if err != nil {
+		return output.ErrNetwork("assets groups failed: %v", err)
+	}
+	if runtimeOpts.JSON {
+		_ = output.WriteJSON(os.Stdout, output.Envelope{OK: true, Data: result})
+		return nil
+	}
+	if len(result.Items) == 0 {
+		fmt.Println("No asset groups found.")
+		return nil
+	}
+	fmt.Printf("%-24s %s\n", "GROUP", "DISPLAY")
+	for _, item := range result.Items {
+		fmt.Printf("%-24s %s\n", item.GroupName, item.DisplayName)
 	}
 	return nil
 }
@@ -363,7 +393,8 @@ func printAssetsUsage() {
 	fmt.Println("")
 	fmt.Println("Subcommands:")
 	fmt.Println("  upload <file> --kind <kind> [--group <name>] [--name <display_name>]")
-	fmt.Println("  search [--kind <kind>] [--group <name>] [--limit <n>]")
+	fmt.Println("  search [--kind <kind>] [--group <name>] [--scope system|user|job] [--limit <n>]")
+	fmt.Println("  groups [--kind <kind>] [--scope system|user|job]")
 	fmt.Println("  resolve <asset_id> [asset_id...]")
 	fmt.Println("  sign <asset_id>")
 	fmt.Println("  cache <asset_id> [--output <path>]")
