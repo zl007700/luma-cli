@@ -13,7 +13,7 @@ Read `../luma-shared/SKILL.md` first. This is a video-format execution skill:
 align.json + script -> PPT HTML/config -> ppt.mp4 -> optional digital-human PiP -> final.mp4
 ```
 
-It does not choose topics, write scripts, or imitate viral references. Use `luma-content-ip-writing` for
+It does not choose topics, write scripts, or imitate viral references. Use `luma-original-script` for
 original script creation, `luma-digital-human` for making the avatar/lip-sync video, and
 `luma-workflow-viral-remix` for reference-based end-to-end production.
 

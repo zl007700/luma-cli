@@ -2,7 +2,7 @@
 name: luma-profile-onboarding
 description: Guide a low-friction Luma profile onboarding flow when the user has no profile or wants to create/improve one; infer a usable creator profile from simple business facts, confirm with lightweight choices, and save it with luma-cli profile commands.
 metadata:
-  relatedSkills: ["luma-shared", "luma-content-ip-writing", "luma-workflow-original-ip-talk"]
+  relatedSkills: ["luma-shared", "luma-original-script", "luma-workflow-original-ip-talk"]
 ---
 
 # Luma Profile Onboarding
@@ -154,4 +154,4 @@ After saving, report:
 - profile id
 - current profile status
 - one-line positioning summary
-- suggested next skill: `luma-content-ip-writing` for a script, or `luma-workflow-original-ip-talk` for a full PPT + digital-human video
+- suggested next skill: `luma-original-script` for a script, or `luma-workflow-original-ip-talk` for a full PPT + digital-human video

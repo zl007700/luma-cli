@@ -55,6 +55,9 @@ var DeprecatedSkillNames = []string{
 	"luma-core-longform-plan",
 	"luma-core-script-writing",
 	"luma-content-script",
+	"luma-content-ip-writing",
+	"luma-find-material",
+	"luma-video-workflow",
 }
 
 func SourceFromEnv() string {

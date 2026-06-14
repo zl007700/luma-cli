@@ -1,57 +1,68 @@
 ---
 name: luma-workflow-original-ip-talk
-description: "Orchestrate a complete original Luma IP spoken video as pure glue: call the profile-to-script workflow, generate TTS and a digital human, align narration, render a production PPT, overlay the avatar, add subtitles, and create a cover."
+description: "Orchestrate a complete original Luma spoken video from a profile by running the original-script pipeline, then generating TTS, digital human video, PPT-style visuals, subtitles, and a cover."
+metadata:
+  category: "workflow"
+  entrypoint: true
+  requires:
+    bins: ["luma-cli"]
+  relatedSkills: ["luma-shared", "luma-original-script", "luma-digital-human", "luma-ppt-video", "luma-subtitle"]
 ---
 
 # Luma Original IP Talk Workflow
 
-This skill is glue only. Delegate content reasoning to `luma-content-ip-writing`, digital-human work to
-`luma-digital-human`, PPT design/rendering to `luma-ppt-video`, and subtitles to `luma-subtitle`.
+This skill is glue only. Content reasoning belongs to `luma-original-script`; media execution belongs
+to `luma-digital-human`, `luma-ppt-video`, and `luma-subtitle`.
 
 ## Inputs
 
-- `<profile_id>`
-- target duration
+- `profile_id`
+- optional `topic_hint`
 - selected voice and role, or permission to choose existing assets
 
 ## Flow
 
-### Step 1: Create Reviewed Script And Materials
+### 1. Produce The Script
 
-Call `luma-content-ip-writing`.
+Run the original script pipeline:
 
-Required outputs:
+```bash
+luma-cli --json content original-script run \
+  --profile <profile_id> \
+  --topic-hint "<optional direction>" \
+  --output runs/<run_id>
+```
 
-- accepted `07_script_<topic_id>.json`
-- accepted `09_script_review_<topic_id>.json`
-- `05_material_assets_<topic_id>.json`
-- `materials/<topic_id>/final_assets/deliverables_manifest.json`
-- selected topic ID and title
+Required files:
 
-Stop if any output is missing.
+- `runs/<run_id>/final.md`
+- `runs/<run_id>/final_review.json`
+- `runs/<run_id>/run_state.json`
 
-### Step 2: Create Transcript
+Continue when `run_state.status` is `done`. If `promotion.status` is `blocked`, tell the user the
+script was produced but not auto-promoted, then ask before spending media credits unless the user
+already requested a best-effort video.
 
-Write the exact `full_script` from the accepted script to:
+### 2. Create Transcript
+
+Copy the exact contents of `final.md` to:
 
 - `transcript.txt`
 
-Do not paraphrase or edit after review.
+Do not paraphrase after review unless the user explicitly asks for manual editing.
 
-### Step 3: Select Voice And Role
+### 3. Select Voice And Role
 
-Run:
+Inspect available assets:
 
 ```bash
 luma-cli asset list voice
 luma-cli asset list roles
 ```
 
-Choose returned asset names. Do not invent or generate a role.
+Use returned asset names. Do not invent or generate a role.
 
-### Step 4: Generate TTS
-
-Run:
+### 4. Generate TTS
 
 ```bash
 luma-cli --json tts \
@@ -62,9 +73,7 @@ luma-cli --json tts \
 
 Save the returned `audio_object_key`.
 
-### Step 5: Generate Digital Human
-
-Call `luma-digital-human`, or run:
+### 5. Generate Digital Human
 
 ```bash
 luma-cli lipsync \
@@ -77,9 +86,7 @@ Required output:
 
 - `10_digital_human.mp4`
 
-### Step 6: Align Narration
-
-Run:
+### 6. Align Narration
 
 ```bash
 luma-cli asr 09_tts.wav \
@@ -89,33 +96,24 @@ luma-cli asr 09_tts.wav \
 
 Required output:
 
-- `11_align.json` with timed sentences or segments
+- `11_align.json`
 
-### Step 7: Build Production PPT
+### 7. Build PPT-Style Visuals
 
-Call `luma-ppt-video`.
-
-Inputs:
+Call `luma-ppt-video` with:
 
 - `11_align.json`
-- accepted script JSON
-- material assets JSON
-- deliverables manifest
-- `09_tts.wav`
-- `10_digital_human.mp4`
+- `transcript.txt`
+- optional `10_digital_human.mp4`
 
-Required outputs:
+Expected outputs:
 
 - `12_ppt/index.html`
 - `12_ppt/config.json`
 - `13_ppt.mp4`
-- `14_ppt_with_avatar.mp4`
+- optional `14_ppt_with_avatar.mp4`
 
-Do not use the demo PPT generator for final output.
-
-### Step 8: Add Subtitles
-
-Call `luma-subtitle`, or run:
+### 8. Add Subtitles
 
 ```bash
 luma-cli subtitle \
@@ -124,11 +122,9 @@ luma-cli subtitle \
   --output 15_subtitle.mp4
 ```
 
-If no role was used, subtitle `13_ppt.mp4`.
+If no avatar overlay was produced, subtitle `13_ppt.mp4`.
 
-### Step 9: Create Cover
-
-Run:
+### 9. Create Cover
 
 ```bash
 luma-cli cover frame \
@@ -136,11 +132,12 @@ luma-cli cover frame \
   --output 16_cover.jpg
 ```
 
-### Step 10: Verify
+## Verify
 
-Confirm these final files exist and are non-empty:
+Confirm final files exist and are non-empty:
 
 - `15_subtitle.mp4`
 - `16_cover.jpg`
 
-Report their absolute paths and the selected topic title.
+Report absolute paths, the original script run directory, and whether `promotion.status` was
+`promoted` or `blocked`.

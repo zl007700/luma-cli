@@ -28,7 +28,7 @@ approved script -> TTS -> avatar/lip-sync -> subtitles -> optional enhancement
 ```
 
 Do not use this skill to choose a topic, imitate a viral reference, decide the writing angle, or
-rewrite the content strategy. Use `luma-content-ip-writing` for original script creation, and
+rewrite the content strategy. Use `luma-original-script` for original script creation, and
 `luma-workflow-viral-remix` for viral-reference remix workflows.
 
 ## Asset First
