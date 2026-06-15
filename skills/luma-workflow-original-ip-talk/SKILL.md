@@ -6,7 +6,7 @@ metadata:
   entrypoint: true
   requires:
     bins: ["luma-cli"]
-  relatedSkills: ["luma-shared", "luma-original-script", "luma-avatar-persona-onboarding", "luma-digital-human", "luma-ppt-video", "luma-subtitle"]
+  relatedSkills: ["luma-shared", "luma-original-script", "luma-profile-onboarding", "luma-digital-human", "luma-ppt-video", "luma-subtitle"]
 ---
 
 # Luma Original IP Talk Workflow

@@ -7,7 +7,7 @@ metadata:
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli content original-script run"
-  relatedSkills: ["luma-shared", "luma-avatar-persona-onboarding"]
+  relatedSkills: ["luma-shared", "luma-profile-onboarding"]
 ---
 
 # Luma Original Script
@@ -34,7 +34,7 @@ It does not produce TTS, digital-human video, PPT visuals, subtitles, or covers.
 - optional `topic_hint`
 - optional output directory
 
-If no usable avatar persona exists, use `luma-avatar-persona-onboarding` first.
+If no usable profile/avatar persona exists, use `luma-profile-onboarding` first.
 
 ## Run
 

@@ -1,6 +1,6 @@
 ---
-name: luma-avatar-persona-onboarding
-description: "Create or improve a Luma avatar persona for original scripts and video workflows. Use when the user has no avatar_persona_id, has no avatar/voice defaults, wants to set up the account/business persona, or needs a persona before running luma-original-script or persona-to-video workflows. This replaces legacy profile onboarding."
+name: luma-profile-onboarding
+description: "Create or improve a Luma profile for original scripts and video workflows, implemented through avatar-persona commands. Use when the user has no avatar_persona_id/profile, has no avatar/voice defaults, wants to set up the account/business persona, or needs onboarding before running luma-original-script or persona-to-video workflows."
 metadata:
   category: "capability"
   entrypoint: true
@@ -10,10 +10,10 @@ metadata:
   relatedSkills: ["luma-shared", "luma-original-script", "luma-workflow-original-ip-talk", "luma-digital-human"]
 ---
 
-# Luma Avatar Persona Onboarding
+# Luma Profile Onboarding
 
-Use this skill to create one reusable avatar persona. In the new Luma content flow, the avatar
-persona is the durable subject for both content strategy and media defaults.
+Use this skill to create one reusable Luma profile. The user-facing concept is "profile"; the current
+implementation stores it as an avatar persona through `luma-cli avatar-persona`.
 
 Read `../luma-shared/SKILL.md` first for common CLI and auth rules.
 
@@ -39,9 +39,9 @@ Ask at most two short questions before drafting:
 
 If the user already gave enough context, infer the draft.
 
-## Persona Fields
+## Profile Fields
 
-Use the current avatar-persona schema:
+Use the current avatar-persona schema to store the profile:
 
 - `avatar_name`: short display name
 - `role_description`: content positioning, voice, beliefs, conversion intent, and business context

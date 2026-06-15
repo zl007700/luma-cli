@@ -58,7 +58,7 @@ var DeprecatedSkillNames = []string{
 	"luma-content-ip-writing",
 	"luma-find-material",
 	"luma-video-workflow",
-	"luma-profile-onboarding",
+	"luma-avatar-persona-onboarding",
 	"luma-benchmark-discovery",
 }
 
