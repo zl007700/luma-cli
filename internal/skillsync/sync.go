@@ -47,19 +47,6 @@ type NpmInstallOptions struct {
 
 var DeprecatedSkillNames = []string{
 	"luma-content-research",
-	"luma-material-planning",
-	"luma-script-writing",
-	"luma-content-script-workflow",
-	"luma-core-topic-discovery",
-	"luma-core-topic-selection",
-	"luma-core-longform-plan",
-	"luma-core-script-writing",
-	"luma-content-script",
-	"luma-content-ip-writing",
-	"luma-find-material",
-	"luma-video-workflow",
-	"luma-avatar-persona-onboarding",
-	"luma-benchmark-discovery",
 }
 
 func SourceFromEnv() string {
