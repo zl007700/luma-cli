@@ -1,157 +1,145 @@
 ---
 name: luma-profile-onboarding
-description: Guide a low-friction Luma profile onboarding flow when the user has no profile or wants to create/improve one; infer a usable creator profile from simple business facts, confirm with lightweight choices, and save it with luma-cli profile commands.
+description: "Create or improve a Luma content profile for original scripts and content workflows. Use when the user has no profile_id, wants to set up an account/business positioning, or needs a creator profile before running luma-original-script. This is for content strategy profiles, not avatar-persona digital-human roles."
 metadata:
+  category: "capability"
+  entrypoint: true
+  requires:
+    bins: ["luma-cli"]
+  cliHelp: "luma-cli profile create"
   relatedSkills: ["luma-shared", "luma-original-script", "luma-workflow-original-ip-talk"]
 ---
 
-# Luma Profile Onboarding
+# Luma Content Profile Onboarding
 
-Read `../luma-shared/SKILL.md` first. This skill creates one usable Luma profile with the least
-possible user burden. The profile is the reusable source for topic discovery, plan review, script
-writing, and original IP video workflows.
+Use this skill to create one usable content profile with minimal user burden. A content profile is
+the reusable source for original topic selection, writing, review, and history memory.
+
+Read `../luma-shared/SKILL.md` first for common CLI and auth rules.
+
+## Terminology
+
+- `profile`: content account positioning used by `luma-cli profile` and `luma-cli content original-script run`.
+- `avatar-persona`: digital-human presentation persona used by `luma-cli avatar-persona`; it binds voices,
+  roles, and avatar assets. Do not create or edit avatar personas in this skill.
+- `profile_extra.md`: longer business context for content generation.
+
+Avoid saying “人设” when it could mean the visual digital human. Prefer “内容账号定位” or “content profile”.
 
 ## Boundary
 
 Use this skill when:
 
-- no current profile exists
-- the user asks to create a profile, build an account persona, or start content from scratch
-- another Luma workflow needs a profile before it can continue
+- no current content profile exists
+- the user wants to create or improve account positioning
+- another content workflow needs a `profile_id`
 
-Do not choose topics, write scripts, find materials, or make videos here. Stop after saving and
-selecting a usable profile.
+Do not choose topics, write scripts, find materials, make videos, bind voices, or configure digital-human avatars here.
+Stop after saving and selecting a usable content profile.
 
-## Principle
+## Minimal Questions
 
-Ask for business facts, not positioning language.
-
-The user should not have to answer "who do you help solve what problem?" or fill a strategy form.
-Ask what they already know:
+Ask for business facts, not strategy jargon. Use at most two short questions before drafting:
 
 ```text
-你是做什么行业的？主要卖什么产品或服务？做了多久？
-随便说几句就行，不用整理。
+你现在主要做什么业务？卖什么产品或服务？目标客户大概是谁？
+现在希望内容帮你解决什么问题，比如获客、信任、转化、复购、招商、招聘？
 ```
 
-If useful, add one optional sentence:
+If the user already gave enough context, do not ask again. Infer a draft.
 
-```text
-现在最想通过内容解决什么问题？比如获客、信任、转化、复购、招商、招人。
-```
+## Profile Fields
 
-Never ask more than two questions before drafting. Infer the rest.
+Save only these structured fields:
 
-## Required Profile Fields
-
-The saved profile must contain only these structured fields:
-
-- `id`: short stable slug, ASCII when possible, e.g. `local_beauty_owner`
-- `identity`: creator identity in one sentence
+- `id`: stable ASCII slug, for example `ai_saas_agent_founder`
+- `identity`: one-sentence creator/business identity
 - `audience`: 2-4 audience labels
 - `stance`: 3-5 strong beliefs or content judgments
-- `avoid`: 3-5 things the account should avoid
+- `avoid`: 3-5 concrete things the account should avoid
 
-Put all softer context into `profile_extra.md`, not extra JSON fields:
+Put softer context into `profile_extra.md`:
 
-- business background inferred from the user's words
-- content style and voice
+- business background
 - product/service details
-- likely audience pains
+- style and voice
 - conversion intent
-- examples of topics the account should and should not talk about
+- likely audience pains
+- examples of topics to pursue or avoid
 
-## Onboarding Flow
+## Flow
 
-1. Check the current profile.
+1. Check current profile:
 
    ```bash
    luma-cli --json profile current
    ```
 
-   If a current profile exists, ask whether to improve it or create a new one only when the user
-   explicitly wants onboarding. Otherwise keep the current profile.
+   If one exists, keep it unless the user explicitly wants to improve or replace it.
 
-2. Ask for the minimal facts.
+2. Ask the minimal questions if needed.
 
-   Use the exact short prompt from `Principle`. Let the user answer messily.
+3. Draft one recommended profile. If the direction is ambiguous, show at most three concise direction cards and recommend one.
 
-3. Infer three direction cards.
-
-   Each card should be concrete and selectable:
+4. Confirm lightly:
 
    ```text
-   A. 老板实战型：讲自己怎么做、怎么踩坑、怎么拿结果
-   B. 顾问分析型：帮同行看清问题、判断方案、少花冤枉钱
-   C. 用户视角型：从消费者真实体验切入，再带到专业判断
+   我会按这个内容账号定位保存，可以吗？你也可以让我改得更实战、更专业或更接地气。
    ```
 
-   Adapt the card labels to the industry. Do not present many choices. If one direction is clearly
-   best, recommend it and let the user confirm or change.
-
-4. Draft the profile.
-
-   Create:
-
-   - a short `profile_id`
-   - one `identity`
-   - concise `audience`, `stance`, and `avoid` lists
-   - `profile_extra.md`
-
-   Use strong, useful beliefs. Avoid generic identities such as "行业知识分享者" unless the user truly
-   has no business context.
-
-5. Confirm with one lightweight choice.
-
-   Show only the meaningful draft fields and ask:
-
-   ```text
-   这个方向可以保存吗？你也可以让我改得更实战 / 更专业 / 更接地气。
-   ```
-
-   If the user does not object, save it.
-
-6. Save and select the profile.
-
-   Write `profile_extra.md` in the active project/workspace, then run:
+5. Save and select:
 
    ```bash
-   luma-cli profile create <profile_id> --identity "<identity>" --audience "<a,b,c>" --stance "<a,b,c>" --avoid "<a,b,c>" --extra-file profile_extra.md --use
+   luma-cli profile create <profile_id> \
+     --identity "<identity>" \
+     --audience "<a,b,c>" \
+     --stance "<a,b,c>" \
+     --avoid "<a,b,c>" \
+     --extra-file profile_extra.md \
+     --use
    ```
 
-   If the profile id already exists, ask before overwriting unless the user explicitly requested an
-   update. For updates, use:
+   If the id already exists, ask before overwriting unless the user explicitly requested an update.
+   For updates:
 
    ```bash
-   luma-cli profile update <profile_id> --identity "<identity>" --audience "<a,b,c>" --stance "<a,b,c>" --avoid "<a,b,c>" --extra-file profile_extra.md
+   luma-cli profile update <profile_id> \
+     --identity "<identity>" \
+     --audience "<a,b,c>" \
+     --stance "<a,b,c>" \
+     --avoid "<a,b,c>" \
+     --extra-file profile_extra.md
+
    luma-cli profile use <profile_id>
    ```
 
-7. Verify.
+6. Verify:
 
    ```bash
    luma-cli --json profile get <profile_id>
    ```
 
-   Confirm that `identity`, `audience`, `stance`, `avoid`, and `extra` are present.
-
 ## Quality Bar
 
-A usable profile should make the next agent able to answer:
+A usable content profile should make the next workflow clear on:
 
-- this account should sound like whom
-- who the first 20 videos are trying to attract
+- what the account/business is
+- who the first 20 videos should attract
 - what the account believes strongly
-- what topics or tones would damage the account
-- what business outcome content should eventually support
+- what tones or topics would damage trust
+- what business outcome content should support
 
-If those answers are still vague, revise the profile before saving.
+If those answers are vague, revise before saving.
 
 ## Handoff
 
-After saving, report:
+Report:
 
-- profile id
-- current profile status
-- one-line positioning summary
-- suggested next skill: `luma-original-script` for a script, or `luma-workflow-original-ip-talk` for a full PPT + digital-human video
+- `profile_id`
+- whether it is now the current profile
+- one-line content positioning summary
+- next command:
+
+  ```bash
+  luma-cli --json content original-script run --profile <profile_id> --output runs/<run_id>
+  ```
