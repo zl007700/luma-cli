@@ -1,12 +1,12 @@
 ---
 name: luma-workflow-original-ip-talk
-description: "Orchestrate a complete original Luma spoken video from a profile by running the original-script pipeline, then generating TTS, digital human video, PPT-style visuals, subtitles, and a cover."
+description: "Orchestrate a complete original Luma spoken video from an avatar persona by running the original-script pipeline, then generating TTS, digital human video, PPT-style visuals, subtitles, and a cover."
 metadata:
   category: "workflow"
   entrypoint: true
   requires:
     bins: ["luma-cli"]
-  relatedSkills: ["luma-shared", "luma-original-script", "luma-digital-human", "luma-ppt-video", "luma-subtitle"]
+  relatedSkills: ["luma-shared", "luma-original-script", "luma-avatar-persona-onboarding", "luma-digital-human", "luma-ppt-video", "luma-subtitle"]
 ---
 
 # Luma Original IP Talk Workflow
@@ -16,7 +16,7 @@ to `luma-digital-human`, `luma-ppt-video`, and `luma-subtitle`.
 
 ## Inputs
 
-- `profile_id`
+- `avatar_persona_id`
 - optional `topic_hint`
 - selected voice and role, or permission to choose existing assets
 
@@ -28,7 +28,7 @@ Run the original script pipeline:
 
 ```bash
 luma-cli --json content original-script run \
-  --profile <profile_id> \
+  --avatar-persona <avatar_persona_id> \
   --topic-hint "<optional direction>" \
   --output runs/<run_id>
 ```

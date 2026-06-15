@@ -15,19 +15,22 @@ import (
 )
 
 type originalScriptRunState struct {
-	RunID        string         `json:"run_id"`
-	ProfileID    string         `json:"profile_id"`
-	TopicHint    string         `json:"topic_hint,omitempty"`
-	Status       string         `json:"status"`
-	CurrentStep  string         `json:"current_step"`
-	StartedAt    time.Time      `json:"started_at"`
-	FinishedAt   time.Time      `json:"finished_at,omitempty"`
-	OutputDir    string         `json:"output_dir"`
-	Warnings     []string       `json:"warnings,omitempty"`
-	CloudAssets  map[string]any `json:"cloud_assets,omitempty"`
-	StageUsage   map[string]any `json:"stage_usage,omitempty"`
-	ReviewRounds int            `json:"review_rounds"`
-	Promotion    map[string]any `json:"promotion,omitempty"`
+	RunID           string         `json:"run_id"`
+	SubjectID       string         `json:"subject_id"`
+	SubjectType     string         `json:"subject_type"`
+	ProfileID       string         `json:"profile_id,omitempty"`
+	AvatarPersonaID string         `json:"avatar_persona_id,omitempty"`
+	TopicHint       string         `json:"topic_hint,omitempty"`
+	Status          string         `json:"status"`
+	CurrentStep     string         `json:"current_step"`
+	StartedAt       time.Time      `json:"started_at"`
+	FinishedAt      time.Time      `json:"finished_at,omitempty"`
+	OutputDir       string         `json:"output_dir"`
+	Warnings        []string       `json:"warnings,omitempty"`
+	CloudAssets     map[string]any `json:"cloud_assets,omitempty"`
+	StageUsage      map[string]any `json:"stage_usage,omitempty"`
+	ReviewRounds    int            `json:"review_rounds"`
+	Promotion       map[string]any `json:"promotion,omitempty"`
 }
 
 func cmdContentOriginalScript(raw []string) error {
@@ -47,12 +50,14 @@ func cmdContentOriginalScript(raw []string) error {
 func cmdContentOriginalScriptRun(raw []string) error {
 	args := cmdutil.Parse(raw)
 	profileID := strings.TrimSpace(args.String("profile", args.Pos(0)))
-	if profileID == "" {
-		return output.ErrValidation("--profile <profile_id> is required")
-	}
+	avatarPersonaID := strings.TrimSpace(args.String("avatar-persona", args.String("persona", "")))
 	cfg, err := requireConfig()
 	if err != nil {
 		return output.ErrAuth("%v", err)
+	}
+	subjectID, subjectType, profileMap, rawSubject, err := loadOriginalScriptSubject(profileID, avatarPersonaID, cfg.CardKey)
+	if err != nil {
+		return err
 	}
 	timeoutSec, err := args.Int("timeout", 240)
 	if err != nil {
@@ -80,33 +85,32 @@ func cmdContentOriginalScriptRun(raw []string) error {
 	}
 
 	state := originalScriptRunState{
-		RunID:       runID,
-		ProfileID:   profileID,
-		TopicHint:   topicHint,
-		Status:      "running",
-		CurrentStep: "load_profile",
-		StartedAt:   time.Now(),
-		OutputDir:   outputAbs,
-		CloudAssets: map[string]any{},
-		StageUsage:  map[string]any{},
+		RunID:           runID,
+		SubjectID:       subjectID,
+		SubjectType:     subjectType,
+		ProfileID:       profileID,
+		AvatarPersonaID: avatarPersonaID,
+		TopicHint:       topicHint,
+		Status:          "running",
+		CurrentStep:     "load_subject",
+		StartedAt:       time.Now(),
+		OutputDir:       outputAbs,
+		CloudAssets:     map[string]any{},
+		StageUsage:      map[string]any{},
 	}
 	saveOriginalScriptState(outputAbs, state)
-
-	profile, err := loadProfile(profileID)
-	if err != nil {
-		return output.ErrSystem("load profile failed: %v", err)
-	}
-	profileMap, err := structToMap(profile)
-	if err != nil {
-		return output.ErrSystem("serialize profile failed: %v", err)
-	}
-	if err := writeJSONFile(filepath.Join(outputAbs, "01_profile.json"), profileMap); err != nil {
-		return output.ErrSystem("write profile failed: %v", err)
+	if err := writeJSONFile(filepath.Join(outputAbs, "01_subject.json"), map[string]any{
+		"subject_id":   subjectID,
+		"subject_type": subjectType,
+		"profile":      profileMap,
+		"raw":          rawSubject,
+	}); err != nil {
+		return output.ErrSystem("write subject failed: %v", err)
 	}
 
 	state.CurrentStep = "load_memory"
 	saveOriginalScriptState(outputAbs, state)
-	memory := loadOriginalScriptMemory(profileID, cfg.CardKey, &state)
+	memory := loadOriginalScriptMemory(subjectID, cfg.CardKey, &state)
 	if err := writeJSONFile(filepath.Join(outputAbs, "02_memory.json"), memory); err != nil {
 		return output.ErrSystem("write memory failed: %v", err)
 	}
@@ -249,12 +253,12 @@ func cmdContentOriginalScriptRun(raw []string) error {
 	saveOriginalScriptState(outputAbs, state)
 	passed, blockReason := originalScriptFinalReviewPassed(finalReview)
 	if passed {
-		saveOriginalScriptCloudArtifacts(profileID, runID, writableTopic, finalArticle, finalReview, cfg.CardKey, &state)
-		updateOriginalScriptHistory(profileID, runID, topicHint, writableTopic, finalArticle, finalReview, cfg.CardKey, &state)
+		saveOriginalScriptCloudArtifacts(subjectID, runID, writableTopic, finalArticle, finalReview, cfg.CardKey, &state)
+		updateOriginalScriptHistory(subjectID, runID, topicHint, writableTopic, finalArticle, finalReview, cfg.CardKey, &state)
 		state.Promotion = map[string]any{"status": "promoted", "reason": "final review passed promotion gate"}
 	} else {
-		saveOriginalScriptReviewArtifact(profileID, runID, "needs_revision_article", finalArticle, cfg.CardKey, &state)
-		saveOriginalScriptReviewArtifact(profileID, runID, "needs_revision_review", finalReview, cfg.CardKey, &state)
+		saveOriginalScriptReviewArtifact(subjectID, runID, "needs_revision_article", finalArticle, cfg.CardKey, &state)
+		saveOriginalScriptReviewArtifact(subjectID, runID, "needs_revision_review", finalReview, cfg.CardKey, &state)
 		state.Promotion = map[string]any{"status": "blocked", "reason": blockReason}
 		state.Warnings = append(state.Warnings, fmt.Sprintf("final review did not pass promotion gate: %s; final was produced but not promoted to content_history", blockReason))
 	}
@@ -315,6 +319,64 @@ func loadOriginalScriptMemory(profileID, cardKey string, state *originalScriptRu
 		}
 	}
 	return memory
+}
+
+func loadOriginalScriptSubject(profileID, avatarPersonaID, cardKey string) (string, string, map[string]any, map[string]any, error) {
+	if strings.TrimSpace(avatarPersonaID) != "" {
+		item, err := cloud.AvatarPersonasGet(avatarPersonaID, cardKey)
+		if err != nil {
+			return "", "", nil, nil, output.ErrNetwork("load avatar persona failed: %v", err)
+		}
+		raw, err := structToMap(*item)
+		if err != nil {
+			return "", "", nil, nil, output.ErrSystem("serialize avatar persona failed: %v", err)
+		}
+		subjectID := firstNonEmpty(item.AvatarPersonaID, avatarPersonaID)
+		return subjectID, "avatar_persona", originalScriptProfileFromAvatarPersona(*item), raw, nil
+	}
+	if strings.TrimSpace(profileID) == "" {
+		return "", "", nil, nil, output.ErrValidation("--avatar-persona <avatar_persona_id> is required; legacy --profile <profile_id> is still supported")
+	}
+	profile, err := loadProfile(profileID)
+	if err != nil {
+		return "", "", nil, nil, output.ErrSystem("load profile failed: %v", err)
+	}
+	profileMap, err := structToMap(profile)
+	if err != nil {
+		return "", "", nil, nil, output.ErrSystem("serialize profile failed: %v", err)
+	}
+	return profileID, "profile_legacy", profileMap, profileMap, nil
+}
+
+func originalScriptProfileFromAvatarPersona(item cloud.AvatarPersona) map[string]any {
+	audience := splitAvatarPersonaList(item.Audience)
+	if len(audience) == 0 && strings.TrimSpace(item.Audience) != "" {
+		audience = []string{strings.TrimSpace(item.Audience)}
+	}
+	roleDescription := strings.TrimSpace(item.RoleDescription)
+	identity := firstNonEmpty(roleDescription, item.AvatarName, item.AvatarPersonaID)
+	stance := []string{}
+	if roleDescription != "" {
+		stance = append(stance, roleDescription)
+	}
+	stance = append(stance,
+		"内容必须贴近真实业务场景，而不是空泛讲AI概念",
+		"观点要服务账号的业务转化和信任建立",
+	)
+	return map[string]any{
+		"id":                 firstNonEmpty(item.AvatarPersonaID, slugForID(item.AvatarName)),
+		"identity":           identity,
+		"audience":           audience,
+		"stance":             dedupeStringsLimit(stance, 5),
+		"avoid":              []string{"不要编造无法核查的数据或案例", "不要写成工具说明书", "不要脱离目标用户的真实处境"},
+		"avatar_persona_id":  item.AvatarPersonaID,
+		"avatar_name":        item.AvatarName,
+		"role_description":   item.RoleDescription,
+		"content_source":     "avatar_persona",
+		"bound_voice_count":  len(item.Voices),
+		"bound_role_count":   len(item.Roles),
+		"persona_visibility": item.Visibility,
+	}
 }
 
 func defaultOriginalScriptMemoryValue(artifactType string) map[string]any {
@@ -1143,5 +1205,6 @@ func firstRunes(value string, limit int) string {
 
 func printContentOriginalScriptUsage() {
 	fmt.Println("luma-cli content original-script <subcommand>")
-	fmt.Println("  run --profile <profile_id> [--topic-hint <hint>] [--output runs/<run_id>]")
+	fmt.Println("  run --avatar-persona <avatar_persona_id> [--topic-hint <hint>] [--output runs/<run_id>]")
+	fmt.Println("  run --profile <profile_id> [--topic-hint <hint>] [--output runs/<run_id>]  # legacy")
 }

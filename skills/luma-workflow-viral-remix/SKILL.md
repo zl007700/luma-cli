@@ -36,7 +36,7 @@ viral reference/research -> transcript/structure -> rewritten script -> TTS -> d
 
 Use `luma-digital-human` instead when the script is already approved and the user only needs a
 digital-human spoken video. Use `luma-original-script` instead when the user wants an original script
-from profile memory rather than remixing a viral reference.
+from avatar-persona memory rather than remixing a viral reference.
 
 ## When To Use
 

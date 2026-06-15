@@ -81,9 +81,9 @@ Use stable names unless the user gives a project convention:
 - Local logic is for stable cross-platform work: file organization, runtime cache, ffmpeg rendering, and result formatting.
 - Prefer friendly names for voices, avatars, and resources. Do not ask users to manually copy internal object keys.
 - Never print API keys, legacy card keys, backend tokens, or private object credentials.
-- Original profile-based script production must use:
+- Original avatar-persona-based script production must use:
   ```bash
-  luma-cli --json content original-script run --profile <profile_id> --output runs/<run_id>
+  luma-cli --json content original-script run --avatar-persona <avatar_persona_id> --output runs/<run_id>
   ```
   Skills must not reimplement original topic selection, research loops, article writing, or final review in agent instructions.
 - Treat `run_state.status=done` as a produced output. Use `run_state.promotion.status` to explain whether it was promoted to history or blocked by review.

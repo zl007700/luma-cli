@@ -1,13 +1,13 @@
 ---
 name: luma-original-script
-description: "Run the Luma original video script pipeline from a creator profile. Use when the user asks for an original spoken short-video script, topic-to-script content production, profile-based copywriting, or wants a reviewed final.md from Luma memory, research, topic refinement, writing, and final review."
+description: "Run the Luma original video script pipeline from an avatar persona. Use when the user asks for an original spoken short-video script, topic-to-script content production, persona-based copywriting, or wants a reviewed final.md from Luma memory, research, topic refinement, writing, and final review."
 metadata:
   category: "workflow"
   entrypoint: true
   requires:
     bins: ["luma-cli"]
   cliHelp: "luma-cli content original-script run"
-  relatedSkills: ["luma-shared", "luma-profile-onboarding"]
+  relatedSkills: ["luma-shared", "luma-avatar-persona-onboarding"]
 ---
 
 # Luma Original Script
@@ -22,7 +22,7 @@ Read `../luma-shared/SKILL.md` first for auth, output, and safe CLI rules.
 This skill owns:
 
 ```text
-profile_id -> original-script pipeline -> final.md + final_review.json + run_state.json
+avatar_persona_id -> original-script pipeline -> final.md + final_review.json + run_state.json
 ```
 
 It does not produce TTS, digital-human video, PPT visuals, subtitles, or covers. Use
@@ -30,11 +30,11 @@ It does not produce TTS, digital-human video, PPT visuals, subtitles, or covers.
 
 ## Required Input
 
-- `profile_id`
+- `avatar_persona_id`
 - optional `topic_hint`
 - optional output directory
 
-If no usable profile exists, use `luma-profile-onboarding` first.
+If no usable avatar persona exists, use `luma-avatar-persona-onboarding` first.
 
 ## Run
 
@@ -42,7 +42,7 @@ Prefer JSON output:
 
 ```bash
 luma-cli --json content original-script run \
-  --profile <profile_id> \
+  --avatar-persona <avatar_persona_id> \
   --output runs/<run_id>
 ```
 
@@ -50,10 +50,13 @@ With a user-provided direction:
 
 ```bash
 luma-cli --json content original-script run \
-  --profile <profile_id> \
+  --avatar-persona <avatar_persona_id> \
   --topic-hint "<topic or direction>" \
   --output runs/<run_id>
 ```
+
+Legacy `--profile <profile_id>` may exist during migration, but new workflows should use
+`--avatar-persona`.
 
 ## Output Contract
 
@@ -65,6 +68,7 @@ Always inspect and report these files:
 
 Useful audit files:
 
+- `01_subject.json`: normalized avatar-persona context used by the pipeline.
 - `03_research_rounds.json`: web/social search results.
 - `04_detail_expansion_plan.json`: selected sources for detail expansion.
 - `05_expanded_details.json`: URL reads and video ASR attempts, including failures.

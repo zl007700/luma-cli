@@ -3,6 +3,8 @@ package commands
 import (
 	"strings"
 	"testing"
+
+	"github.com/luma-cli/lumer-cli/cloud"
 )
 
 func TestOriginalScriptArticleTextPrefersArticleField(t *testing.T) {
@@ -94,6 +96,29 @@ func TestCompactOriginalScriptMemoryTrimsHistoryReview(t *testing.T) {
 	review := items[0].(map[string]any)["final_review"].(map[string]any)
 	if len(strAny(review["summary"])) > 220 {
 		t.Fatalf("review summary not compacted: %d", len(strAny(review["summary"])))
+	}
+}
+
+func TestOriginalScriptProfileFromAvatarPersona(t *testing.T) {
+	got := originalScriptProfileFromAvatarPersona(cloud.AvatarPersona{
+		AvatarPersonaID: "persona_1",
+		AvatarName:      "AI老板顾问",
+		RoleDescription: "AI SaaS Agent 创业者，专门讲中小企业如何用AI减少人工执行。",
+		Audience:        "中小企业老板,销售负责人",
+	})
+
+	if got["id"] != "persona_1" {
+		t.Fatalf("id = %#v", got["id"])
+	}
+	if got["content_source"] != "avatar_persona" {
+		t.Fatalf("content_source = %#v", got["content_source"])
+	}
+	audience := got["audience"].([]string)
+	if len(audience) != 2 {
+		t.Fatalf("audience = %#v", audience)
+	}
+	if strAny(got["identity"]) == "" {
+		t.Fatalf("identity missing: %#v", got)
 	}
 }
 
